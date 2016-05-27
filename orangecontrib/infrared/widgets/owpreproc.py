@@ -59,6 +59,68 @@ class GaussianSmoothing():
         return data
 
 
+class Feri():
+# this is the actual computation
+    def __init__(self, sd=10.):
+        #super().__init__(variable)
+        self.sd = sd
+
+    def __call__(self, data):
+        #FIXME this filted does not do automatic domain conversions!
+        #FIXME we need need data about frequencies:
+        #what if frequencies are not sampled on equal intervals
+        x = np.arange(len(data.domain.attributes))
+        newd = gaussian_filter1d(data.X, sigma=self.sd, mode="nearest")
+        data = copy.copy(data)
+        data.X = newd
+        return data
+
+class FeriEditor(BaseEditor):
+    """
+    This is the little window on the right with options
+    """
+
+    def __init__(self, parent=None, **kwargs):
+        BaseEditor.__init__(self, parent, **kwargs)
+        self.__sd = 10.
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        self.__sdspin = sdspin = QDoubleSpinBox(  #QT elements for UI
+           minimum=0.0, maximum=100.0, singleStep=0.5, value=self.__sd)
+        layout.addWidget(sdspin)
+
+        sdspin.valueChanged[float].connect(self.setSd)
+        sdspin.editingFinished.connect(self.edited)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+
+    def setSd(self, sd):
+        if self.__sd != sd:
+            self.__sd = sd
+            with blocked(self.__sdspin):
+                self.__sdspin.setValue(sd)
+            self.changed.emit()
+
+    def sd(self):
+        return self.__sd
+
+    def intervals(self):
+        return self.__nintervals
+
+    def setParameters(self, params):
+        self.setSd(params.get("sd", 10.))
+
+    def parameters(self):
+        return {"sd": self.__sd}
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        sd = params.get("sd", 10.)
+        return Feri(sd=sd)
+
+
 class GaussianSmoothingEditor(BaseEditor):
     """
     Editor for preprocess.Discretize.
@@ -199,7 +261,7 @@ class SavitzkyGolayFilteringEditor(BaseEditor):
 
 
 
-
+# what is registered
 PREPROCESSORS = [
     PreprocessAction(
         "Gaussian smoothing", "orangecontrib.infrared.gaussian", "Smoothing",
@@ -212,6 +274,12 @@ PREPROCESSORS = [
         Description("Savitzky-Golay Filter (smoothing and differentiation)",
         icon_path("Discretize.svg")),
         SavitzkyGolayFilteringEditor
+    ),
+    PreprocessAction(
+        "Feri", "orangecontrib.infrared.Feri", "test",
+        Description("blablabla",
+        icon_path("Discretize.svg")),
+        FeriEditor
     ),
 ]
 
