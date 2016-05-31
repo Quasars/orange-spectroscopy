@@ -11,7 +11,7 @@ from orangecontrib.infrared.data import build_spec_table
 
 class OWFFT(OWWidget):
     # Widget's name as displayed in the canvas
-    name = "FFT"
+    name = "Interferogram to Spectrum"
 
     # Short widget description
     description = (
