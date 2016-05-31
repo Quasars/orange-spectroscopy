@@ -28,6 +28,8 @@ class OWFFT(OWWidget):
 
     # Define widget settings
     laser_wavenumber = settings.Setting(15797.337544)
+    dx_HeNe = settings.Setting(True)
+    dx = settings.Setting(1.0)
     apod_func = settings.Setting(1)
     zff = settings.Setting(1)
     phase_corr = settings.Setting(0)
@@ -57,9 +59,10 @@ class OWFFT(OWWidget):
         self.data = None
         self.spectra = None
         self.spectra_table = None
-        self.dx = 1.0 / self.laser_wavenumber / 2.0
         self.wavenumbers = None
         self.sweeps = None
+        if self.dx_HeNe is True:
+            self.dx = 1.0 / self.laser_wavenumber / 2.0
 
         # GUI
         # An info box
@@ -70,14 +73,25 @@ class OWFFT(OWWidget):
         # Input Data control area
         self.dataBox = gui.widgetBox(self.controlArea, "Input Data")
 
-        gui.widgetLabel(self.dataBox, "Interferometer laser frequency:")
-        box = gui.hBox(self.dataBox)
-        gui.lineEdit(box, self, "laser_wavenumber",
-                        callback=self.setting_changed,
-                        valueType=float, enterPlaceholder=True,
-                        controlWidth=100
-                        )
-        gui.widgetLabel(box, "cm-1")
+        gui.widgetLabel(self.dataBox, "Datapoint spacing (Δx):")
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        self.dx_edit = gui.lineEdit(
+                    self.dataBox, self, "dx",
+                    callback=self.setting_changed,
+                    valueType=float, enterPlaceholder=True,
+                    controlWidth=100, disabled=self.dx_HeNe
+                    )
+        cb = gui.checkBox(
+                    self.dataBox, self, "dx_HeNe",
+                    label="HeNe laser",
+                    callback=self.dx_changed,
+                    )
+        lb = gui.widgetLabel(self.dataBox, "cm")
+        grid.addWidget(cb, 0, 0)
+        grid.addWidget(self.dx_edit, 0, 1)
+        grid.addWidget(lb, 0, 2)
+        self.dataBox.layout().addLayout(grid)
 
         # FFT Options control area
         self.optionsBox = gui.widgetBox(self.controlArea, "FFT Options")
@@ -197,6 +211,12 @@ class OWFFT(OWWidget):
         self.out_limit2 = maxX
         self.commit()
 
+    def dx_changed(self):
+        self.dx_edit.setDisabled(self.dx_HeNe)
+        if self.dx_HeNe is True:
+            self.dx = 1.0 / self.laser_wavenumber / 2.0
+        self.commit()
+
     def commit(self):
         if self.data is not None:
             self.calculateFFT()
@@ -219,9 +239,6 @@ class OWFFT(OWWidget):
         self.error(1)   # FFT ValueError, usually wrong sweep number
         self.error(2)   # vsplit ValueError, odd number of data points
         self.warning(4) # Phase resolution limit too low
-
-        # Calculate dx value
-        self.dx = 1.0 / self.laser_wavenumber / 2.0
 
         for row in self.data.X:
             # Check to see if interferogram is single or double sweep
