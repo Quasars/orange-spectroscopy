@@ -121,3 +121,63 @@ def zero_filling(Ix, zff):
     zero_fill = ((N_2 - N) + (N_2 * (zff)))
     Ix_zff = np.hstack((Ix, np.zeros(zero_fill)))
     return Ix_zff
+
+def compute_phase(Ix, wavenumbers, dx,
+                  phase_res=None, apod_func=1, zff=2):
+    """
+    Compute the phase spectrum.
+    Uses either the specified phase resolution or the largest possible
+    double-sided interferogram.
+
+    Args:
+        Ix (np.array): 1D array of interferogram intensities
+        wavenumbers (np.array): 1D array of corresponding wavenumber set
+        dx (float): Interferogram data point spacing (in cm)
+        phase_res (int): Resolution limit for phase spectrum (in wavenumbers)
+        apod_func (int): Apodization function passed to apodize()
+        zff (int): Zero-filling factor passed to zero_fill()
+
+    Returns:
+        phase (np.array): 1D array of phase spectrum
+    """
+    # Determine largest possible double-sided interferogram
+    # Calculate the index of the Zero Phase Difference (centerburst)
+    zpd = peak_search(Ix)
+    N = np.size(Ix)
+    delta = np.min([zpd , N - 1 - zpd])
+
+    if phase_res is not None:
+        L = int(1 / (dx * phase_res)) - 1
+        if L > delta:
+            L = delta
+    else:
+        L = delta
+
+    # Select small, double-sided interfergram for phase computation
+    Ixs = Ix[zpd - L : zpd + L]
+    zpd = peak_search(Ixs)
+    # Apodize, zero-fill
+    Ixs_apod = apodization(Ixs, zpd, apod_func)
+    Ixs_zff = zero_filling(Ixs_apod, zff)
+
+    Ixs_N = Ixs_zff.shape[0]
+    if zpd != peak_search(Ixs_zff):
+        raise ValueError("zpd: %d, new_zpd: %d" % (zpd, peak_search(Ixs_zff)))
+    # Rotate the sample so that the centerburst is at edges
+    Ixs_rot = np.hstack((Ixs_zff[zpd:],Ixs_zff[0:zpd]))
+    # Take FFT of Rotated Complete Graph
+    Ixs_fft = np.fft.rfft(Ixs_rot)
+
+    # Calculate wavenumbers in our sampled spectrum.
+    wavenumbers_sampled = np.fft.rfftfreq(Ixs_N, dx)
+
+    # Calculate the Phase Angle for the FT'd SampleGraph.
+    phase_sampled = np.arctan2( Ixs_fft.imag,
+                                Ixs_fft.real )
+
+    # Interpolate the complete Phase Data.
+    phase = np.interp(wavenumbers,
+                      wavenumbers_sampled,
+                      phase_sampled)
+
+    return phase

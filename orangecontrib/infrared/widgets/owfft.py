@@ -352,10 +352,15 @@ class OWFFT(OWWidget):
             raise ValueError("zpd: %d, new_zpd: %d" % (zpd, irfft.peak_search(Ix_zff)))
 
         # Calculate wavenumber set
-        self.wavenumber_set(N_zff)
+        self.wavenumbers = np.fft.rfftfreq(N_zff, self.dx)
 
         # Compute phase spectrum
-        phase = self.compute_phase(Ix)
+        if self.phase_res_limit is True:
+            phase_res = self.phase_resolution
+        else:
+            phase_res = None
+        phase = irfft.compute_phase(Ix, self.wavenumbers, self.dx,
+                                   phase_res, self.apod_func, self.zff)
 
         # Rotate the Complete IFG so that the centerburst is at edges.
         Ix_rot = np.hstack((Ix_zff[zpd:],Ix_zff[0:zpd]))
@@ -372,78 +377,6 @@ class OWFFT(OWWidget):
                     + phase_sin * Ix_fft.imag
 
         return spectrum
-
-    def wavenumber_set(self, N_zff):
-        """
-        Calculate the wavenumber set after zero filling.
-
-        Args:
-            N_zff (int): Number of points in interferogram after zero filling
-
-        """
-        # Only calculate once per calculateFFT() call
-        if self.wavenumbers is None:
-            self.wavenumbers = np.fft.rfftfreq(N_zff, self.dx)
-
-    def compute_phase(self, Ix):
-        """
-        Compute the phase spectrum.
-        Uses either the specified phase resolution or the largest possible
-        double-sided interferogram.
-
-        Args:
-            Ix (np.array): 1D array of interferogram intensities
-
-        Returns:
-            phase (np.array): 1D array of phase spectrum
-        """
-        # Determine largest possible double-sided interferogram
-        # Calculate the index of the Zero Phase Difference (centerburst)
-        zpd = irfft.peak_search(Ix)
-        N = np.size(Ix)
-        delta = np.min([zpd , N - 1 - zpd])
-
-        if self.phase_res_limit is True:
-            L = int(1 / (self.dx * self.phase_resolution)) - 1
-            if L > delta:
-                self.warning(4,
-                    "Selected phase resolution limit too low."
-                    "Using entire interferogram for phase computation."
-                    )
-                L = delta
-        else:
-            L = delta
-
-        # Select small, double-sided interfergram for phase computation
-        Ixs = Ix[zpd - L : zpd + L]
-        zpd = irfft.peak_search(Ixs)
-        # Apodize, zero-fill
-        Ixs_apod = irfft.apodization(Ixs, zpd, self.apod_func)
-        Ixs_zff = irfft.zero_filling(Ixs_apod, self.zff)
-
-        Ixs_N = Ixs_zff.shape[0]
-        if zpd != irfft.peak_search(Ixs_zff):
-            raise ValueError("zpd: %d, new_zpd: %d" % (zpd, irfft.peak_search(Ixs_zff)))
-        # Rotate the sample so that the centerburst is at edges
-        Ixs_rot = np.hstack((Ixs_zff[zpd:],Ixs_zff[0:zpd]))
-        # Take FFT of Rotated Complete Graph
-        Ixs_fft = np.fft.rfft(Ixs_rot)
-
-        # Calculate wavenumbers in our sampled spectrum.
-        wavenumber_sample = np.fft.rfftfreq(Ixs_N, self.dx)
-
-        # Calculate the Phase Angle for the FT'd SampleGraph.
-        # Note: we discard the right half of the FT, as it's a mirror.
-        # TODO check this
-        phase_sampled = np.arctan2( Ixs_fft.imag,
-                                    Ixs_fft.real )
-
-        # Interpolate the complete Phase Data.
-        phase = np.interp(self.wavenumbers,
-                          wavenumber_sample,
-                          phase_sampled)
-
-        return phase
 
 # Simple main stub function in case being run outside Orange Canvas
 def main(argv=sys.argv):
