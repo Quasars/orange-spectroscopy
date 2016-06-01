@@ -245,7 +245,7 @@ class OWFFT(OWWidget):
             # Check to see if interferogram is single or double sweep
             if self.sweeps == 0:
                 try:
-                    spectrum_out = self.fft_single_sweep(row)
+                    spectrum_out, self.wavenumbers = self.fft_single(row)
                 except ValueError as e:
                     self.error(1, "FFT error: %s" % e)
                     return
@@ -265,8 +265,8 @@ class OWFFT(OWWidget):
 
                 # Calculate spectrum for both forward and backward sweeps
                 try:
-                    spectrum_fwd = self.fft_single_sweep(fwd)
-                    spectrum_back = self.fft_single_sweep(back)
+                    spectrum_fwd, self.wavenumbers = self.fft_single(fwd)
+                    spectrum_back, self.wavenumbers = self.fft_single(back)
                 except ValueError as e:
                     self.error(1, "FFT error: %s" % e)
                     return
@@ -327,56 +327,26 @@ class OWFFT(OWWidget):
                 # single, asymetric
                 self.sweeps = 0
 
-    def fft_single_sweep(self, Ix):
+    def fft_single(self, Ix):
         """
-        Calculate FFT of a single interferogram sweep.
-
-        Based on mertz module by Eric Peach, 2014
+        Handle FFT options and call irfft.fft_single_sweep.
 
         Args:
-            Ix (np.array): 1D array with a single interferogram
+            Ix (np.array): 1D array with a single-sweep interferogram
 
         Returns:
-            spectrum: 1D array of frequency domain values
+            spectrum: 1D array of frequency domain intensities
+            wavenumbers: 1D array of corresponding wavenumber set
         """
-
-        # Calculate the index of the Zero Phase Difference (centerburst)
-        zpd = irfft.peak_search(Ix)
-
-        # Apodize, Zero-fill
-        Ix_apod = irfft.apodization(Ix, zpd, self.apod_func)
-        Ix_zff = irfft.zero_filling(Ix_apod, self.zff)
-        # Recaculate N and zpd
-        N_zff = Ix_zff.shape[0]
-        if zpd != irfft.peak_search(Ix_zff):
-            raise ValueError("zpd: %d, new_zpd: %d" % (zpd, irfft.peak_search(Ix_zff)))
-
-        # Calculate wavenumber set
-        self.wavenumbers = np.fft.rfftfreq(N_zff, self.dx)
-
-        # Compute phase spectrum
         if self.phase_res_limit is True:
             phase_res = self.phase_resolution
         else:
             phase_res = None
-        phase = irfft.compute_phase(Ix, self.wavenumbers, self.dx,
-                                   phase_res, self.apod_func, self.zff)
 
-        # Rotate the Complete IFG so that the centerburst is at edges.
-        Ix_rot = np.hstack((Ix_zff[zpd:],Ix_zff[0:zpd]))
+        spectrum, wavenumbers = irfft.fft_single_sweep(Ix, self.dx,
+                                        phase_res, self.apod_func, self.zff)
 
-        # Take FFT of Rotated Complete Graph
-        Ix_fft = np.fft.rfft(Ix_rot)
-
-        # Calculate the Cosines and Sines
-        phase_cos = np.cos(phase)
-        phase_sin = np.sin(phase)
-
-        # Calculate magnitude of complete Fourier Transform
-        spectrum =  phase_cos * Ix_fft.real \
-                    + phase_sin * Ix_fft.imag
-
-        return spectrum
+        return spectrum, wavenumbers
 
 # Simple main stub function in case being run outside Orange Canvas
 def main(argv=sys.argv):
