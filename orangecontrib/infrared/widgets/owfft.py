@@ -356,7 +356,7 @@ def main(argv=sys.argv):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "iris"
+        filename = "IFG_single.dpt"
 
     ow = OWFFT()
     ow.show()
