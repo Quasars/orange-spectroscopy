@@ -85,7 +85,7 @@ def main(argv=None):
     app = QtGui.QApplication(argv)
     w = OWCut()
     w.show()
-    data = Orange.data.Table("/home/marko/Downloads/testdata.csv")
+    data = Orange.data.Table("2012.11.09-11.45_Peach juice colorful spot.dpt")
     w.set_data(data)
     w.handleNewSignals()
     rval = app.exec_()

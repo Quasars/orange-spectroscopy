@@ -14,7 +14,7 @@ from Orange.widgets.utils.plot import \
     SELECT, PANNING, ZOOMING
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
-
+import orangecontrib.infrared
 
 #view types
 INDIVIDUAL = 0
@@ -73,8 +73,10 @@ def closestindex(array, v):
 
 def searchsorted_cached(cache, arr, v, side="left"):
     key = (id(arr),v,side)
-    if key in cache:
-        return cache
+    if key not in cache:
+        cache[key] = np.searchsorted(arr, v, side=side)
+    return cache[key]
+        
 
 def distancetocurve(array, x, y, xpixel, ypixel, r=5, cache=None):
     if cache is not None and id(x) in cache:
@@ -206,7 +208,8 @@ class CurvePlot(QWidget):
         self.plot = self.plotview.getPlotItem()
         self.plot.setDownsampling(auto=True, mode="peak")
         self.plot.invertX(True)
-        self.curves = []
+        self.curves = [] #currently loaded curves
+        self.curves_plotted = [] #currently plotted curves (different than loaded for averages)
         self.vLine = pg.InfiniteLine(angle=90, movable=False)
         self.hLine = pg.InfiniteLine(angle=0, movable=False)
         self.proxy = pg.SignalProxy(self.plot.scene().sigMouseMoved, rateLimit=20, slot=self.mouseMoved, delay=0.1)
@@ -278,6 +281,7 @@ class CurvePlot(QWidget):
 
     def mouseMoved(self, evt):
         pos = evt[0]
+
         if self.plot.sceneBoundingRect().contains(pos):
             mousePoint = self.plot.vb.mapSceneToView(pos)
             posx, posy = mousePoint.x(), mousePoint.y()
@@ -339,6 +343,7 @@ class CurvePlot(QWidget):
         self.curves_cont.clear()
         self.curves_cont.update()
         self.plotview.clear()
+        self.curves_plotted = []
         self.plotview.addItem(self.label, ignoreBounds=True)
         self.highlighted_curve = pg.PlotCurveItem(pen=self.pen_mouse)
         self.highlighted_curve.setZValue(10)
@@ -364,12 +369,14 @@ class CurvePlot(QWidget):
                 self.curves.append((x,y))
             c = pg.PlotCurveItem(x=x, y=y, pen=self.pen_normal)
             self.curves_cont.add_curve(c)
+        self.curves_plotted = self.curves
 
     def add_curve(self, x, y, pen=None):
         xsind = np.argsort(x)
         x = x[xsind]
         c = pg.PlotCurveItem(x=x, y=y, pen=pen if pen else self.pen_normal)
         self.curves_cont.add_curve(c)
+        self.curves_plotted.append((x, y))
 
     def show_individual(self):
         self.viewtype = INDIVIDUAL
@@ -381,16 +388,17 @@ class CurvePlot(QWidget):
 
     def rescale_current_view_y(self):
         if self.curves:
+            cache = {}
             qrect = self.plot.vb.targetRect()
             bleft =  qrect.left()
             bright = qrect.right()
 
-            ymax = max(np.max(y[np.searchsorted(x, bleft):
-                                np.searchsorted(x, bright, side="right")])
-                       for x,y in self.curves)
-            ymin = min(np.min(y[np.searchsorted(x, bleft):
-                                np.searchsorted(x, bright, side="right")])
-                       for x,y in self.curves)
+            ymax = max(np.max(y[searchsorted_cached(cache, x, bleft):
+                                searchsorted_cached(cache, x, bright, side="right")])
+                       for x,y in self.curves_plotted)
+            ymin = min(np.min(y[searchsorted_cached(cache, x, bleft):
+                                searchsorted_cached(cache, x, bright, side="right")])
+                       for x,y in self.curves_plotted)
 
             self.plot.vb.setYRange(ymin, ymax, padding=0.0)
             self.pad_current_view_y()
@@ -504,17 +512,6 @@ class OWCurves(widget.OWWidget):
             self.send("Selection", None)
 
 
-def read_dpt(fn):
-    """
-    Temporary file reading.
-    """
-    tbl = np.loadtxt(fn)
-    domvals = tbl.T[0] #first column is attribute name
-    domain = Orange.data.Domain([Orange.data.ContinuousVariable("%f" % f) for f in domvals], None)
-    datavals = tbl.T[1:]
-    return Orange.data.Table(domain, datavals)
-
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -522,8 +519,8 @@ def main(argv=None):
     app = QtGui.QApplication(argv)
     w = OWCurves()
     w.show()
-    data = read_dpt("/home/marko/orange-infrared/orangecontrib/infrared/datasets/2012.11.09-11.45_Peach juice colorful spot.dpt")
-    data = Orange.data.Table("/home/marko/Downloads/testdata.csv")
+    import os.path
+    data = Orange.data.Table("2012.11.09-11.45_Peach juice colorful spot.dpt")
     w.set_data(data)
     #w.set_subset(data[:10])
     w.set_subset(None)
