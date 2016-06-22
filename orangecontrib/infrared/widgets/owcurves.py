@@ -73,7 +73,7 @@ def searchsorted_cached(cache, arr, v, side="left"):
     if key not in cache:
         cache[key] = np.searchsorted(arr, v, side=side)
     return cache[key]
-        
+
 
 def distancetocurve(array, x, y, xpixel, ypixel, r=5, cache=None):
     if cache is not None and id(x) in cache:
@@ -81,15 +81,15 @@ def distancetocurve(array, x, y, xpixel, ypixel, r=5, cache=None):
     else:
         xmin = closestindex(array[0], x-r*xpixel)
         xmax = closestindex(array[0], x+r*xpixel)
-        if cache is not None: 
+        if cache is not None:
             cache[id(x)] = xmin,xmax
     xp = array[0][xmin:xmax+1]
     yp = array[1][xmin:xmax+1]
-    
+
     #convert to distances in pixels
     xp = ((xp-x)/xpixel)
     yp = ((yp-y)/ypixel)
-    
+
     distancepx = (xp**2+yp**2)**0.5
     mini = np.argmin(distancepx)
     return distancepx[mini], xmin + mini
@@ -377,6 +377,10 @@ class CurvePlot(QWidget):
         self.markings.append(item)
         self.plot.addItem(item, ignoreBounds=True)
 
+    def remove_marking(self, item):
+        self.markings.remove(item)
+        self.plot.removeItem(item)
+
     def add_curves(self, x, data, addc=True):
         """ Add multiple curves with the same x domain. """
         xsind = np.argsort(x)
@@ -641,4 +645,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
-

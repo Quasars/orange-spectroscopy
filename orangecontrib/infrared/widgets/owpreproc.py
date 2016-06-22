@@ -70,6 +70,12 @@ class FocusFrame(owpreprocess.SequenceFlow.Frame):
         except AttributeError:
             pass
 
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        try:
+            self.widget().deactivateOptions()
+        except AttributeError:
+            pass
 
 class PreviewFrame(owpreprocess.SequenceFlow.Frame):
 
@@ -438,6 +444,12 @@ class CutEditor(BaseEditor):
             self.parent_widget.curveplot.add_marking(self.line1)
         if self.line2 not in self.parent_widget.curveplot.markings:
             self.parent_widget.curveplot.add_marking(self.line2)
+
+    def deactivateOptions(self):
+        if self.line1 in self.parent_widget.curveplot.markings:
+            self.parent_widget.curveplot.remove_marking(self.line1)
+        if self.line2 in self.parent_widget.curveplot.markings:
+            self.parent_widget.curveplot.remove_marking(self.line2)
 
     def set_lowlim(self, lowlim):
         if self.__lowlim != lowlim:
