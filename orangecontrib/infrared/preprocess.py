@@ -839,3 +839,47 @@ class Transmittance(Preprocess):
         domain = Orange.data.Domain(
                     newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
+
+class SubtractFeature(SelectColumn):
+    pass
+
+
+class _SubtractCommon:
+
+    def __init__(self, ref, domain):
+        self.ref = ref
+        self.domain = domain
+
+    def __call__(self, data):
+        if data.domain != self.domain:
+            data = data.from_table(self.domain, data)
+        if self.ref:
+            # Subtract ref
+            subd = data.X - self.ref.X
+        else:
+            subd = data.X
+        return subd
+
+
+class Subtract(Preprocess):
+    """
+    Calculate a simple spectral subtraction.
+
+    Set ref to subtract from data, otherwise do nothing.
+
+    Parameters
+    ----------
+    ref : reference single-channel (Orange.data.Table)
+    """
+
+    def __init__(self, ref=None):
+        self.ref = ref
+
+    def __call__(self, data):
+        common = _SubtractCommon(self.ref, data.domain)
+        newattrs = [Orange.data.ContinuousVariable(
+                    name=var.name, compute_value=SubtractFeature(i, common))
+                    for i, var in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(
+                    newattrs, data.domain.class_vars, data.domain.metas)
+        return data.from_table(domain, data)
