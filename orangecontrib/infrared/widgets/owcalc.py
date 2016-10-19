@@ -31,9 +31,9 @@ class OWCalc(OWWidget):
     autocommit = settings.Setting(False)
     calc = settings.Setting(0)
 
-    calculators = [("AB (-log(DataSC/RefSC))", Absorbance),
-                   ("TR (DataSC/RefSC)", Transmittance),
-                   ("Subtract (Data - Ref)", Subtract)]
+    calculators = [("Absorbance", Absorbance, "-log(DataSC/RefSC)", "-log(T)"),
+                   ("Transmittance", Transmittance, "DataSC/RefSC", "10^-A"),
+                   ("Subtract", Subtract, "Data - Ref", "")]
 
     # GUI definition:
     #   a simple 'single column' GUI layout
@@ -54,6 +54,7 @@ class OWCalc(OWWidget):
 
         # Select calculation
         self.calcBox = gui.widgetBox(self.controlArea, "Calculate")
+        self.infocalc = gui.widgetLabel(self.calcBox, "")
         gui.radioButtons(self.calcBox, self, "calc",
                          btnLabels=(x[0] for x in self.calculators),
                          callback=self.setting_changed)
@@ -70,6 +71,7 @@ class OWCalc(OWWidget):
                                     dataset.X.shape[0],
                                     dataset.X.shape[1]))
             self.calcBox.setDisabled(False)
+            self.set_eqn()
             self.commit()
         else:
             self.data = None
@@ -85,19 +87,27 @@ class OWCalc(OWWidget):
             except AttributeError:
                 self.data_ref = None
                 self.infob.setText("No reference data on input.")
-                self.commit()
             else:
                 self.infob.setText("{0} reference data points used (of {1})".format(
                                     self.data_ref.X.shape[1],
                                     dataset.X.shape[1]))
-                self.commit()
         elif dataset is not None:
             self.data_ref = None
             self.infob.setText("Only one reference spectra allowed")
         else:
             self.data_ref = None
             self.infob.setText("No reference data on input.")
-            self.commit()
+        self.set_eqn()
+        self.commit()
+
+    def set_eqn(self):
+        if self.data is not None:
+            if self.data_ref is None:
+                self.infocalc.setText(self.calculators[self.calc][3])
+            else:
+                self.infocalc.setText(self.calculators[self.calc][2])
+        else:
+            self.infocalc.setText("")
 
     def commit(self):
         if self.data is not None:
@@ -106,6 +116,7 @@ class OWCalc(OWWidget):
 
     def setting_changed(self):
         """Required by auto_commit button"""
+        self.set_eqn()
         self.commit()
 
 # Simple main stub function in case being run outside Orange Canvas
