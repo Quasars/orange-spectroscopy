@@ -8,8 +8,13 @@ from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.widgets.line_geometry import intersect_curves_chunked, \
     distance_line_segment
 from orangecontrib.infrared.preprocess import Interpolate
-from PyQt4.QtCore import QRectF, QPoint, Qt
+from AnyQt.QtCore import QRectF, QPoint, Qt
 from AnyQt.QtTest import QTest
+
+try:
+    qWaitForWindow = QTest.qWaitForWindowShown
+except AttributeError:
+    qWaitForWindow = QTest.qWaitForWindowActive
 
 NAN = float("nan")
 
@@ -96,7 +101,7 @@ class TestOWCurves(WidgetTest):
 
     def test_select_line(self):
         self.widget.show()
-        QTest.qWaitForWindowShown(self.widget)
+        qWaitForWindow(self.widget)
         for data in self.normal_data:
             self.send_signal("Data", data)
             out = self.get_output("Selection")
@@ -109,7 +114,7 @@ class TestOWCurves(WidgetTest):
     def test_zoom_rect(self):
         """ Test zooming with two clicks. """
         self.widget.show()
-        QTest.qWaitForWindowShown(self.widget)
+        qWaitForWindow(self.widget)
         self.send_signal("Data", self.iris)
         vb = self.widget.curveplot.plot.vb
         vb.set_mode_zooming()

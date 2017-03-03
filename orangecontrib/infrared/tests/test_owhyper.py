@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from PyQt4.QtCore import QPointF
+from AnyQt.QtCore import QPointF
 import Orange
 from Orange.widgets.tests.base import WidgetTest
 

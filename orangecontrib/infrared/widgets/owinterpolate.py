@@ -131,9 +131,8 @@ class OWInterpolate(OWWidget):
 
 
 def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     app = QApplication(list(argv))
-    args = app.argv()
     ow = OWInterpolate()
     ow.show()
     ow.raise_()

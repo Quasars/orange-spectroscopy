@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-from PyQt4.QtGui import QGridLayout
+from AnyQt.QtWidgets import QGridLayout, QApplication
 
 import Orange.data
 from Orange.widgets.widget import OWWidget
@@ -358,13 +358,8 @@ class OWFFT(OWWidget):
 
 # Simple main stub function in case being run outside Orange Canvas
 def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
     app = QApplication(list(argv))
-    args = app.argv()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "IFG_single.dpt"
+    filename = "IFG_single.dpt"
 
     ow = OWFFT()
     ow.show()

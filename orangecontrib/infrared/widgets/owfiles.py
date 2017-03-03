@@ -3,9 +3,8 @@ from functools import reduce
 from itertools import chain, repeat
 from collections import Counter
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QSizePolicy as Policy
+from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QSizePolicy as Policy, QGridLayout, QLabel, QMessageBox, QFileDialog, QApplication, QStyle
 
 import Orange
 import orangecontrib.infrared
@@ -46,13 +45,13 @@ class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
 
         self.lb = gui.listBox(self.controlArea, self, "file_idx")
 
-        layout = QtGui.QGridLayout()
+        layout = QGridLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
 
         file_button = gui.button(
             None, self, '  ...', callback=self.browse_files, autoDefault=False)
         file_button.setIcon(self.style().standardIcon(
-            QtGui.QStyle.SP_DirOpenIcon))
+            QStyle.SP_DirOpenIcon))
         file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
         layout.addWidget(file_button, 0, 0)
 
@@ -68,7 +67,7 @@ class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
         reload_button = gui.button(
             None, self, "Reload", callback=self.load_data, autoDefault=False)
         reload_button.setIcon(self.style().standardIcon(
-                QtGui.QStyle.SP_BrowserReload))
+                QStyle.SP_BrowserReload))
         reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
         layout.addWidget(reload_button, 0, 7)
 
@@ -78,14 +77,14 @@ class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
                                         sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_label = QtGui.QLabel()
+        self.sheet_label = QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_box.layout().addWidget(
-            self.sheet_label, QtCore.Qt.AlignLeft)
+            self.sheet_label, Qt.AlignLeft)
         self.sheet_box.layout().addWidget(
-            self.sheet_combo, QtCore.Qt.AlignVCenter)
+            self.sheet_combo, Qt.AlignVCenter)
         layout.addWidget(self.sheet_box, 2, 1)
         self.sheet_box.hide()
 
@@ -181,15 +180,18 @@ class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
         if in_demos:
             start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
-                QtGui.QMessageBox.information(
+                QMessageBox.information(
                     None, "File",
                     "Cannot find the directory with documentation data sets")
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filenames = QtGui.QFileDialog.getOpenFileNames(
+        filenames = QFileDialog.getOpenFileNames(
             self, 'Open Multiple Data Files', start_file, self.dlg_formats)
+
+        if isinstance(filenames, tuple):  # has a file description
+            filenames = filenames[0]
 
         if not filenames:
             return
@@ -266,7 +268,7 @@ class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
 
 if __name__ == "__main__":
     import sys
-    a = QtGui.QApplication(sys.argv)
+    a = QApplication(sys.argv)
     ow = OWFiles()
     ow.show()
     a.exec_()

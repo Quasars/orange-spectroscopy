@@ -536,22 +536,22 @@ class SavitzkyGolayFilteringEditor(BaseEditor):
 
         form = QFormLayout()
 
-        self.wspin = QDoubleSpinBox(
+        self.wspin = QSpinBox(
             minimum=3, maximum=100, singleStep=2,
             value=self.window)
-        self.wspin.valueChanged[float].connect(self.setW)
+        self.wspin.valueChanged[int].connect(self.setW)
         self.wspin.editingFinished.connect(self.edited)
 
-        self.pspin = QDoubleSpinBox(
+        self.pspin = QSpinBox(
             minimum=2, maximum=self.window, singleStep=1,
             value=self.polyorder)
-        self.pspin.valueChanged[float].connect(self.setP)
+        self.pspin.valueChanged[int].connect(self.setP)
         self.pspin.editingFinished.connect(self.edited)
 
-        self.dspin = QDoubleSpinBox(
+        self.dspin = QSpinBox(
             minimum=0, maximum=3, singleStep=1,
             value=self.deriv)
-        self.dspin.valueChanged[float].connect(self.setD)
+        self.dspin.valueChanged[int].connect(self.setD)
         self.dspin.editingFinished.connect(self.edited)
 
         form.addRow("Window", self.wspin)
@@ -590,6 +590,13 @@ class SavitzkyGolayFilteringEditor(BaseEditor):
         window = params.get("window", 5)
         polyorder = params.get("polyorder",2)
         deriv = params.get("deriv", 0)
+        # make window, polyorder, deriv valid, even if they were saved differently
+        window, polyorder, deriv = int(window), int(polyorder), int(deriv)
+        if window % 2 == 0:
+            window = window + 1
+        if polyorder >= window:
+            polyorder = window - 1
+        # FIXME notify changes
         return SavitzkyGolayFiltering(window=window, polyorder=polyorder, deriv=deriv)
 
 
@@ -1231,10 +1238,11 @@ class OWPreprocess(OWWidget):
         self.scroll_area.setWidget(self.flow_view)
         self.scroll_area.setWidgetResizable(True)
 
+        self.flow_view.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.scroll_area.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Expanding)
+
         self.curveplot = CurvePlot(self)
         self.curveplot.plot.vb.x_padding = 0.005  # so that lines on the edges are visible
-
-        self.scroll_area.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         self.topbox = gui.hBox(self)
         self.topbox.layout().addWidget(self.curveplot)
@@ -1489,10 +1497,7 @@ class OWPreprocess(OWWidget):
         # the 'instantiated' preprocessor list (to avoid the horizontal
         # scroll bar).
         sh = self.flow_view.minimumSizeHint()
-        scroll_width = self.scroll_area.verticalScrollBar().width()
-        self.scroll_area.setMinimumWidth(
-            min(max(sh.width() + scroll_width + 5, self.controlArea.width()),
-               520))
+        self.scroll_area.setMinimumWidth(max(sh.width() + 50, 200))
 
     def sizeHint(self):
         sh = super().sizeHint()
