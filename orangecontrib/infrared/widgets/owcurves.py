@@ -328,6 +328,7 @@ class SelectRegion(pg.LinearRegionItem):
 
 
 class CurvePlot(QWidget, OWComponent):
+    sample_seed = 314
     label_title = Setting("")
     label_xaxis = Setting("")
     label_yaxis = Setting("")
@@ -389,6 +390,11 @@ class CurvePlot(QWidget, OWComponent):
 
         actions = []
 
+        reset_curves = QAction(
+            "Reset display", self, shortcut=Qt.Key_R,
+            triggered=lambda x: self.reset_curves()
+        )
+        actions.append(reset_curves)
         zoom_in = QAction(
             "Zoom in", self, triggered=self.plot.vb.set_mode_zooming
         )
@@ -419,7 +425,7 @@ class CurvePlot(QWidget, OWComponent):
         actions.append(view_average)
 
         resample_curves = QAction(
-            "Resample curves", self, shortcut=Qt.Key_R,
+            "Resample curves", self, shortcut=Qt.Key_C,
             triggered=lambda x: self.resample_curves()
         )
         actions.append(resample_curves)
@@ -762,11 +768,13 @@ class CurvePlot(QWidget, OWComponent):
     def add_curves(self, x, ys, addc=True):
         """ Add multiple curves with the same x domain. """
         if len(ys) > MAX_INSTANCES_DRAWN:
-            self.sampled_indices = sorted(random.Random().sample(range(len(ys)), MAX_INSTANCES_DRAWN))
+            sample_selection = random.Random(self.sample_seed).sample(range(len(ys)), MAX_INSTANCES_DRAWN)
+            print(sample_selection)
+            self.sampled_indices = sorted(sample_selection)
             self.sampling = True
         else:
             self.sampled_indices = list(range(len(ys)))
-        random.Random().shuffle(self.sampled_indices)  # for sequential classes#
+        random.Random(self.sample_seed).shuffle(self.sampled_indices)  # for sequential classes#
         self.sampled_indices_inverse = {s: i for i, s in enumerate(self.sampled_indices)}
         ys = ys[self.sampled_indices]
         self.curves.append((x, ys))
@@ -827,15 +835,29 @@ class CurvePlot(QWidget, OWComponent):
     def show_individual(self):
         if not self.data:
             return
+        # if self.viewtype == AVERAGE:
+        #     print('coming from Average display state')
+        # elif self.viewtype == INDIVIDUAL:
+        #     print('coming from Individual display state')
         self.viewtype = INDIVIDUAL
         self.clear_graph()
         self.add_curves(self.data_x, self.data_ys)
         self.set_curve_pens()
         self.curves_cont.update()
 
+    def reset_curves(self):
+        if not self.data:
+            return
+        self.sample_seed = 314
+        if self.viewtype == INDIVIDUAL:
+            self.show_individual()
+        elif self.viewtype == AVERAGE:
+            self.show_average()
+
     def resample_curves(self):
         if not self.data:
             return
+        self.sample_seed = random.randint(0, 5958723)
         if self.viewtype == INDIVIDUAL:
             self.show_individual()
         elif self.viewtype == AVERAGE:
