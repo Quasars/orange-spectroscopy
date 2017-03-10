@@ -32,18 +32,16 @@ from orangecontrib.infrared.widgets.line_geometry import \
     distance_curves, intersect_curves_chunked
 from orangecontrib.infrared.widgets.gui import lineEditFloatOrNone
 
-
 SELECT_SQUARE = 123
 
-#view types
+# view types
 INDIVIDUAL = 0
 AVERAGE = 1
 
-#selections
+# selections
 SELECTNONE = 0
 SELECTONE = 1
 SELECTMANY = 2
-
 
 MAX_INSTANCES_DRAWN = 100
 NAN = float("nan")
@@ -72,7 +70,7 @@ class PlotCurvesItem(GraphicsObject):
 
     def add_curve(self, c):
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore") # NaN warnings are expected
+            warnings.simplefilter("ignore")  # NaN warnings are expected
             cb = c.boundingRect()
             # keep undefined elements NaN
             self.bounds[0] = np.nanmin([cb.left(), self.bounds[0]])
@@ -98,15 +96,15 @@ def closestindex(array, v, side="left"):
     elif fi == len(array):
         return len(array) - 1
     else:
-        return fi-1 if v - array[fi-1] < array[fi] - v else fi
+        return fi - 1 if v - array[fi - 1] < array[fi] - v else fi
 
 
 def searchsorted_cached(cache, arr, v, side="left"):
-    key = (id(arr),v,side)
+    key = (id(arr), v, side)
     if key not in cache:
         cache[key] = np.searchsorted(arr, v, side=side)
     return cache[key]
-        
+
 
 def distancetocurves(array, x, y, xpixel, ypixel, r=5, cache=None):
     # xpixel, ypixel are sizes of pixels
@@ -114,32 +112,31 @@ def distancetocurves(array, x, y, xpixel, ypixel, r=5, cache=None):
     # array - curves in both x and y
     # x,y position in curve coordinates
     if cache is not None and id(x) in cache:
-        xmin,xmax = cache[id(x)]
+        xmin, xmax = cache[id(x)]
     else:
-        xmin = closestindex(array[0], x-r*xpixel)
-        xmax = closestindex(array[0], x+r*xpixel, side="right")
-        if cache is not None: 
-            cache[id(x)] = xmin,xmax
-    xmin = max(0, xmin-1)
-    xp = array[0][xmin:xmax+2]
-    yp = array[1][:,xmin:xmax+2]
+        xmin = closestindex(array[0], x - r * xpixel)
+        xmax = closestindex(array[0], x + r * xpixel, side="right")
+        if cache is not None:
+            cache[id(x)] = xmin, xmax
+    xmin = max(0, xmin - 1)
+    xp = array[0][xmin:xmax + 2]
+    yp = array[1][:, xmin:xmax + 2]
 
-    #convert to distances in pixels
-    xp = ((xp-x)/xpixel)
-    yp = ((yp-y)/ypixel)
+    # convert to distances in pixels
+    xp = ((xp - x) / xpixel)
+    yp = ((yp - y) / ypixel)
 
-    distancepx = (xp**2+yp**2)**0.5
+    distancepx = (xp ** 2 + yp ** 2) ** 0.5
     mini = np.argmin(distancepx)
 
     # add edge point so that distance_curves works if there is just one point
     xp = np.hstack((xp, float("nan")))
-    yp = np.hstack((yp, np.zeros((yp.shape[0], 1))*float("nan")))
+    yp = np.hstack((yp, np.zeros((yp.shape[0], 1)) * float("nan")))
     dc = distance_curves(xp, yp, (0, 0))
     return dc
 
 
 class InteractiveViewBox(ViewBox):
-
     def __init__(self, graph):
         ViewBox.__init__(self, enableMenu=False)
         self.graph = graph
@@ -163,7 +160,6 @@ class InteractiveViewBox(ViewBox):
         self.selection_square.setZValue(1e9)
         self.selection_square.hide()
         self.addItem(self.selection_square, ignoreBounds=True)
-
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
@@ -189,7 +185,7 @@ class InteractiveViewBox(ViewBox):
     def suggestPadding(self, axis):
         return 0.
 
-    def mouseMovedEvent(self, ev): #not a Qt event!
+    def mouseMovedEvent(self, ev):  # not a Qt event!
         if self.action == ZOOMING and self.zoomstartpoint:
             pos = self.mapFromView(self.mapSceneToView(ev))
             self.updateScaleBox(self.zoomstartpoint, pos)
@@ -214,7 +210,7 @@ class InteractiveViewBox(ViewBox):
         self.selection_square.show()
 
     def wheelEvent(self, ev, axis=None):
-        ev.accept() #ignore wheel zoom
+        ev.accept()  # ignore wheel zoom
 
     def mouseClickEvent(self, ev):
         if ev.button() == Qt.RightButton and \
@@ -321,7 +317,6 @@ class InteractiveViewBox(ViewBox):
 
 
 class SelectRegion(pg.LinearRegionItem):
-
     def __init__(self, *args, **kwargs):
         pg.LinearRegionItem.__init__(self, *args, **kwargs)
         for l in self.lines:
@@ -333,7 +328,7 @@ class SelectRegion(pg.LinearRegionItem):
 
 
 class CurvePlot(QWidget, OWComponent):
-
+    sample_seed = 314
     label_title = Setting("")
     label_xaxis = Setting("")
     label_yaxis = Setting("")
@@ -381,9 +376,9 @@ class CurvePlot(QWidget, OWComponent):
 
         self.clear_graph()
 
-        #interface settings
-        self.location = True #show current position
-        self.markclosest = True #mark
+        # interface settings
+        self.location = True  # show current position
+        self.markclosest = True  # mark
         self.crosshair = True
         self.crosshair_hidden = True
         self.viewtype = INDIVIDUAL
@@ -395,6 +390,11 @@ class CurvePlot(QWidget, OWComponent):
 
         actions = []
 
+        reset_curves = QAction(
+            "Reset display", self, shortcut=Qt.Key_R,
+            triggered=lambda x: self.reset_curves()
+        )
+        actions.append(reset_curves)
         zoom_in = QAction(
             "Zoom in", self, triggered=self.plot.vb.set_mode_zooming
         )
@@ -423,6 +423,13 @@ class CurvePlot(QWidget, OWComponent):
             triggered=lambda x: self.show_average()
         )
         actions.append(view_average)
+
+        resample_curves = QAction(
+            "Resample curves", self, shortcut=Qt.Key_C,
+            triggered=lambda x: self.resample_curves()
+        )
+        actions.append(resample_curves)
+
         self.show_grid = False
         self.show_grid_a = QAction(
             "Show grid", self, shortcut=Qt.Key_G, checkable=True,
@@ -574,7 +581,7 @@ class CurvePlot(QWidget, OWComponent):
         self.resized()
         # force redraw of axes (to avoid a pyqtgraph bug)
         vr = self.plot.vb.viewRect()
-        self.plot.vb.setRange(xRange=(0,1), yRange=(0,1))
+        self.plot.vb.setRange(xRange=(0, 1), yRange=(0, 1))
         self.plot.vb.setRange(rect=vr)
         self.invertX_menu.setChecked(self.invertX)
 
@@ -698,12 +705,13 @@ class CurvePlot(QWidget, OWComponent):
                 labels = fs % (posx, posy)
             self.label.setText(labels, color=(0, 0, 0))
 
-            if self.curves and len(self.curves[0][0]): #need non-zero x axis!
+            if self.curves and len(self.curves[0][0]):  # need non-zero x axis!
                 cache = {}
                 bd = None
                 if self.markclosest and self.plot.vb.action != ZOOMING:
                     xpixel, ypixel = self.plot.vb.viewPixelSize()
-                    distances = distancetocurves(self.curves[0], posx, posy, xpixel, ypixel, r=self.MOUSE_RADIUS, cache=cache)
+                    distances = distancetocurves(self.curves[0], posx, posy, xpixel, ypixel, r=self.MOUSE_RADIUS,
+                                                 cache=cache)
                     try:
                         bd = np.nanargmin(distances)
                         bd = (bd, distances[bd])
@@ -716,7 +724,7 @@ class CurvePlot(QWidget, OWComponent):
                     self.highlighted = bd[0]
                     x = self.curves[0][0]
                     y = self.curves[0][1][self.highlighted]
-                    self.highlighted_curve.setData(x=x,y=y)
+                    self.highlighted_curve.setData(x=x, y=y)
                     self.highlighted_curve.show()
 
             self.vLine.setPos(posx)
@@ -760,11 +768,13 @@ class CurvePlot(QWidget, OWComponent):
     def add_curves(self, x, ys, addc=True):
         """ Add multiple curves with the same x domain. """
         if len(ys) > MAX_INSTANCES_DRAWN:
-            self.sampled_indices = sorted(random.Random(0).sample(range(len(ys)), MAX_INSTANCES_DRAWN))
+            sample_selection = random.Random(self.sample_seed).sample(range(len(ys)), MAX_INSTANCES_DRAWN)
+            print(sample_selection)
+            self.sampled_indices = sorted(sample_selection)
             self.sampling = True
         else:
             self.sampled_indices = list(range(len(ys)))
-        random.Random(0).shuffle(self.sampled_indices) #for sequential classes#
+        random.Random(self.sample_seed).shuffle(self.sampled_indices)  # for sequential classes#
         self.sampled_indices_inverse = {s: i for i, s in enumerate(self.sampled_indices)}
         ys = self.data.X[self.sampled_indices][:, self.data_xsind]
         self.curves.append((x, ys))
@@ -825,11 +835,33 @@ class CurvePlot(QWidget, OWComponent):
     def show_individual(self):
         if not self.data:
             return
+        # if self.viewtype == AVERAGE:
+        #     print('coming from Average display state')
+        # elif self.viewtype == INDIVIDUAL:
+        #     print('coming from Individual display state')
         self.viewtype = INDIVIDUAL
         self.clear_graph()
         self.add_curves(self.data_x, self.data.X)
         self.set_curve_pens()
         self.curves_cont.update()
+
+    def reset_curves(self):
+        if not self.data:
+            return
+        self.sample_seed = 314
+        if self.viewtype == INDIVIDUAL:
+            self.show_individual()
+        elif self.viewtype == AVERAGE:
+            self.show_average()
+
+    def resample_curves(self):
+        if not self.data:
+            return
+        self.sample_seed = random.randint(0, 5958723)
+        if self.viewtype == INDIVIDUAL:
+            self.show_individual()
+        elif self.viewtype == AVERAGE:
+            self.show_average()
 
     def rescale_current_view_y(self):
         if self.curves_plotted:
@@ -839,10 +871,10 @@ class CurvePlot(QWidget, OWComponent):
             bright = qrect.right()
 
             ymax = max(np.max(ys[:, searchsorted_cached(cache, x, bleft):
-                                 searchsorted_cached(cache, x, bright, side="right")])
+            searchsorted_cached(cache, x, bright, side="right")])
                        for x, ys in self.curves_plotted)
             ymin = min(np.min(ys[:, searchsorted_cached(cache, x, bleft):
-                                 searchsorted_cached(cache, x, bright, side="right")])
+            searchsorted_cached(cache, x, bright, side="right")])
                        for x, ys in self.curves_plotted)
 
             self.plot.vb.setYRange(ymin, ymax, padding=0.0)
@@ -1003,7 +1035,7 @@ class OWCurves(OWWidget):
             self.Information.showing_sample(len(self.curveplot.sampled_indices), len(data))
         self.openContext(data)
         self.curveplot.set_pen_colors()
-        self.curveplot.set_curve_pens() #mark the selection
+        self.curveplot.set_curve_pens()  # mark the selection
         self.selection_changed()
 
     def set_subset(self, data):
@@ -1024,15 +1056,17 @@ def main(argv=None):
     w = OWCurves()
     w.show()
     data = Orange.data.Table("collagen.csv")
-    #data = Orange.data.Table("/home/marko/dust/20160831_06_Paris_25x_highmag.hdr")
+    # data = Orange.data.Table("/home/marko/dust/20160831_06_Paris_25x_highmag.hdr")
     w.set_data(data)
     w.set_subset(data[:40])
-    #w.set_subset(None)
+    # w.set_subset(None)
     w.handleNewSignals()
     region = SelectRegion()
+
     def update():
         minX, maxX = region.getRegion()
         print(minX, maxX)
+
     region.sigRegionChanged.connect(update)
     w.curveplot.add_marking(region)
     rval = app.exec_()
@@ -1044,6 +1078,6 @@ def main(argv=None):
     gc.collect()
     return rval
 
+
 if __name__ == "__main__":
     sys.exit(main())
-
