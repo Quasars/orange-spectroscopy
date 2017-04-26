@@ -7,7 +7,7 @@ from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.preprocess import Absorbance, Transmittance, \
     Integrate, Interpolate, Cut, SavitzkyGolayFiltering, \
     GaussianSmoothing, PCADenoising, RubberbandBaseline, \
-    Normalize
+    Normalize, Average
 
 # Preprocessors that work per sample and should return the same
 # result for a sample independent of the other samples
@@ -28,6 +28,7 @@ PREPROCESSORS_INDEPENDENT_SAMPLES = [
 # internal parameters.
 PREPROCESSORS_GROUPS_OF_SAMPLES = [
     PCADenoising(components=2),
+    Average(),
 ]
 
 PREPROCESSORS = PREPROCESSORS_INDEPENDENT_SAMPLES + PREPROCESSORS_GROUPS_OF_SAMPLES
@@ -285,7 +286,7 @@ class TestCommon(unittest.TestCase):
         for proc in PREPROCESSORS:
             comparison = np.testing.assert_equal
             # TODO find out why there are small differences for certain preprocessors
-            if isinstance(proc, (RubberbandBaseline, Normalize, PCADenoising)):
+            if isinstance(proc, (RubberbandBaseline, Normalize, PCADenoising, Average)):
                 comparison = lambda x,y: np.testing.assert_almost_equal(x, y, decimal=5)
             pdata = proc(data)
             X = pdata.X[:, np.argsort(getx(pdata))]
@@ -315,3 +316,28 @@ class TestPCADenoising(unittest.TestCase):
         d1 = proc(data[:0])
         newdata = Orange.data.Table(d1.domain, data)
         np.testing.assert_equal(newdata.X, np.nan)
+
+class TestAverage(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.collagen = Orange.data.Table("collagen")
+
+    def test_average_all(self):
+        data = Orange.data.Table([[2, 1, 2, 2, 3], [1, 2, 1, 1, 0]])
+        p = Average(avar=None, std=False)(data)
+        np.testing.assert_equal(p.X, [[1.5, 1.5, 1.5, 1.5, 1.5]])
+
+    def test_std_all(self):
+        data = Orange.data.Table([[2, 1, 2, 2, 3], [1, 2, 1, 1, 0]])
+        p = Average(avar=None, std=True)(data)
+        np.testing.assert_equal(p.X, [[1.5, 1.5, 1.5, 1.5, 1.5],
+                                      [0.5, 0.5, 0.5, 0.5, 1.5]])
+
+    def test_var_average(self):
+        data = self.collagen
+        var = data.domain.class_vars[0]
+        p = Average(avar=var, std=False)(data)
+        self.assertEqual(p.X.shape[0], len(var.values))
+        p = Average(avar=var, std=True)(data)
+        self.assertEqual(p.X.shape[0], 2 * len(var.values))
