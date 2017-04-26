@@ -760,17 +760,17 @@ class Average(Preprocess):
             avar_vals = []
             dsplit = _split_by_value(data, self.avar)
             for v, indices in dsplit.items():
-                avgd.append(data.X[indices].mean(axis=0))
+                avgd.append(np.nanmean(data.X[indices], axis=0))
                 avar_vals.append(v)
                 if self.std:
-                    avgd.append(data.X[indices].std(axis=0))
+                    avgd.append(np.nanstd(data.X[indices], axis=0))
                     avar_vals.append(v + " (Std Dev)")
             avar_vals = np.vstack(avar_vals)
             avar_meta = [Orange.data.StringVariable.make(name=self.avar.name)]
         else:
-            avgd.append(data.X.mean(axis=0))
+            avgd.append(np.nanmean(data.X, axis=0))
             if self.std:
-                avgd.append(data.X.std(axis=0))
+                avgd.append(np.nanstd(data.X, axis=0))
 
         domain = Orange.data.Domain(data.domain.attributes, metas=avar_meta)
         return Orange.data.Table(domain, np.vstack(avgd), metas=avar_vals)
