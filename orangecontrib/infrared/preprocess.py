@@ -756,7 +756,7 @@ class Average(Preprocess):
         avar_vals = None
         avar_meta = None
         avgd = []
-        if self.avar:
+        if self.avar in data.domain:
             avar_vals = []
             dsplit = _split_by_value(data, self.avar)
             for v, indices in dsplit.items():

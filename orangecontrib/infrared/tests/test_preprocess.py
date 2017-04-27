@@ -341,3 +341,10 @@ class TestAverage(unittest.TestCase):
         self.assertEqual(p.X.shape[0], len(var.values))
         p = Average(avar=var, std=True)(data)
         self.assertEqual(p.X.shape[0], 2 * len(var.values))
+
+    def test_novar(self):
+        data = self.collagen
+        var = Orange.data.DiscreteVariable("OldVar")
+        p = Average(avar=var, std=False)(data)
+        q = Average(avar=None, std=False)(data)
+        np.testing.assert_equal(p.X, q.X)
