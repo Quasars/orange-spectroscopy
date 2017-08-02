@@ -1,5 +1,6 @@
 import random
 import sys
+from itertools import chain
 
 import Orange.data
 import Orange.widgets.data.owpreprocess as owpreprocess
@@ -21,7 +22,7 @@ from AnyQt.QtWidgets import (
     QWidget, QButtonGroup, QRadioButton, QDoubleSpinBox, QComboBox, QSpinBox,
     QListView, QVBoxLayout, QHBoxLayout, QFormLayout, QSizePolicy, QStyle,
     QStylePainter, QStyleOptionFrame, QApplication, QPushButton, QLabel,
-    QMenu, QApplication, QAction, QDockWidget, QScrollArea
+    QMenu, QApplication, QAction, QDockWidget, QScrollArea, QCheckBox
 )
 from AnyQt.QtGui import (
     QCursor, QIcon, QPainter, QPixmap, QStandardItemModel, QStandardItem,
@@ -31,7 +32,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering, \
-    RubberbandBaseline, Normalize, Integrate, Absorbance, Transmittance
+    RubberbandBaseline, Normalize, Integrate, Absorbance, Transmittance, Average
 from orangecontrib.infrared.widgets.owcurves import CurvePlot
 
 
@@ -1123,6 +1124,60 @@ class AbsToTransEditor(BaseEditor):
     def createinstance(params):
         return Transmittance(ref=None)
 
+class AverageEditor(BaseEditor):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.attrs = ["(All)"]
+
+        model = VariableListModel()
+        model.wrap(self.attrs)
+        attrform = QFormLayout()
+        self.attrcb = QComboBox()
+        self.attrcb.setModel(model)
+        attrform.addRow("Average:", self.attrcb)
+
+        self.stdcheck = QCheckBox()
+        attrform.addRow("Standard Deviation:", self.stdcheck)
+
+        self.setLayout(attrform)
+
+        self.attrcb.activated.connect(self.edited)
+        self.stdcheck.stateChanged.connect(self.edited)
+
+        self.user_changed = False
+
+    def setParameters(self, params):
+        if params:
+            self.user_changed = True
+        avar = params.get("avar", self.attrs[0])
+        std = params.get("std", False)
+        if self.attrs[self.attrcb.currentIndex()] != avar:
+            try:
+                self.attrcb.setCurrentIndex(self.attrs.index(avar))
+            except ValueError:
+                self.attrcb.setCurrentIndex(0)
+        if self.stdcheck.isChecked() != std:
+            self.stdcheck.setChecked(std)
+
+    def parameters(self):
+        return {"avar": self.attrs[self.attrcb.currentIndex()],
+                "std": self.stdcheck.isChecked()}
+
+    @staticmethod
+    def createinstance(params):
+        avar = params.get("avar", "(All)")
+        if avar == "(All)":
+            avar = None
+        std = params.get("std", False)
+        return Average(avar, std)
+
+    def set_preview_data(self, data):
+        self.attrs[:] = ["(All)"] + [
+            var for var in chain(data.domain, data.domain.metas)
+                if isinstance(var, str) or var.is_discrete]
+
 PREPROCESSORS = [
     PreprocessAction(
         "Cut (keep)", "orangecontrib.infrared.cut", "Cut",
@@ -1183,6 +1238,12 @@ PREPROCESSORS = [
         Description("Absorbance to Transmittance",
                     icon_path("Discretize.svg")),
         AbsToTransEditor
+    ),
+    PreprocessAction(
+        "Average", "orangecontrib.infrared.average", "Average",
+        Description("Average",
+                    icon_path("Discretize.svg")),
+        AverageEditor
     ),
     ]
 

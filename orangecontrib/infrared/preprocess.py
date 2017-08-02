@@ -782,3 +782,58 @@ class Transmittance(Preprocess):
         domain = Orange.data.Domain(
                     newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
+
+
+def _split_by_value(data, avar):
+    # from owcurves.CurvePlot._split_by_color_value()
+    rd = {}
+    if isinstance(avar, str):
+        rd[None] = np.full((len(data.X),), True, dtype=bool)
+    else:
+        cvd = Orange.data.Table(Orange.data.Domain([avar]), data)
+        for v in range(len(avar.values)):
+            v1 = np.in1d(cvd.X, v)
+            if np.any(v1):
+                rd[avar.values[v]] = v1
+        nanind = np.isnan(cvd.X)
+        if np.any(nanind):
+            rd[None] = nanind
+    return rd
+
+
+class Average(Preprocess):
+    """
+    Calculate mean and (optionally) standard deviation of groups of spectra
+
+    Parameters
+    ----------
+    avar : Variable to group averages
+    std : include standard deviation
+    """
+
+    def __init__(self, avar=None, std=False):
+        self.avar = avar
+        self.std = std
+
+    def __call__(self, data):
+        avar_vals = None
+        avar_meta = None
+        avgd = []
+        if self.avar in data.domain:
+            avar_vals = []
+            dsplit = _split_by_value(data, self.avar)
+            for v, indices in dsplit.items():
+                avgd.append(np.nanmean(data.X[indices], axis=0))
+                avar_vals.append(v)
+                if self.std:
+                    avgd.append(np.nanstd(data.X[indices], axis=0))
+                    avar_vals.append(v + " (Std Dev)")
+            avar_vals = np.vstack(avar_vals)
+            avar_meta = [Orange.data.StringVariable.make(name=self.avar.name)]
+        else:
+            avgd.append(np.nanmean(data.X, axis=0))
+            if self.std:
+                avgd.append(np.nanstd(data.X, axis=0))
+
+        domain = Orange.data.Domain(data.domain.attributes, metas=avar_meta)
+        return Orange.data.Table(domain, np.vstack(avgd), metas=avar_vals)
