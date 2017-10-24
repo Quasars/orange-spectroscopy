@@ -1,6 +1,6 @@
 import Orange
 from Orange.widgets.tests.base import WidgetTest
-from orangecontrib.infrared.widgets.owfft import OWFFT
+from orangecontrib.infrared.widgets.owifg_to_sp import OWFFT
 
 
 class TestOWFFT(WidgetTest):

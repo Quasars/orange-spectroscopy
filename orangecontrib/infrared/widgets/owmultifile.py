@@ -35,7 +35,7 @@ def domain_union(A, B):
 
 
 class OWFiles(Orange.widgets.data.owfile.OWFile, RecentPathsWidgetMixin):
-    name = "Files"
+    name = "Multifile"
     id = "orangecontrib.infrared.widgets.files"
     icon = "icons/files.svg"
     description = "Read data from input files " \

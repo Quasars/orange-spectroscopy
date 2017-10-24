@@ -17,10 +17,10 @@ from Orange.widgets import gui, settings
 from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.preprocess import Integrate
 
-from orangecontrib.infrared.widgets.owcurves import SELECTONE
-from orangecontrib.infrared.widgets.owhyper import refresh_integral_markings
-from orangecontrib.infrared.widgets.owpreproc import SetXDoubleSpinBox, MovableVlineWD
-import orangecontrib.infrared.widgets.owpreproc
+from orangecontrib.infrared.widgets.owspectra import SELECTONE
+from orangecontrib.infrared.widgets.owhyperspectra import refresh_integral_markings
+from orangecontrib.infrared.widgets.owpreprocess_spectra import SetXDoubleSpinBox, MovableVlineWD
+import orangecontrib.infrared.widgets.owpreprocess_spectra
 
 
 class IntegrateOneEditor(BaseEditor):
@@ -162,7 +162,7 @@ PREPROCESSORS = [
 ]
 
 
-class OWIntegrate(orangecontrib.infrared.widgets.owpreproc.OWPreprocess):
+class OWIntegrate(orangecontrib.infrared.widgets.owpreprocess_spectra.OWPreprocess):
     name = "Integrate Spectra"
     id = "orangecontrib.infrared.widgets.integrate"
     description = "Integrate spectra in various ways."
