@@ -35,7 +35,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering, \
     RubberbandBaseline, Normalize, Integrate, Absorbance, Transmittance
-from orangecontrib.infrared.widgets.owcurves import CurvePlot
+from orangecontrib.infrared.widgets.owspectra import CurvePlot
 
 from Orange.widgets.utils.colorpalette import DefaultColorBrewerPalette
 

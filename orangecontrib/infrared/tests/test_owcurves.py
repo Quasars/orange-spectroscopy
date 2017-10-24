@@ -3,7 +3,7 @@ import Orange
 import pyqtgraph as pg
 from Orange.widgets.tests.base import WidgetTest
 from Orange.data import Table, Domain, ContinuousVariable
-from orangecontrib.infrared.widgets.owcurves import OWCurves, MAX_INSTANCES_DRAWN, \
+from orangecontrib.infrared.widgets.owspectra import OWCurves, MAX_INSTANCES_DRAWN, \
     PlotCurvesItem
 from orangecontrib.infrared.data import getx
 from orangecontrib.infrared.widgets.line_geometry import intersect_curves, \

@@ -29,11 +29,11 @@ from orangecontrib.infrared.data import getx
 
 from orangecontrib.infrared.preprocess import Integrate
 
-from orangecontrib.infrared.widgets.owcurves import InteractiveViewBox, \
+from orangecontrib.infrared.widgets.owspectra import InteractiveViewBox, \
     MenuFocus, CurvePlot, SELECTONE, SELECTMANY, INDIVIDUAL, AVERAGE, \
     HelpEventDelegate
 
-from orangecontrib.infrared.widgets.owpreproc import MovableVlineWD
+from orangecontrib.infrared.widgets.owpreprocess_spectra import MovableVlineWD
 from orangecontrib.infrared.widgets.line_geometry import in_polygon
 
 from Orange.widgets.utils.annotated_data import create_annotated_table

@@ -1,6 +1,6 @@
 import Orange
 from Orange.widgets.tests.base import WidgetTest
-from orangecontrib.infrared.widgets.owintegrate import OWIntegrate, PREPROCESSORS
+from orangecontrib.infrared.widgets.owintegrate_spectra import OWIntegrate, PREPROCESSORS
 
 
 class TestOWPreprocess(WidgetTest):

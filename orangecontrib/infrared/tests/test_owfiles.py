@@ -3,7 +3,7 @@ import unittest
 import AnyQt
 
 from Orange.widgets.tests.base import WidgetTest
-from orangecontrib.infrared.widgets.owfiles import OWFiles
+from orangecontrib.infrared.widgets.owmultifile import OWFiles
 from Orange.data import FileFormat, dataset_dirs, Table
 
 
