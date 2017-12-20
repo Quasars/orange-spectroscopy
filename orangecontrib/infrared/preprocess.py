@@ -283,6 +283,56 @@ class RubberbandBaseline(Preprocess):
         return data.from_table(domain, data)
 
 
+class LinearBaselineFeature(SelectColumn):
+    pass
+
+
+class _LinearBaselineCommon:
+
+    def __init__(self, peak_dir, sub, domain):
+        self.peak_dir = peak_dir
+        self.sub = sub
+        self.domain = domain
+
+    def __call__(self, data):
+        if data.domain != self.domain:
+            data = data.from_table(self.domain, data)
+        xs, xsind, mon, y = _transform_to_sorted_features(data)
+        x = xs[xsind]
+
+        if np.any(np.isnan(y)):
+            y, _ = _nan_extend_edges_and_interpolate(x, y)
+
+        if self.sub == 0:
+            newd = y - _edge_baseline(x, y)
+        else:
+            newd = _edge_baseline(x, y)
+        return _transform_back_to_features(xsind, mon, newd)
+
+
+class LinearBaseline(Preprocess):
+
+    PeakPositive, PeakNegative = 0, 1
+    Subtract, View = 0, 1
+
+    def __init__(self, peak_dir=PeakPositive, sub=Subtract):
+        """
+        :param peak_dir: PeakPositive or PeakNegative
+        :param sub: Subtract (baseline is subtracted) or View
+        """
+        self.peak_dir = peak_dir
+        self.sub = sub
+
+    def __call__(self, data):
+        common = _LinearBaselineCommon(self.peak_dir, self.sub,
+                                           data.domain)
+        atts = [a.copy(compute_value=LinearBaselineFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+
 class NormalizeFeature(SelectColumn):
     pass
 
