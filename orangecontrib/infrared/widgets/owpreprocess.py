@@ -37,6 +37,7 @@ from orangecontrib.infrared.data import getx
 # baseline correction imports
 from orangecontrib.infrared.preprocess import LinearBaseline, RubberbandBaseline
 
+from orangecontrib.infrared.preprocess import CurveShift
 from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering, \
      Normalize, Integrate, Absorbance, Transmittance
 from orangecontrib.infrared.widgets.owspectra import CurvePlot
@@ -631,6 +632,41 @@ class RubberbandBaselineEditor(BaseEditor):
             return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
 
 
+class CurveShiftEditor(BaseEditor):
+    """
+    Apply a shift to the Y values of the whole dataset.
+    """
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        form = QFormLayout()
+
+        self.curveshiftle = QComboBox()
+
+        form.addRow("Shift amount", self.curveshiftle)
+
+        self.layout().addLayout(form)
+
+        self.curveshiftle.currentIndexChanged.connect(self.changed)
+        self.curveshiftle.activated.connect(self.edited)
+
+    def setParameters(self, params):
+        # baseline_type = params.get("baseline_type", 0)
+        # self.baselinecb.setCurrentIndex(baseline_type)
+        pass
+
+    def parameters(self):
+        pass
+        # return {"sub": self.subcb.currentIndex()}
+
+    @staticmethod
+    def createinstance(params):
+        # sub = params.get("sub", 0)
+
+        # return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
+        pass
 
 class NormalizeEditor(BaseEditor):
     """
@@ -1131,12 +1167,6 @@ PREPROCESSORS = [
         icon_path("Discretize.svg")),
         RubberbandBaselineEditor
     ),
-    # PreprocessAction(
-    #     "Rubberband Baseline Subtraction", "orangecontrib.infrared.rubberband", "Baseline Subtraction",
-    #     Description("Rubberband Baseline Subtraction (convex hull)",
-    #     icon_path("Discretize.svg")),
-    #     RubberbandBaselineEditor
-    # ),
     PreprocessAction(
         "Normalize Spectra", "orangecontrib.infrared.normalize", "Normalize Spectra",
         Description("Normalize Spectra",
@@ -1166,6 +1196,12 @@ PREPROCESSORS = [
         Description("Absorbance to Transmittance",
                     icon_path("Discretize.svg")),
         AbsToTransEditor
+    ),
+    PreprocessAction(
+        "Shift Spectra", "orangecontrib.infrared.curveshift", "Shift Spectra", ### what is this?
+        Description("Shift Spectra",
+                    icon_path("Discretize.svg")),
+        CurveShiftEditor
     ),
     ]
 

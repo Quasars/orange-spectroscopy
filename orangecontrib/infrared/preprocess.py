@@ -334,6 +334,51 @@ class LinearBaseline(Preprocess):
         return data.from_table(domain, data)
 
 
+class CurveShiftFeature(SelectColumn):
+    pass
+
+
+class _CurveShiftCommon:
+
+    def __init__(self, curve_shift):
+        pass
+
+    def __call__(self, data):
+        if data.domain != self.domain:
+            data = data.from_table(self.domain, data)
+        # xs, xsind, mon, y = _transform_to_sorted_features(data)
+        # x = xs[xsind]
+        #
+        # if np.any(np.isnan(y)):
+        #     y, _ = _nan_extend_edges_and_interpolate(x, y)
+        #
+        # if self.sub == 0:
+        #     newd = y - _edge_baseline(x, y)
+        # else:
+        #     newd = _edge_baseline(x, y)
+        #
+        # return _transform_back_to_features(xsind, mon, newd)
+        pass
+
+class CurveShift(Preprocess):
+
+    CurveShiftAmount = 0
+
+    def __init__(self, curve_shift=CurveShiftAmount):
+        """
+        :param peak_dir: CurveShiftAmount
+        """
+        self.curve_shift = curve_shift
+
+    def __call__(self, data):
+        common = _CurveShiftCommon(self.curve_shift, data.domain)
+        atts = [a.copy(compute_value=CurveShiftFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+
 class NormalizeFeature(SelectColumn):
     pass
 
