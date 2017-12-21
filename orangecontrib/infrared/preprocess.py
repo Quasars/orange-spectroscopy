@@ -307,6 +307,7 @@ class _LinearBaselineCommon:
             newd = y - _edge_baseline(x, y)
         else:
             newd = _edge_baseline(x, y)
+
         return _transform_back_to_features(xsind, mon, newd)
 
 

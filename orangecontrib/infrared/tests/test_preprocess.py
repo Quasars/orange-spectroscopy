@@ -270,6 +270,18 @@ class TestRubberbandBaseline(unittest.TestCase):
         np.testing.assert_equal(i.X, [[0, 0, -0.5, 0]])
 
 
+class TestLinearBaseline(unittest.TestCase):
+
+    def test_whole(self):
+        data = Orange.data.Table([[1, 5, 1]])
+        i = LinearBaseline()(data)
+        np.testing.assert_equal(i.X, [[0, 4, 0]])
+
+        data = Orange.data.Table([[4, 1, 2, 4]])
+        i = LinearBaseline(peak_dir=LinearBaseline.PeakNegative)(data)
+        np.testing.assert_equal(i.X, [[0, -3, -2, 0]])
+
+
 class TestNormalize(unittest.TestCase):
 
     def test_vector_norm(self):
