@@ -33,18 +33,15 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangecontrib.infrared.data import getx
-
-# baseline correction imports
-from orangecontrib.infrared.preprocess import LinearBaseline, RubberbandBaseline
-
-from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering, \
-     Normalize, Integrate, Absorbance, Transmittance
+from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, \
+    SavitzkyGolayFiltering, RubberbandBaseline, Normalize, Integrate
+from orangecontrib.infrared.preprocess import Transformer
 from orangecontrib.infrared.widgets.owspectra import CurvePlot
 
 from Orange.widgets.utils.colorpalette import DefaultColorBrewerPalette
 
 
-PREVIEW_COLORS = [QColor(*a).name() for a in DefaultColorBrewerPalette[8]]
+PREVIEW_COLORS = [ QColor(*a).name() for a in DefaultColorBrewerPalette[8]]
 
 
 class ViewController(Controller):
@@ -582,54 +579,35 @@ class RubberbandBaselineEditor(BaseEditor):
 
         form = QFormLayout()
 
-        self.baselinecb = QComboBox()
-        self.baselinecb.addItems(["Linear", "Rubber band"])
-
         self.peakcb = QComboBox()
         self.peakcb.addItems(["Positive", "Negative"])
 
         self.subcb = QComboBox()
         self.subcb.addItems(["Subtract", "Calculate"])
 
-        form.addRow("Baseline Type", self.baselinecb)
         form.addRow("Peak Direction", self.peakcb)
         form.addRow("Background Action", self.subcb)
-
         self.layout().addLayout(form)
-
-        self.baselinecb.currentIndexChanged.connect(self.changed)
-        self.baselinecb.activated.connect(self.edited)
         self.peakcb.currentIndexChanged.connect(self.changed)
         self.peakcb.activated.connect(self.edited)
         self.subcb.currentIndexChanged.connect(self.changed)
         self.subcb.activated.connect(self.edited)
 
     def setParameters(self, params):
-        baseline_type = params.get("baseline_type", 0)
         peak_dir = params.get("peak_dir", 0)
         sub = params.get("sub", 0)
-        self.baselinecb.setCurrentIndex(baseline_type)
         self.peakcb.setCurrentIndex(peak_dir)
         self.subcb.setCurrentIndex(sub)
 
     def parameters(self):
-        return {"baseline_type": self.baselinecb.currentIndex(),
-                "peak_dir": self.peakcb.currentIndex(),
+        return {"peak_dir": self.peakcb.currentIndex(),
                 "sub": self.subcb.currentIndex()}
 
     @staticmethod
     def createinstance(params):
-        baseline_type = params.get("baseline_type", 0)
         peak_dir = params.get("peak_dir", 0)
         sub = params.get("sub", 0)
-
-        if baseline_type == 0:
-            return LinearBaseline(peak_dir=peak_dir, sub=sub)
-        elif baseline_type == 1:
-            return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
-        elif baseline_type == 2: #other type of baseline - need to be implemented
-            return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
-
+        return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
 
 
 class NormalizeEditor(BaseEditor):
@@ -1076,29 +1054,51 @@ class PCADenoisingEditor(BaseEditor):
         components = params.get("components", 5)
         return PCADenoising(components=components)
 
-class TransToAbsEditor(BaseEditor):
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+SP_TYPES = ["Absorbance",
+            "Transmittance"]
+
+
+class TransformerEditor(BaseEditor):
+
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        form = QFormLayout()
+
+        self.fromcb = QComboBox()
+        self.fromcb.addItems(SP_TYPES)
+
+        self.tocb = QComboBox()
+        self.tocb.addItems(SP_TYPES)
+
+        form.addRow("Original", self.fromcb)
+        form.addRow("Transformed", self.tocb)
+        self.layout().addLayout(form)
+
+        self.fromcb.currentIndexChanged.connect(self.changed)
+        self.fromcb.activated.connect(self.edited)
+        self.tocb.currentIndexChanged.connect(self.changed)
+        self.tocb.activated.connect(self.edited)
 
     def setParameters(self, params):
-        pass
+        from_type = params.get("from_type", 0)
+        to_type = params.get("to_type", 1)
+        self.fromcb.setCurrentIndex(from_type)
+        self.tocb.setCurrentIndex(to_type)
+
+    def parameters(self):
+        return {"from_type": self.fromcb.currentIndex(),
+                "to_type": self.tocb.currentIndex()}
 
     @staticmethod
     def createinstance(params):
-        return Absorbance(ref=None)
+        from_type = params.get("from_type", 0)
+        to_type = params.get("to_type", 1)
+        return Transformer(from_type=from_type, to_type=to_type)
 
-class AbsToTransEditor(BaseEditor):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def setParameters(self, params):
-        pass
-
-    @staticmethod
-    def createinstance(params):
-        return Transmittance(ref=None)
 
 PREPROCESSORS = [
     PreprocessAction(
@@ -1126,17 +1126,11 @@ PREPROCESSORS = [
         SavitzkyGolayFilteringEditor
     ),
     PreprocessAction(
-        "Baseline Correction", "orangecontrib.infrared.baseline", "Baseline Correction",
-        Description("Baseline Correction",
+        "Rubberband Baseline Subtraction", "orangecontrib.infrared.rubberband", "Baseline Subtraction",
+        Description("Rubberband Baseline Subtraction (convex hull)",
         icon_path("Discretize.svg")),
         RubberbandBaselineEditor
     ),
-    # PreprocessAction(
-    #     "Rubberband Baseline Subtraction", "orangecontrib.infrared.rubberband", "Baseline Subtraction",
-    #     Description("Rubberband Baseline Subtraction (convex hull)",
-    #     icon_path("Discretize.svg")),
-    #     RubberbandBaselineEditor
-    # ),
     PreprocessAction(
         "Normalize Spectra", "orangecontrib.infrared.normalize", "Normalize Spectra",
         Description("Normalize Spectra",
@@ -1156,16 +1150,10 @@ PREPROCESSORS = [
         PCADenoisingEditor
     ),
     PreprocessAction(
-        "Transmittance to Absorbance", "orangecontrib.infrared.absorbance", "Trasmittance to Absorbance",
-        Description("Trasmittance to Absorbance",
+        "Spectrum Transformations", "orangecontrib.infrared.transformer", "Spectrum Transformations",
+        Description("Spectrum Transformations",
                     icon_path("Discretize.svg")),
-        TransToAbsEditor
-    ),
-    PreprocessAction(
-        "Absorbance to Transmittance", "orangecontrib.infrared.transmittance", "Absorbance to Transmittance",
-        Description("Absorbance to Transmittance",
-                    icon_path("Discretize.svg")),
-        AbsToTransEditor
+        TransformerEditor
     ),
     ]
 
