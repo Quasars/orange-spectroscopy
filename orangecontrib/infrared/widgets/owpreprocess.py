@@ -33,8 +33,9 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangecontrib.infrared.data import getx
-from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering, \
-    RubberbandBaseline, Normalize, Integrate, Absorbance, Transmittance
+from orangecontrib.infrared.preprocess import PCADenoising, GaussianSmoothing, Cut, \
+    SavitzkyGolayFiltering, RubberbandBaseline, Normalize, Integrate
+from orangecontrib.infrared.preprocess import Transformer
 from orangecontrib.infrared.widgets.owspectra import CurvePlot
 
 from Orange.widgets.utils.colorpalette import DefaultColorBrewerPalette
@@ -1053,29 +1054,51 @@ class PCADenoisingEditor(BaseEditor):
         components = params.get("components", 5)
         return PCADenoising(components=components)
 
-class TransToAbsEditor(BaseEditor):
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+SP_TYPES = ["Absorbance",
+            "Transmittance"]
+
+
+class TransformerEditor(BaseEditor):
+
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        form = QFormLayout()
+
+        self.fromcb = QComboBox()
+        self.fromcb.addItems(SP_TYPES)
+
+        self.tocb = QComboBox()
+        self.tocb.addItems(SP_TYPES)
+
+        form.addRow("Original", self.fromcb)
+        form.addRow("Transformed", self.tocb)
+        self.layout().addLayout(form)
+
+        self.fromcb.currentIndexChanged.connect(self.changed)
+        self.fromcb.activated.connect(self.edited)
+        self.tocb.currentIndexChanged.connect(self.changed)
+        self.tocb.activated.connect(self.edited)
 
     def setParameters(self, params):
-        pass
+        from_type = params.get("from_type", 0)
+        to_type = params.get("to_type", 1)
+        self.fromcb.setCurrentIndex(from_type)
+        self.tocb.setCurrentIndex(to_type)
+
+    def parameters(self):
+        return {"from_type": self.fromcb.currentIndex(),
+                "to_type": self.tocb.currentIndex()}
 
     @staticmethod
     def createinstance(params):
-        return Absorbance(ref=None)
+        from_type = params.get("from_type", 0)
+        to_type = params.get("to_type", 1)
+        return Transformer(from_type=from_type, to_type=to_type)
 
-class AbsToTransEditor(BaseEditor):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def setParameters(self, params):
-        pass
-
-    @staticmethod
-    def createinstance(params):
-        return Transmittance(ref=None)
 
 PREPROCESSORS = [
     PreprocessAction(
@@ -1127,16 +1150,10 @@ PREPROCESSORS = [
         PCADenoisingEditor
     ),
     PreprocessAction(
-        "Transmittance to Absorbance", "orangecontrib.infrared.absorbance", "Trasmittance to Absorbance",
-        Description("Trasmittance to Absorbance",
+        "Spectrum Transformations", "orangecontrib.infrared.transformer", "Spectrum Transformations",
+        Description("Spectrum Transformations",
                     icon_path("Discretize.svg")),
-        TransToAbsEditor
-    ),
-    PreprocessAction(
-        "Absorbance to Transmittance", "orangecontrib.infrared.transmittance", "Absorbance to Transmittance",
-        Description("Absorbance to Transmittance",
-                    icon_path("Discretize.svg")),
-        AbsToTransEditor
+        TransformerEditor
     ),
     ]
 

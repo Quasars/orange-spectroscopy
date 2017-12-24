@@ -283,6 +283,57 @@ class RubberbandBaseline(Preprocess):
         return data.from_table(domain, data)
 
 
+class LinearBaselineFeature(SelectColumn):
+    pass
+
+
+class _LinearBaselineCommon:
+
+    def __init__(self, peak_dir, sub, domain):
+        self.peak_dir = peak_dir
+        self.sub = sub
+        self.domain = domain
+
+    def __call__(self, data):
+        if data.domain != self.domain:
+            data = data.from_table(self.domain, data)
+        xs, xsind, mon, y = _transform_to_sorted_features(data)
+        x = xs[xsind]
+
+        if np.any(np.isnan(y)):
+            y, _ = _nan_extend_edges_and_interpolate(x, y)
+
+        if self.sub == 0:
+            newd = y - _edge_baseline(x, y)
+        else:
+            newd = _edge_baseline(x, y)
+
+        return _transform_back_to_features(xsind, mon, newd)
+
+
+class LinearBaseline(Preprocess):
+
+    PeakPositive, PeakNegative = 0, 1
+    Subtract, View = 0, 1
+
+    def __init__(self, peak_dir=PeakPositive, sub=Subtract):
+        """
+        :param peak_dir: PeakPositive or PeakNegative
+        :param sub: Subtract (baseline is subtracted) or View
+        """
+        self.peak_dir = peak_dir
+        self.sub = sub
+
+    def __call__(self, data):
+        common = _LinearBaselineCommon(self.peak_dir, self.sub,
+                                           data.domain)
+        atts = [a.copy(compute_value=LinearBaselineFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+
 class NormalizeFeature(SelectColumn):
     pass
 
@@ -779,97 +830,66 @@ class InterpolateToDomain(Preprocess):
         return data
 
 
-class AbsorbanceFeature(SelectColumn):
+class TransformerFeature(SelectColumn):
     pass
 
 
-class _AbsorbanceCommon:
+class _TransformerCommon: # this is the calculation
 
-    def __init__(self, ref, domain):
-        self.ref = ref
+    def __init__(self, from_type, to_type, domain):
+        self.from_type = from_type
+        self.to_type = to_type
         self.domain = domain
 
     def __call__(self, data):
         if data.domain != self.domain:
             data = data.from_table(self.domain, data)
-        if self.ref:
-            # Calculate from single-channel data
-            absd = self.ref.X / data.X
-            np.log10(absd, absd)
+        xs, xsind, mon, y = _transform_to_sorted_features(data)
+        x = xs[xsind]
+
+        if np.any(np.isnan(y)):
+            y, _ = _nan_extend_edges_and_interpolate(x, y)
+
+        if self.from_type == self.to_type:
+            pass # we should handle this case more elegantly
+        elif self.from_type == 0 and self.to_type==1:
+            # Convert from absorbance to transmittance
+            y = np.power(10, -y)
+        elif self.from_type == 1 and self.to_type==0:
+            # Convert from transmittance to absorbance
+            y = -np.log10(y)
         else:
-            # Calculate from transmittance data
-            absd = np.log10(data.X)
-            absd *= -1
-        return absd
+            pass
+
+        return _transform_back_to_features(xsind, mon, y)
 
 
-class Absorbance(Preprocess):
+class Transformer(Preprocess):
     """
-    Convert data to absorbance.
-
-    Set ref to calculate from single-channel spectra, otherwise convert from transmittance.
+    Convert spectra between different types.
 
     Parameters
     ----------
-    ref : reference single-channel (Orange.data.Table)
+    from_type : original data (Orange.data.Table)
+    to_type : transformed data (Orange.data.Table)
     """
 
-    def __init__(self, ref=None):
-        self.ref = ref
+    Abs, Trans = 0, 1
+
+    def __init__(self, from_type=Abs, to_type=Trans):
+        """
+        :param from_type: PeakPositive or PeakNegative
+        :param to_type: Subtract (baseline is subtracted) or View
+        """
+        self.from_type = from_type
+        self.to_type = to_type
+
 
     def __call__(self, data):
-        common = _AbsorbanceCommon(self.ref, data.domain)
-        newattrs = [Orange.data.ContinuousVariable(
-                    name=var.name, compute_value=AbsorbanceFeature(i, common))
-                    for i, var in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(
-                    newattrs, data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
-
-
-class TransmittanceFeature(SelectColumn):
-    pass
-
-
-class _TransmittanceCommon:
-
-    def __init__(self, ref, domain):
-        self.ref = ref
-        self.domain = domain
-
-    def __call__(self, data):
-        if data.domain != self.domain:
-            data = data.from_table(self.domain, data)
-        if self.ref:
-            # Calculate from single-channel data
-            transd = data.X / self.ref.X
-        else:
-            # Calculate from absorbance data
-            transd = data.X.copy()
-            transd *= -1
-            np.power(10, transd, transd)
-        return transd
-
-
-class Transmittance(Preprocess):
-    """
-    Convert data to transmittance.
-
-    Set ref to calculate from single-channel spectra, otherwise convert from absorbance.
-
-    Parameters
-    ----------
-    ref : reference single-channel (Orange.data.Table)
-    """
-
-    def __init__(self, ref=None):
-        self.ref = ref
-
-    def __call__(self, data):
-        common = _TransmittanceCommon(self.ref, data.domain)
-        newattrs = [Orange.data.ContinuousVariable(
-                    name=var.name, compute_value=TransmittanceFeature(i, common))
-                    for i, var in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(
-                    newattrs, data.domain.class_vars, data.domain.metas)
+        common = _TransformerCommon(self.from_type, self.to_type,
+                                    data.domain)
+        atts = [a.copy(compute_value=RubberbandBaselineFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
         return data.from_table(domain, data)
