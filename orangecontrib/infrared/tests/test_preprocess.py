@@ -5,10 +5,10 @@ import random
 import Orange
 from Orange.widgets.utils.annotated_data import get_next_name
 from orangecontrib.infrared.data import getx
-from orangecontrib.infrared.preprocess import Absorbance, Transmittance, \
-    Integrate, Interpolate, Cut, SavitzkyGolayFiltering, \
+from orangecontrib.infrared.preprocess import Integrate, Interpolate, \
+    Cut, SavitzkyGolayFiltering, \
     GaussianSmoothing, PCADenoising, RubberbandBaseline, \
-    Normalize, LinearBaseline
+    Normalize, LinearBaseline, Transformer
 
 
 # Preprocessors that work per sample and should return the same
@@ -18,8 +18,7 @@ PREPROCESSORS_INDEPENDENT_SAMPLES = [
     SavitzkyGolayFiltering(window=9, polyorder=2, deriv=2),
     Cut(lowlim=1000, highlim=1800),
     GaussianSmoothing(sd=3.),
-    Absorbance(),
-    Transmittance(),
+    Transformer(),
     Integrate(limits=[[900, 100], [1100, 1200], [1200, 1300]]),
     Integrate(methods=Integrate.Simple, limits=[[1100, 1200]]),
     Integrate(methods=Integrate.Baseline, limits=[[1100, 1200]]),
@@ -58,41 +57,22 @@ def reverse_attr(data):
     return Orange.data.Table(ndomain, data)
 
 
-class TestTransmittance(unittest.TestCase):
+class TestTransformer(unittest.TestCase):
 
     def test_domain_conversion(self):
         """Test whether a domain can be used for conversion."""
         data = Orange.data.Table("collagen.csv")
-        transmittance = Transmittance()(data)
-        nt = Orange.data.Table.from_table(transmittance.domain, data)
-        self.assertEqual(transmittance.domain, nt.domain)
-        np.testing.assert_equal(transmittance.X, nt.X)
-        np.testing.assert_equal(transmittance.Y, nt.Y)
+        transformer_data = Transformer()(data)
+        nt = Orange.data.Table.from_table(transformer_data.domain, data)
+        self.assertEqual(transformer_data.domain, nt.domain)
+        np.testing.assert_equal(transformer_data.X, nt.X)
+        np.testing.assert_equal(transformer_data.Y, nt.Y)
 
-    def test_roundtrip(self):
-        """Test AB -> TR -> AB calculation"""
-        data = Orange.data.Table("collagen.csv")
-        calcdata = Absorbance()(Transmittance()(data))
-        np.testing.assert_allclose(data.X, calcdata.X)
-
-
-class TestAbsorbance(unittest.TestCase):
-
-    def test_domain_conversion(self):
-        """Test whether a domain can be used for conversion."""
-        data = Transmittance()(Orange.data.Table("collagen.csv"))
-        absorbance = Absorbance()(data)
-        nt = Orange.data.Table.from_table(absorbance.domain, data)
-        self.assertEqual(absorbance.domain, nt.domain)
-        np.testing.assert_equal(absorbance.X, nt.X)
-        np.testing.assert_equal(absorbance.Y, nt.Y)
-
-    def test_roundtrip(self):
-        """Test TR -> AB -> TR calculation"""
-        # actually AB -> TR -> AB -> TR
-        data = Transmittance()(Orange.data.Table("collagen.csv"))
-        calcdata = Transmittance()(Absorbance()(data))
-        np.testing.assert_allclose(data.X, calcdata.X)
+    # def test_roundtrip(self):
+    #     """Test AB -> TR -> AB calculation"""
+    #     data = Orange.data.Table("collagen.csv")
+    #     calcdata = Absorbance()(Transmittance()(data))
+    #     np.testing.assert_allclose(data.X, calcdata.X)
 
 
 class TestSavitzkyGolay(unittest.TestCase):
