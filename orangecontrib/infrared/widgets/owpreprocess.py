@@ -33,7 +33,6 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangecontrib.infrared.data import getx
-
 # baseline correction imports
 from orangecontrib.infrared.preprocess import LinearBaseline, RubberbandBaseline
 
@@ -634,39 +633,53 @@ class RubberbandBaselineEditor(BaseEditor):
 
 class CurveShiftEditor(BaseEditor):
     """
-    Apply a shift to the Y values of the whole dataset.
+    Editor for CurveShift
     """
+    # TODO: the layout changes when I click the area of the preprocessor
+    #       EFFECT: the sidebar snaps in
 
     def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.setLayout(QVBoxLayout())
+        BaseEditor.__init__(self, parent, **kwargs)
+        self.__sd = 0.
 
+        self.setLayout(QVBoxLayout())
         form = QFormLayout()
 
-        self.curveshiftle = QComboBox()
-
-        form.addRow("Shift amount", self.curveshiftle)
-
+        minf,maxf = -sys.float_info.max, sys.float_info.max
+        # TODO: the singleStep parameter should be automatically set to
+        # TODO:   5% of the data range instead of hard coding
+        self.__sdspin = sdspin = QDoubleSpinBox(
+           minimum=minf, maximum=maxf, singleStep=0.5, value=self.__sd)
+        form.addRow("Shift Amount", sdspin)
         self.layout().addLayout(form)
 
-        self.curveshiftle.currentIndexChanged.connect(self.changed)
-        self.curveshiftle.activated.connect(self.edited)
+        sdspin.valueChanged[float].connect(self.setSd)
+        sdspin.editingFinished.connect(self.edited)
+
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+
+    def setSd(self, sd):
+        if self.__sd != sd:
+            self.__sd = sd
+            with blocked(self.__sdspin):
+                self.__sdspin.setValue(sd)
+            self.edited.emit()
+
+    def sd(self):
+        return self.__sd
 
     def setParameters(self, params):
-        # baseline_type = params.get("baseline_type", 0)
-        # self.baselinecb.setCurrentIndex(baseline_type)
-        pass
+        self.setSd(params.get("sd", 0.))
 
     def parameters(self):
-        pass
-        # return {"sub": self.subcb.currentIndex()}
+        return {"sd": self.__sd}
 
     @staticmethod
     def createinstance(params):
-        # sub = params.get("sub", 0)
+        params = dict(params)
+        sd = params.get("sd", 0.)
+        return CurveShift(sd=sd)
 
-        # return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
-        pass
 
 class NormalizeEditor(BaseEditor):
     """
