@@ -360,6 +360,7 @@ class _CurveShiftCommon:
         # return _transform_back_to_features(xsind, mon, newd)
         pass
 
+
 class CurveShift(Preprocess):
 
     CurveShiftAmount = 0
@@ -968,4 +969,39 @@ class Transmittance(Preprocess):
                     for i, var in enumerate(data.domain.attributes)]
         domain = Orange.data.Domain(
                     newattrs, data.domain.class_vars, data.domain.metas)
+        return data.from_table(domain, data)
+
+
+class CurveShiftFeature(SelectColumn):
+    pass
+
+
+class _CurveShiftCommon:
+
+    def __init__(self, sd, domain):
+        self.sd = sd
+        self.domain = domain
+
+    def __call__(self, data):
+        if data.domain != self.domain:
+            data = data.from_table(self.domain, data)
+        xs, xsind, mon, X = _transform_to_sorted_features(data)
+        X, nans = _nan_extend_edges_and_interpolate(xs[xsind], X)
+        X = X + self.sd
+        if nans is not None:
+            X[nans] = np.nan
+        return _transform_back_to_features(xsind, mon, X)
+
+
+class CurveShift(Preprocess):
+
+    def __init__(self, sd=0.):
+        self.sd = sd
+
+    def __call__(self, data):
+        common = _CurveShiftCommon(self.sd, data.domain)
+        atts = [a.copy(compute_value=CurveShiftFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
         return data.from_table(domain, data)
