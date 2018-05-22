@@ -1,5 +1,7 @@
 [![DOI](https://zenodo.org/badge/53335377.svg)](https://zenodo.org/badge/latestdoi/53335377)
 
+Travis test
+
 Orange for spectral data
 ========================
 
