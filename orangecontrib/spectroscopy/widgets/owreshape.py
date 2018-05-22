@@ -14,6 +14,8 @@ class OWReshape(OWWidget):
     # Widget's name as displayed in the canvas
     name = "Reshape Map"
 
+    # Here's my first test comment
+
     # Short widget description
     description = (
         "Builds or modifies the shape of the input dataset to create 2D maps "
