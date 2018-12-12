@@ -3,13 +3,20 @@ import unittest
 import Orange
 import numpy as np
 
+from orangecontrib.spectroscopy.data import getx
+
 from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
-                                              find_zpd, PeakSearch,
+                                              find_zpd, PeakSearch, ApodFunc
                                              )
 
 dx = 1.0 / 15797.337544 / 2.0
 
 class TestIRFFT(unittest.TestCase):
+
+    def setUp(self):
+        self.ifg_single = Orange.data.Table("IFG_single.dpt")
+        self.ifg_seq_ref = Orange.data.Table("agilent/background_agg256.seq")
+        self.sc_dat_ref = Orange.data.Table("agilent/background_agg256.dat")
 
     def test_zero_fill(self):
         N = 1975
@@ -24,12 +31,12 @@ class TestIRFFT(unittest.TestCase):
             assert N_zf >= N * zff
 
     def test_simple_fft(self):
-        data = Orange.data.Table("IFG_single.dpt").X[0]
+        data = self.ifg_single.X[0]
         fft = IRFFT(dx=dx)
         fft(data)
 
     def test_stored_phase_zpd(self):
-        data = Orange.data.Table("IFG_single.dpt").X[0]
+        data = self.ifg_single.X[0]
         fft = IRFFT(dx=dx)
         fft(data)
         stored_phase = fft.phase
@@ -40,9 +47,54 @@ class TestIRFFT(unittest.TestCase):
         np.testing.assert_array_equal(fft.phase, fft_stored.phase)
 
     def test_peak_search(self):
-        data = Orange.data.Table("IFG_single.dpt").X[0]
+        data = self.ifg_single.X[0]
         assert find_zpd(data, PeakSearch.MAXIMUM) == data.argmax()
         assert find_zpd(data, PeakSearch.MINIMUM) == data.argmin()
         assert find_zpd(data, PeakSearch.ABSOLUTE) == abs(data).argmax()
         data *= -1
         assert find_zpd(data, PeakSearch.ABSOLUTE) == abs(data).argmax()
+
+    def test_agilent_fft_sc(self):
+        ifg = self.ifg_seq_ref.X[0]
+        dat = self.sc_dat_ref.X[0]
+        dx_ag = (1 / 1.57980039e+04 / 2) * 4
+        fft = IRFFT(dx=dx_ag,
+                    apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    zff=1,
+                    phase_res=None,
+                    phase_corr=PhaseCorrection.MERTZ,
+                    peak_search=PeakSearch.MINIMUM,
+                    )
+        fft(ifg)
+        self.assertEqual(fft.zpd, 69)
+        dat_x = getx(self.sc_dat_ref)
+        limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
+        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        # TODO This fails due to scaling differences
+        # np.testing.assert_allclose(fft.spectrum[limits[0]:limits[1]], dat)
+
+    def test_agilent_fft_ab(self):
+        ifg_ref = self.ifg_seq_ref.X[0]
+        ifg_sam = Orange.data.Table("agilent/4_noimage_agg256.seq").X[0]
+        dat_T = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        dat = dat_T.X[0]
+        dx_ag = (1 / 1.57980039e+04 / 2) * 4
+        fft = IRFFT(dx=dx_ag,
+                    apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    zff=1,
+                    phase_res=None,
+                    phase_corr=PhaseCorrection.MERTZ,
+                    peak_search=PeakSearch.MINIMUM,
+                    )
+        fft(ifg_ref)
+        rsc = fft.spectrum
+        fft(ifg_sam)
+        ssc = fft.spectrum
+        dat_x = getx(dat_T)
+        limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
+        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        # Calculate absorbance from ssc and rsc
+        ab = np.log10(rsc / ssc)
+        # Compare to agilent absorbance
+        # NB 4 mAbs error
+        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, atol=0.004)
