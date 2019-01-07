@@ -4,6 +4,10 @@
 # Remove this when the minimum supported Orange is 3.16.
 pip install CommonMark==0.7.5
 
+# fastTSNE depends on numba and there are some problems with the
+#recent build. Temporarily fix the version
+pip install numba==0.41.0 llvmlite==0.26.0
+
 if [ $ORANGE == "release" ]; then
     echo "Orange: Skipping separate Orange install"
     return 0
