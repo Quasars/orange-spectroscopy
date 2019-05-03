@@ -130,6 +130,10 @@ class _EMSC(CommonDomainOrderUnknowns):
 
         newspectra = np.zeros((X.shape[0], X.shape[1] + n_add_model))
         for i, rawspectrum in enumerate(X):
+            if np.any(np.isnan(rawspectrum)):
+                # lstsq can not handle NaNs
+                newspectra[i] = np.nan
+                continue
             rawspectrumW = (rawspectrum*wei_X)[0]
             m = np.linalg.lstsq(M_weighted, rawspectrum, rcond=-1)[0]
             corrected = rawspectrum
