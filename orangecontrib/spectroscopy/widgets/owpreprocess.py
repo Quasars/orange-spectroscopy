@@ -1129,7 +1129,7 @@ class PrepareSavingSettingsHandler(SettingsHandler):
         return super().pack_data(widget)
 
 
-class SpectralPreprocess(OWWidget):
+class SpectralPreprocess(OWWidget, openclass=True):
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)
@@ -1566,7 +1566,7 @@ class SpectralPreprocess(OWWidget):
                 cls.migrate_preprocessors(settings_["storedsettings"]["preprocessors"], version)
 
 
-class SpectralPreprocessReference(SpectralPreprocess):
+class SpectralPreprocessReference(SpectralPreprocess, openclass=True):
 
     class Inputs(SpectralPreprocess.Inputs):
         reference = Input("Reference", Orange.data.Table)
