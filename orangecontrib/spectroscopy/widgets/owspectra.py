@@ -1467,7 +1467,6 @@ class OWSpectra(OWWidget):
         if data is not None and not len(self.curveplot.data_x):
             self.Warning.no_x()
         self.selection_changed()
-        print('dentro do spectra:', data.attributes)
 
     @Inputs.data_subset
     def set_subset(self, data):
