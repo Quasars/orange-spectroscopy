@@ -417,6 +417,7 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
                 table.name = self.data.name
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
+                print('attributes:\t', table.attributes)
 
         self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)

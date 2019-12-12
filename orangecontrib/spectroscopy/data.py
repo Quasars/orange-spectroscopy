@@ -844,7 +844,7 @@ class GSFReader(FileFormat, SpectralFileFormat):
 
 class NeaReader(FileFormat, SpectralFileFormat):
 
-    EXTENSIONS = (".nea", ".txt")
+    EXTENSIONS = (".nea", ".txt", '.gsf')
     DESCRIPTION = 'NeaSPEC'
 
     def read_v1(self):
@@ -1014,16 +1014,195 @@ class NeaReader(FileFormat, SpectralFileFormat):
         domain = Orange.data.Domain([], None, metas=metas)
         meta_data = Table.from_numpy(domain, X=np.zeros((len(M), 0)),
                                      metas=Meta_data)
+
+        meta_data.attributes = {'teste': 'Deu certo porra'}
+        print('metas', type(metas),
+        'meta_data', type(meta_data),
+        'domain', type(domain))                             
         return waveN, M, meta_data
+
+    def read_v3(self):
+        print('Entrou')
+
+        file_channel = str(self.filename.split(' ')[-2]).strip()
+        folder_file = str(self.filename.split(file_channel)[-2]).strip()
+        # print('folder_file', folder_file)
+
+        if 'P' in file_channel:
+            self.channel_p = file_channel
+            self.channel_a = file_channel.replace('P', 'A')
+            file_gsf_p = self.filename
+            file_gsf_a = self.filename.replace('P raw.gsf', 'A raw.gsf')
+            file_html = folder_file + '.html'
+        elif 'A' in file_channel:
+            self.channel_a = file_channel
+            self.channel_p = file_channel.replace('A', 'P')
+            file_gsf_a = self.filename
+            file_gsf_p = self.filename.replace('A raw.gsf', 'P raw.gsf')
+            file_html = folder_file + '.html'
+
+        # print('folder_file', folder_file)
+        # print('file_channel', file_channel)
+        # print('file_gsf_a', file_gsf_a)
+        # print('file_gsf_p', file_gsf_p)
+        # print('file_html', file_html)
+
+        data_gsf_a = self._gsf_reader(file_gsf_a)
+        print('data a carregada')
+        print(type(data_gsf_a))
+        data_gsf_p = self._gsf_reader(file_gsf_p)
+        print('data P carregada')
+        info = self._html_reader(file_html)
+        print('html carregado')
+
+        # print(data_gsf_a, data_gsf_p, info)
+        # data = data_gsf_p
+        # return data, self.filename.split('.')[-1]
+        final_data, parameters, final_metas = self._format_file(data_gsf_a, data_gsf_p, info)
+        print('dado formatado')
+        # print(parameters)
+
+
+        metas = [Orange.data.ContinuousVariable.make("run"),
+                Orange.data.ContinuousVariable.make("row"),
+                Orange.data.ContinuousVariable.make("column"),
+                Orange.data.StringVariable.make("channel")]
+        print(metas)
+
+        domain = Orange.data.Domain([], None, metas=metas)
+        meta_data = Table.from_numpy(domain, X=np.zeros((len(final_data), 0)),
+                                     metas=np.asarray(final_metas, dtype=object))
+        
+        print(domain)
+        # meta_data.attributes = parameters
+
+        depth = np.arange(0, int(parameters['Pixel Area (X, Y, Z)'][3]))
+
+        print('meta_data', meta_data)
+        print('final_metas', final_metas)
+        print('data', final_data)
+        print('parametros', parameters)
+
+        # print(final_data)
+
+        return depth, final_data, meta_data
+
+    def _format_file(self, gsf_a, gsf_p, parameters):
+        
+        info = {}
+        for row in range(len(parameters)):
+            info.update({parameters[row,0].replace(':', ''): parameters[row,1:]})
+
+        print('escreveu o dicionario')
+
+        averaging = int(info['Averaging'][1])
+        px_x = int(info['Pixel Area (X, Y, Z)'][1]) # 10
+        px_y = int(info['Pixel Area (X, Y, Z)'][2]) # 10
+        px_z = number_of_points = int(info['Pixel Area (X, Y, Z)'][3]) # 1024
+        description = info['Description'][1]
+
+        print('Encontrou as informacoes')
+
+        data_complete = []
+        final_metas = []
+        for y in range(0, px_y):
+            print(y)
+            amplitude = gsf_a[y].reshape((1, px_x * px_z * averaging))[0]
+            phase = gsf_p[y].reshape((1, px_x * px_z * averaging))[0]
+            i = 0
+            f = i + px_z
+            for x in range(0, px_x):
+                for run in range(0, averaging):
+                    print(run)
+                    data_complete += [amplitude[i:f]]
+                    data_complete += [phase[i:f]]
+                    print('antes do final_metas')
+                    
+                    print(self.channel_a)
+                    print(self.channel_p)
+                    final_metas += [[run,x, y, self.channel_a]]
+                    final_metas += [[run,x, y, self.channel_p]]
+                    i = f
+                    f = i + px_z
+                    print('apos o final_metas')
+        print('formatou')
+        print('info', info)
+        return np.asarray(data_complete), info, final_metas
+
+    def _html_reader(self, path):
+        from pandas import read_html
+        try:
+            parameters = np.asarray(read_html(path)[0])
+        except ImportError:
+            print('''Probably you need to install xlml
+            Try 
+            "pip install lxml"
+            or
+            "conda install -c conda-forge lxml"''')
+            pass
+
+        return parameters
+
+    def _gsf_reader(self, path):
+
+        with open(path, "rb") as f:
+            if not (f.readline() == b'Gwyddion Simple Field 1.0\n'):
+                raise ValueError('Not a correct GSF file, wrong header.')
+
+            meta = {}
+
+            term = False  # there are mandatory fileds
+            while term != b'\x00':
+                l = f.readline().decode('utf-8')
+                name, value = l.split("=")
+                name = name.strip()
+                value = value.strip()
+                meta[name] = value
+                term = f.read(1)
+                f.seek(-1, 1)
+
+            f.read(4 - f.tell() % 4)
+
+            meta["XRes"] = XR = int(meta["XRes"])
+            meta["YRes"] = YR = int(meta["YRes"])
+            meta["XReal"] = float(meta.get("XReal", 1))
+            meta["YReal"] = float(meta.get("YReal", 1))
+            meta["XOffset"] = float(meta.get("XOffset", 0))
+            meta["YOffset"] = float(meta.get("YOffset", 0))
+            meta["Title"] = meta.get("Title", None)
+            meta["XYUnits"] = meta.get("XYUnits", None)
+            meta["ZUnits"] = meta.get("ZUnits", None)
+
+            X = np.fromfile(f, dtype='float32',
+                            count=XR*YR).reshape(XR, YR)
+
+            X = X.reshape((meta["YRes"], meta["XRes"]) + (1,))
+            data = np.asarray(X)
+
+        return data
+                # print(data)
+
 
     def read_spectra(self):
         version = 1
-        with open(self.filename, "rt") as f:
-            if f.read(2) == '# ':
-                version = 2
+        print('esta no read')
+        try:
+            with open(self.filename, "rt") as f:
+                if f.read(2) == '# ':
+                    version = 2
+        except:
+            pass
+        try:
+            if self.filename.split('.')[-1] == 'gsf':
+                print('e gsf')
+                version = 3
+                return self.read_v3()
+        except:
+            pass
+
         if version == 1:
             return self.read_v1()
-        else:
+        elif version == 2:
             return self.read_v2()
 
 
