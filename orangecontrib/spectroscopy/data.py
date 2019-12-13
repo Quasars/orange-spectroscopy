@@ -17,6 +17,8 @@ import Orange.data.io
 from .pymca5 import OmnicMap
 from .agilent import agilentImage, agilentMosaic, agilentImageIFG, agilentMosaicIFG
 
+SET_flow = False    # Use for manual control flow in some function inter Class
+                    # See example in class NeaSpec and GSFReader
 
 class SpectralFileFormat:
 
@@ -837,6 +839,11 @@ class GSFReader(FileFormat, SpectralFileFormat):
             YRr = np.arange(YR-1, -1, -1) # needed to have the same orientation as in Gwyddion
 
             X = X.reshape((meta["YRes"], meta["XRes"]) + (1,))
+            
+            global SET_flow
+            if SET_flow:    #True if from class NeaReader()
+                return X
+
             data = _spectra_from_image(X, [1], XRr, YRr)
 
             return data
@@ -846,6 +853,9 @@ class NeaReader(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".nea", ".txt", '.gsf')
     DESCRIPTION = 'NeaSPEC'
+
+    global SET_flow 
+    SET_flow = True     #Set up for change the flow in GSFReader 
 
     def read_v1(self):
 
@@ -1099,43 +1109,13 @@ class NeaReader(FileFormat, SpectralFileFormat):
 
         return parameters
 
+    
     def _gsf_reader(self, path):
 
-        with open(path, "rb") as f:
-            if not (f.readline() == b'Gwyddion Simple Field 1.0\n'):
-                raise ValueError('Not a correct GSF file, wrong header.')
+        gsf = GSFReader(path)
+        X = gsf.read_spectra()
 
-            meta = {}
-
-            term = False  # there are mandatory fileds
-            while term != b'\x00':
-                l = f.readline().decode('utf-8')
-                name, value = l.split("=")
-                name = name.strip()
-                value = value.strip()
-                meta[name] = value
-                term = f.read(1)
-                f.seek(-1, 1)
-
-            f.read(4 - f.tell() % 4)
-
-            meta["XRes"] = XR = int(meta["XRes"])
-            meta["YRes"] = YR = int(meta["YRes"])
-            meta["XReal"] = float(meta.get("XReal", 1))
-            meta["YReal"] = float(meta.get("YReal", 1))
-            meta["XOffset"] = float(meta.get("XOffset", 0))
-            meta["YOffset"] = float(meta.get("YOffset", 0))
-            meta["Title"] = meta.get("Title", None)
-            meta["XYUnits"] = meta.get("XYUnits", None)
-            meta["ZUnits"] = meta.get("ZUnits", None)
-
-            X = np.fromfile(f, dtype='float32',
-                            count=XR*YR).reshape(XR, YR)
-
-            X = X.reshape((meta["YRes"], meta["XRes"]) + (1,))
-            data = np.asarray(X)
-
-        return data
+        return np.asarray(X)
 
 
     def read_spectra(self):
