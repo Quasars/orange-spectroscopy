@@ -50,10 +50,6 @@ class PLSRegressionLearner(SklPLSRegressionLearner):
 
 class PLSModel(SklModel):
 
-    # @property
-    # def intercept(self):
-    #    return self.skl_model.y_mean_
-
     @property
     def coefficients(self):
         return self.skl_model.coef_
