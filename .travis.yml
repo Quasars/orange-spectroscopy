@@ -30,7 +30,8 @@ install:
     - source $TRAVIS_BUILD_DIR/.travis/install_orange.sh
     # opusFC is not installed by default - install for tests
     - pip install opusFC
-    - pip install -e .
+    - python setup.py sdist
+    - pip install dist/*.tar.gz
     - pip freeze
 
 script:

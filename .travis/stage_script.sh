@@ -9,7 +9,7 @@ if [ "$RUN_PYLINT" ]; then
 else
     # Screen must be 24bpp lest pyqt5 crashes, see pytest-dev/pytest-qt/35
     export XVFBARGS="-screen 0 1280x1024x24"
-    catchsegv xvfb-run -a -s "$XVFBARGS" coverage run -m unittest
+    catchsegv xvfb-run -a -s "$XVFBARGS" coverage run -m unittest orangecontrib.spectroscopy
     (($? != 0)) && { printf '%s\n' "Command exited with non-zero"; exit 1; }
 fi
 
