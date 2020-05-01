@@ -7,7 +7,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from Orange.widgets.tests.base import WidgetTest
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, ANNOTATED_DATA_FEATURE_NAME
 
 from orangecontrib.spectroscopy.widgets.owspectra import OWSpectra, MAX_INSTANCES_DRAWN, \
@@ -316,7 +316,7 @@ class TestOWSpectra(WidgetTest):
     def test_settings_color(self):
         self.send_signal("Data", self.iris)
         self.assertEqual(self.widget.curveplot.feature_color, None)
-        self.widget.curveplot.feature_color = "iris"
+        self.widget.curveplot.feature_color = self.iris.domain.class_var
         iris_context = self.widget.settingsHandler.pack_data(self.widget)["context_settings"]
         self.send_signal("Data", Table("housing"))
         self.assertEqual(self.widget.curveplot.feature_color, None)
@@ -324,13 +324,13 @@ class TestOWSpectra(WidgetTest):
         self.widget = self.create_widget(OWSpectra,
                                          stored_settings={"context_settings": iris_context})
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.curveplot.feature_color, "iris")
+        self.assertEqual(self.widget.curveplot.feature_color.name, "iris")
 
     def test_cycle_color(self):
         self.send_signal("Data", self.iris)
         self.assertEqual(self.widget.curveplot.feature_color, None)
         self.widget.curveplot.cycle_color_attr()
-        self.assertEqual(self.widget.curveplot.feature_color, "iris")
+        self.assertEqual(self.widget.curveplot.feature_color, self.iris.domain.class_var)
         self.widget.curveplot.cycle_color_attr()
         self.assertEqual(self.widget.curveplot.feature_color, None)
 
@@ -447,7 +447,7 @@ class TestOWSpectra(WidgetTest):
         data[0][data.domain.class_var] = np.nan
         self.send_signal("Data", data)
         self.widget.curveplot.cycle_color_attr()
-        self.assertEqual(self.widget.curveplot.feature_color, "iris")
+        self.assertEqual(self.widget.curveplot.feature_color, data.domain.class_var)
         self.widget.curveplot.show_average()
         wait_for_graph(self.widget)
 
@@ -503,3 +503,12 @@ class TestOWSpectra(WidgetTest):
         for obj in curves_cont.objs:
             self.assertTrue(np.isfinite(obj.yData).all())
             self.assertTrue(np.isfinite(obj.xData).all())
+
+    def test_migrate_context_feature_color(self):
+        c = self.widget.settingsHandler.new_context(self.iris.domain,
+                                                    None, self.iris.domain.class_vars)
+        c.values["curveplot"] = {"feature_color": ("iris", 1)}
+        self.widget = self.create_widget(OWSpectra,
+                                         stored_settings={"context_settings": [c]})
+        self.send_signal("Data", self.iris)
+        self.assertIsInstance(self.widget.curveplot.feature_color, DiscreteVariable)

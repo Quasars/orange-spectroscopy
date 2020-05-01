@@ -7,6 +7,7 @@ import numpy as np
 from AnyQt.QtCore import QPointF, Qt
 from AnyQt.QtTest import QSignalSpy
 import Orange
+from Orange.data import DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 
 from orangecontrib.spectroscopy.widgets import owhyper
@@ -232,11 +233,11 @@ class TestOWHyper(WidgetTest):
 
     def test_settings_curves(self):
         self.send_signal("Data", self.iris)
-        self.widget.curveplot.feature_color = "iris"
+        self.widget.curveplot.feature_color = self.iris.domain.class_var
         self.send_signal("Data", self.whitelight)
         self.assertEqual(self.widget.curveplot.feature_color, None)
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.curveplot.feature_color, "iris")
+        self.assertEqual(self.widget.curveplot.feature_color.name, "iris")
 
     def test_set_variable_color(self):
         data = Orange.data.Table("iris.tab")
@@ -292,3 +293,12 @@ class TestOWHyper(WidgetTest):
         self.send_signal("Data", data)
         wait_for_image(self.widget)
         self.assertTrue(self.widget.Information.not_shown.is_shown())
+
+    def test_migrate_context_feature_color(self):
+        c = self.widget.settingsHandler.new_context(self.iris.domain,
+                                                    None, self.iris.domain.class_vars)
+        c.values["curveplot"] = {"feature_color": ("iris", 1)}
+        self.widget = self.create_widget(OWHyper,
+                                         stored_settings={"context_settings": [c]})
+        self.send_signal("Data", self.iris)
+        self.assertIsInstance(self.widget.curveplot.feature_color, DiscreteVariable)

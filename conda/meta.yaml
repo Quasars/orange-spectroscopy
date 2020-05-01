@@ -38,6 +38,7 @@ test:
     - orangecontrib.spectroscopy
   commands:
     - test -f $PREFIX/help/orange-spectroscopy/index.html  # [unix]
+    - python -m unittest -v orangecontrib.spectroscopy.tests
 
 about:
   home: https://github.com/quasars

@@ -61,7 +61,7 @@ def apodize(ifg, zpd, apod_func):
     function
 
     Args:
-        ifg (np.array): 1D array with a single interferogram
+        ifg (np.array): interferogram array (1D or 2D row-wise)
         zpd (int): Index of the Zero Phase Difference (centerburst)
         apod_func (IntEnum): One of apodization function options:
                 <ApodFunc.BOXCAR: 0>            : Boxcar apodization
@@ -70,12 +70,12 @@ def apodize(ifg, zpd, apod_func):
                 <ApodFunc.BLACKMAN_NUTTALL: 3>  : Blackman-Nuttall (Eric Peach implementation)
 
     Returns:
-        ifg_apod (np.array): 1D array of apodized ifg
+        ifg_apod (np.array): apodized interferogram(s)
     """
 
     # Calculate negative and positive wing size
     # correcting zpd from 0-based index
-    ifg_N = ifg.shape[0]
+    ifg_N = ifg.shape[-1]
     wing_n = zpd + 1
     wing_p = ifg_N - (zpd + 1)
 
@@ -151,21 +151,22 @@ def _zero_fill_size(ifg_N, zff):
     return int(np.exp2(np.ceil(np.log2(Nzff))))
 
 def _zero_fill_pad(ifg, zerofill):
-    return np.hstack((ifg, np.zeros(zerofill, dtype=ifg.dtype)))
+    zeroshape = (ifg.shape[0], zerofill) if ifg.ndim == 2 else zerofill
+    return np.hstack((ifg, np.zeros(zeroshape, dtype=ifg.dtype)))
 
 def zero_fill(ifg, zff):
     """
-    Zero-fill interferogram.
+    Zero-fill interferogram to DFT-efficient power of two.
     Assymetric to prevent zpd from changing index.
 
     Args:
-        ifg (np.array): 1D array with a single interferogram
+        ifg (np.array): interferogram array (1D or 2D row-wise)
         zff (int): Zero-filling factor
 
     Returns:
-        np.array: 1D array of ifg + zero fill
+        np.array: ifg with appended zero fill
     """
-    ifg_N = ifg.shape[0]
+    ifg_N = ifg.shape[-1]
     # Calculate zero-fill to next power of two for DFT efficiency
     zero_fill = _zero_fill_size(ifg_N, zff) - ifg_N
     # Pad array
@@ -197,6 +198,8 @@ class IRFFT():
         self.peak_search = peak_search
 
     def __call__(self, ifg, zpd=None, phase=None):
+        if ifg.ndim != 1:
+            raise ValueError("ifg must be 1D array")
         # Stored phase
         self.phase = phase
         # Stored ZPD
@@ -269,11 +272,68 @@ class IRFFT():
         elif self.phase_corr == PhaseCorrection.STORED:
             if self.phase is None:
                 raise ValueError("No stored phase provided.")
-            else:
-                return
+            return
         elif self.phase_corr == PhaseCorrection.MERTZ:
             self.phase = np.arctan2(ifg_sub_fft.imag, ifg_sub_fft.real)
         elif self.phase_corr == PhaseCorrection.MERTZSIGNED:
             self.phase = np.arctan(ifg_sub_fft.imag/ifg_sub_fft.real)
         else:
             raise ValueError("Invalid PhaseCorrection: {}".format(self.phase_corr))
+
+
+class MultiIRFFT(IRFFT):
+
+    def __call__(self, ifg, zpd=None, phase=None):
+        if ifg.ndim != 2:
+            raise ValueError("ifg must be 2D array of row-wise interferograms")
+        # TODO does stored phase work / make sense here?
+        self.phase = phase
+        try:
+            self.zpd = int(zpd)
+        except TypeError:
+            raise TypeError("zpd must be specified as a single value valid for all interferograms")
+
+        # Subtract DC value from interferogram
+        ifg = ifg - ifg.mean(axis=1, keepdims=True)
+
+        # Calculate phase on interferogram of specified size 2*L
+        L = self.phase_ifg_size(ifg.shape[1])
+        if L == 0: # Use full ifg for phase #TODO multi is this code tested
+            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = zero_fill(ifg, self.zff)
+            # Rotate the Complete IFG so that the centerburst is at edges.
+            ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
+            Nzff = ifg.shape[0]
+            # Take FFT of Rotated Complete Graph
+            ifg = np.fft.rfft(ifg)
+            self.compute_phase(ifg)
+        else:
+            # Select phase interferogram as copy
+            # Note that L is now the zpd index
+            Ixs = ifg[:, self.zpd - L : self.zpd + L].copy()
+            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = zero_fill(ifg, self.zff)
+            ifg = np.hstack((ifg[:, self.zpd:], ifg[:, 0:self.zpd]))
+            Nzff = ifg.shape[1]
+
+            Ixs = apodize(Ixs, L, self.apod_func)
+            # Zero-fill Ixs to same size as ifg (instead of interpolating later)
+            Ixs = _zero_fill_pad(Ixs, Nzff - Ixs.shape[1])
+            Ixs = np.hstack((Ixs[:, L:], Ixs[:, 0:L]))
+
+            ifg = np.fft.rfft(ifg)
+            Ixs = np.fft.rfft(Ixs)
+            self.compute_phase(Ixs)
+
+        self.wavenumbers = np.fft.rfftfreq(Nzff, self.dx)
+
+        if self.phase_corr == PhaseCorrection.NONE:
+            self.spectrum = ifg.real
+            self.phase = ifg.imag
+        else:
+            try:
+                self.spectrum = np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
+            except ValueError as e:
+                raise ValueError("Incompatible phase: {}".format(e))
+
+        return self.spectrum, self.phase, self.wavenumbers

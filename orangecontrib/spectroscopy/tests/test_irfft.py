@@ -6,7 +6,8 @@ import Orange
 from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
-                                              find_zpd, PeakSearch, ApodFunc
+                                              find_zpd, PeakSearch, ApodFunc,
+                                              MultiIRFFT,
                                              )
 
 dx = 1.0 / 15797.337544 / 2.0
@@ -97,3 +98,40 @@ class TestIRFFT(unittest.TestCase):
         # Compare to agilent absorbance
         # NB 4 mAbs error
         np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, atol=0.004)
+
+    def test_multi(self):
+        dx_ag = (1 / 1.57980039e+04 / 2) * 4
+        fft = MultiIRFFT(dx=dx_ag,
+                         apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         zff=1,
+                         phase_res=None,
+                         phase_corr=PhaseCorrection.MERTZ,
+                         peak_search=PeakSearch.MINIMUM)
+        zpd = 69    # from test_agilent_fft_sc(), TODO replace with value read from file
+        fft(self.ifg_seq_ref.X, zpd)
+
+    def test_multi_ab(self):
+        ifg_ref = self.ifg_seq_ref.X
+        ifg_sam = Orange.data.Table("agilent/4_noimage_agg256.seq").X
+        dat_T = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        dat = dat_T.X
+        dx_ag = (1 / 1.57980039e+04 / 2) * 4
+        fft = MultiIRFFT(dx=dx_ag,
+                         apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         zff=1,
+                         phase_res=None,
+                         phase_corr=PhaseCorrection.MERTZ,
+                         peak_search=PeakSearch.MINIMUM)
+        zpd = 69  # from test_agilent_fft_sc(), TODO replace with value read from file
+        fft(ifg_ref, zpd)
+        rsc = fft.spectrum
+        fft(ifg_sam, zpd)
+        ssc = fft.spectrum
+        dat_x = getx(dat_T)
+        limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
+        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        # Calculate absorbance from ssc and rsc
+        ab = np.log10(rsc / ssc)
+        # Compare to agilent absorbance
+        # NB 4 mAbs error
+        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)

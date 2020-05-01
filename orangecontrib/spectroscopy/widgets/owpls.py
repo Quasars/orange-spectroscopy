@@ -1,6 +1,5 @@
 from AnyQt.QtCore import Qt
 import scipy.sparse as sp
-from orangecontrib.spectroscopy.models.modelling.pls import PLSRegressionLearner
 
 from Orange.widgets import gui
 from Orange.widgets.widget import Msg
@@ -9,6 +8,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+
+from orangecontrib.spectroscopy.models.pls import PLSRegressionLearner
 
 
 class OWPLS(OWBaseLearner):
@@ -23,24 +24,24 @@ class OWPLS(OWBaseLearner):
         coefsdata = Output("Coefficients", Table, explicit=True)
 
     class Warning(OWBaseLearner.Warning):
-        sparse_data = Msg('Input data is sparse, default preprocessing is to scale it.')
+        sparse_data = Msg('Sparse input data: default preprocessing is to scale it.')
 
     #: number of components
     n_components = Setting(2)
     #: whether or not to limit number of iterations
-    iters = Setting(500)
+    max_iter = Setting(500)
 
     def add_main_layout(self):
 
         self.optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
-        self.ncomps_spin = gui.doubleSpin(
+        self.ncomps_spin = gui.spin(
             self.optimization_box, self, "n_components", 1, 50, 1,
             label="Components: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed)
         self.n_iters = gui.spin(
-            self.optimization_box, self, "iters", 5, 1e6, 50,
+            self.optimization_box, self, "max_iter", 5, 1e6, 50,
             label="Iteration limit: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
@@ -65,11 +66,14 @@ class OWPLS(OWBaseLearner):
             self.Warning.sparse_data()
 
     def handleNewSignals(self):
-        self.settings_changed()
+        self.apply()
 
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
-        return PLSRegressionLearner(n_components=int(self.n_components), max_iter=int(self.iters), **common_args)
+        return PLSRegressionLearner(n_components=self.n_components,
+                                    max_iter=self.max_iter,
+                                    **common_args)
+
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWPLS).run(Table("housing"))
