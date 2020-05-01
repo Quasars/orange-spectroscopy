@@ -1,4 +1,5 @@
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QSpinBox
 import scipy.sparse as sp
 
 from Orange.widgets import gui
@@ -39,13 +40,13 @@ class OWPLS(OWBaseLearner):
             self.optimization_box, self, "n_components", 1, 50, 1,
             label="Components: ",
             alignment=Qt.AlignRight, controlWidth=100,
-            callback=self.settings_changed)
+            callback=self.settings_changed, spinType=QSpinBox)
         self.n_iters = gui.spin(
             self.optimization_box, self, "max_iter", 5, 1e6, 50,
             label="Iteration limit: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
-            checkCallback=self.settings_changed)
+            checkCallback=self.settings_changed, spinType=QSpinBox)
 
     def update_model(self):
         super().update_model()
@@ -70,8 +71,8 @@ class OWPLS(OWBaseLearner):
 
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
-        return PLSRegressionLearner(n_components=int(self.n_components),
-                                    max_iter=int(self.max_iter),
+        return PLSRegressionLearner(n_components=self.n_components,
+                                    max_iter=self.max_iter,
                                     **common_args)
 
 
