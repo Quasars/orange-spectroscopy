@@ -65,6 +65,10 @@ class OWPLS(OWBaseLearner):
         super().set_data(data)
         if self.data and sp.issparse(self.data.X):
             self.Warning.sparse_data()
+        if self.data is not None:
+            self.ncomps_spin.setMaximum(len(self.data.domain.attributes))
+        else:
+            self.ncomps_spin.setMaximum(1)
 
     def handleNewSignals(self):
         self.apply()
