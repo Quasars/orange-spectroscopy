@@ -70,8 +70,8 @@ class OWPLS(OWBaseLearner):
 
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
-        return PLSRegressionLearner(n_components=self.n_components,
-                                    max_iter=self.max_iter,
+        return PLSRegressionLearner(n_components=int(self.n_components),
+                                    max_iter=int(self.max_iter),
                                     **common_args)
 
 
