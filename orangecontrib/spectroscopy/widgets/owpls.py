@@ -1,4 +1,5 @@
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QSpinBox
 import scipy.sparse as sp
 
 from Orange.widgets import gui
@@ -36,16 +37,16 @@ class OWPLS(OWBaseLearner):
         self.optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
         self.ncomps_spin = gui.spin(
-            self.optimization_box, self, "n_components", 1, 50, 1,
+            self.optimization_box, self, "n_components", 1, 100, 1,
             label="Components: ",
             alignment=Qt.AlignRight, controlWidth=100,
-            callback=self.settings_changed)
+            callback=self.settings_changed, spinType=QSpinBox)
         self.n_iters = gui.spin(
             self.optimization_box, self, "max_iter", 5, 1e6, 50,
             label="Iteration limit: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
-            checkCallback=self.settings_changed)
+            checkCallback=self.settings_changed, spinType=QSpinBox)
 
     def update_model(self):
         super().update_model()
@@ -64,6 +65,10 @@ class OWPLS(OWBaseLearner):
         super().set_data(data)
         if self.data and sp.issparse(self.data.X):
             self.Warning.sparse_data()
+        if self.data is not None:
+            self.ncomps_spin.setMaximum(len(self.data.domain.attributes))
+        else:
+            self.ncomps_spin.setMaximum(100)
 
     def handleNewSignals(self):
         self.apply()
