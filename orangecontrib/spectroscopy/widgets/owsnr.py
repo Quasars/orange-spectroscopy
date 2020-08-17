@@ -25,9 +25,14 @@ class OWSNR(OWWidget):
     class Outputs:
         averages = Output("SNR", Orange.data.Table, default=True)
 
+    OUT_OPTIONS = {'SNR': 0, #snr
+                'Average': 1, # average
+                'Standart Deviation': 2} # STD
+
     settingsHandler = settings.DomainContextHandler()
     group_x = settings.ContextSetting(None)
     group_y = settings.ContextSetting(None)
+    out_choiced = settings.ContextSetting(0)
 
     autocommit = settings.Setting(False)
 
@@ -48,16 +53,20 @@ class OWSNR(OWWidget):
         self.group_axis_x = DomainModel(
             placeholder="None", separators=False,
             valid_types=Orange.data.DiscreteVariable)
-        self.group_view = gui.listView(
+        self.group_view_x = gui.comboBox(
             self.controlArea, self, "group_x", box="Select axis: x",
             model=self.group_axis_x, callback=self.grouping_changed)
 
         self.group_axis_y = DomainModel(
             placeholder="None", separators=False,
             valid_types=Orange.data.DiscreteVariable)
-        self.group_view = gui.listView(
+        self.group_view_y = gui.comboBox(
             self.controlArea, self, "group_y", box="Select axis: y",
             model=self.group_axis_y, callback=self.grouping_changed)
+
+        self.selected_out = gui.comboBox(
+            self.controlArea, self, "out_choiced", box="Select Output:",
+            items=self.OUT_OPTIONS, callback=self.out_choice_changed)
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
@@ -78,8 +87,19 @@ class OWSNR(OWWidget):
 
         self.commit()
 
+    def average_table(self, table):
+
+        if len(table) == 0:
+            return table
+        if self.out_choiced == 0: #snr
+            return self.make_table(np.nanmean(table.X, axis=0, keepdims=True) / np.std(table.X, axis=0, keepdims=True), table)
+        elif self.out_choiced == 1: #avg
+            return self.make_table(np.nanmean(table.X, axis=0, keepdims=True), table)
+        else: # std
+            return self.make_table(np.std(table.X, axis=0, keepdims=True), table)
+
     @staticmethod
-    def average_table(table):
+    def make_table(data, table):
         """
         Return a features-averaged table.
 
@@ -88,12 +108,9 @@ class OWSNR(OWWidget):
           - return value of DiscreteVariable, StringVariable and TimeVariable
             if all are the same.
           - return unknown otherwise.
-        """
-        if len(table) == 0:
-            return table
-        mean = np.nanmean(table.X, axis=0, keepdims=True)/np.std(table.X, axis=0, keepdims=True)
-        avg_table = Orange.data.Table.from_numpy(table.domain,
-                                                 X=mean,
+        """        
+        new_table = Orange.data.Table.from_numpy(table.domain,
+                                                 X=data,
                                                  Y=np.atleast_2d(table.Y[0].copy()),
                                                  metas=np.atleast_2d(table.metas[0].copy()))
         cont_vars = [var for var in table.domain.class_vars + table.domain.metas
@@ -102,31 +119,34 @@ class OWSNR(OWWidget):
             index = table.domain.index(var)
             col, _ = table.get_column_view(index)
             try:
-                avg_table[0, index] = np.nanmean(col)
+                new_table[0, index] = np.nanmean(col)
             except AttributeError:
                 # numpy.lib.nanfunctions._replace_nan just guesses and returns
                 # a boolean array mask for object arrays because object arrays
                 # do not support `isnan` (numpy-gh-9009)
                 # Since we know that ContinuousVariable values must be np.float64
                 # do an explicit cast here
-                avg_table[0, index] = np.nanmean(col, dtype=np.float64)
+                new_table[0, index] = np.nanmean(col, dtype=np.float64)
 
         other_vars = [var for var in table.domain.class_vars + table.domain.metas
                       if not isinstance(var, Orange.data.ContinuousVariable)]
         for var in other_vars:
             index = table.domain.index(var)
             col, _ = table.get_column_view(index)
-            val = var.to_val(avg_table[0, var])
+            val = var.to_val(new_table[0, var])
             if not np.all(col == val):
-                avg_table[0, var] = Orange.data.Unknown
+                new_table[0, var] = Orange.data.Unknown
 
-        return avg_table
+        return new_table
 
     def grouping_changed(self):
         """Calls commit() indirectly to respect auto_commit setting."""
         self.commit()
+    def out_choice_changed(self):
+        self.commit()
 
     def commit(self):
+        print(self.group_x, self.group_y, self.out_choiced)
         averages = None
         if self.data is not None:
             if self.group_x is None or self.group_y is None:
@@ -185,4 +205,15 @@ class OWSNR(OWWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    WidgetPreview(OWSNR).run(Orange.data.Table("iris"))
+    from orangecontrib.spectroscopy.data import NeaReaderGSF #Used to run outside Orange Canvas
+    from Orange.data.io import FileFormat
+    from Orange.data import dataset_dirs
+
+    fn = 'NeaReaderGSF_test/NeaReaderGSF_test O2A raw.gsf'
+    fn = "/home/ABTLUS/joao.levandoski/Documents/iniciacao_cientifica/ic-orange/dados/[original]-27-08-19-abertura-dados/automatic_saved/2019-08-27 140439 NF S hyperspectral_sample/2019-08-27 140439 NF S hyperspectral_sample O2A raw.gsf"
+    absolute_filename = FileFormat.locate(fn, dataset_dirs)
+    data = NeaReaderGSF(absolute_filename).read()
+    WidgetPreview(OWSNR).run(data)
+
+    # from Orange.widgets.utils.widgetpreview import WidgetPreview
+    # WidgetPreview(OWSNR).run(Orange.data.Table("iris"))
