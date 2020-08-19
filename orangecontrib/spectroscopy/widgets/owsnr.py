@@ -5,7 +5,6 @@ from Orange.data.filter import SameValue, FilterDiscrete, Values
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import DomainModel
-import Orange.data.filter as data_filter
 
 
 class OWSNR(OWWidget):
@@ -26,12 +25,13 @@ class OWSNR(OWWidget):
         averages = Output("SNR", Orange.data.Table, default=True)
 
     OUT_OPTIONS = {'SNR': 0, #snr
-                'Average': 1, # average
-                'Standart Deviation': 2} # STD
+                   'Average': 1, # average
+                   'Standart Deviation': 2} # STD
 
     settingsHandler = settings.DomainContextHandler()
     group_x = settings.ContextSetting(None)
     group_y = settings.ContextSetting(None)
+    group = settings.ContextSetting(None)
     out_choiced = settings.ContextSetting(0)
 
     autocommit = settings.Setting(False)
@@ -41,8 +41,6 @@ class OWSNR(OWWidget):
 
     class Warning(OWWidget.Warning):
         nodata = Msg("No useful data on input!")
-        nofloat_x = Msg("Group x, is not a float or int value")
-        nofloat_y = Msg("Group y, is not a float or int value")
 
     def __init__(self):
         super().__init__()
@@ -78,6 +76,7 @@ class OWSNR(OWWidget):
         self.data = dataset
         self.group_x = None
         self.group_y = None
+        self.group = None
         if dataset is None:
             self.Warning.nodata()
         else:
@@ -87,8 +86,7 @@ class OWSNR(OWWidget):
 
         self.commit()
 
-    def average_table(self, table):
-
+    def calc_table(self, table):
         if len(table) == 0:
             return table
         if self.out_choiced == 0: #snr
@@ -142,64 +140,53 @@ class OWSNR(OWWidget):
     def grouping_changed(self):
         """Calls commit() indirectly to respect auto_commit setting."""
         self.commit()
+        
     def out_choice_changed(self):
         self.commit()
 
+    def select_2coordinates(self):
+        parts = []
+        for x in self.group_x.values:
+            svfilter_x = SameValue(self.group_x, x)
+            data_x = svfilter_x(self.data)
+            for y in self.group_y.values:
+                svfilter_y = SameValue(self.group_y, y)
+                data_y = svfilter_y(data_x)
+
+                v_table = self.calc_table(data_y)
+                parts.append(v_table)
+
+        averages = Orange.data.Table.concatenate(parts, axis=0)
+        return averages
+
+    def select_1coordinate(self):
+        parts = []
+        for value in self.group.values:
+            svfilter = SameValue(self.group, value)
+            v_table = self.calc_table(svfilter(self.data))
+            parts.append(v_table)
+        averages = Orange.data.Table.concatenate(parts, axis=0)
+        return averages
+    
+    def test_types(self):
+        if self.group_y is None and self.group_x is None:
+            averages = self.calc_table(self.data)
+        elif None in [self.group_x, self.group_y]:
+            if self.group_x is None:
+                self.group = self.group_y
+            else:
+                self.group = self.group_x
+            averages = self.select_1coordinate()
+        else:
+            averages = self.select_2coordinates()
+
+        return averages
+
     def commit(self):
-        print(self.group_x, self.group_y, self.out_choiced)
         averages = None
         if self.data is not None:
-            if self.group_x is None or self.group_y is None:
-                averages = self.average_table(self.data)
-            else:
-                try:
-                    self.Warning.nofloat_x()
-                    if float(self.group_x.values[0]):
-                        self.Warning.nofloat_x.clear()
-                except ValueError:
-                    self.group_x = None
-                try:
-                    self.Warning.nofloat_y()
-                    if float(self.group_y.values[0]):
-                        self.Warning.nofloat_y.clear()
-                except ValueError:
-                    self.group_y = None
+            averages = self.test_types()
 
-                if self.group_x is None or self.group_y is None:
-                    averages = self.average_table(self.data)
-                else:
-                    self.Warning.nofloat_x.clear()
-                    self.Warning.nofloat_y.clear()
-                    parts = []
-                    domain = self.data.domain
-                    for x in self.group_x.values:
-                        attr_name = self.group_x
-                        attr_index = domain.index(attr_name)
-                        filter = data_filter.FilterDiscrete(attr_index, x)
-                        filtro = []
-                        filtro.append(filter)
-                        filters = data_filter.Values(filtro)
-                        temp = filters(self.data)
-                        for y in self.group_y.values:
-                            attr_name1 = self.group_y
-                            attr_index1 = domain.index(attr_name1)
-                            filter1 = data_filter.FilterDiscrete(attr_index1, y)
-                            filtro1 = []
-                            filtro1.append(filter1)
-                            filters1 = data_filter.Values(filtro1)
-                            full = filters1(temp)
-                            v_table = self.average_table(full)
-                            parts.append(v_table)
-
-
-                    # Using "None" as in OWSelectRows
-                    # Values is required because FilterDiscrete doesn't have
-                    # negate keyword or IsDefined method
-                    deffilter = Values(conditions=[FilterDiscrete(self.group_x, None)],
-                                       negate=True)
-                    v_table = self.average_table(deffilter(self.data))
-                    parts.append(v_table)
-                    averages = Orange.data.Table.concatenate(parts, axis=0)
         self.Outputs.averages.send(averages)
 
 
