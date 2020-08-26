@@ -13,9 +13,9 @@ class OWSNR(OWWidget):
 
     # Short widget description
     description = (
-        "Calculates averages.")
+        "Calculates SNR, averages or Standard Deviation.")
 
-    icon = "icons/none.svg"
+    icon = "icons/snr.svg"
 
     # Define inputs and outputs
     class Inputs:
@@ -24,9 +24,9 @@ class OWSNR(OWWidget):
     class Outputs:
         averages = Output("SNR", Orange.data.Table, default=True)
 
-    OUT_OPTIONS = {'SNR': 0, #snr
+    OUT_OPTIONS = {'Signal-to-noise ratio': 0, #snr
                    'Average': 1, # average
-                   'Standart Deviation': 2} # STD
+                   'Standard Deviation': 2} # STD
 
     settingsHandler = settings.DomainContextHandler()
     group_x = settings.ContextSetting(None)
@@ -140,7 +140,7 @@ class OWSNR(OWWidget):
     def grouping_changed(self):
         """Calls commit() indirectly to respect auto_commit setting."""
         self.commit()
-        
+       
     def out_choice_changed(self):
         self.commit()
 
