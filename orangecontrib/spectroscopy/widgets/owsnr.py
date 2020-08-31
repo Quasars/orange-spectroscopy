@@ -22,11 +22,11 @@ class OWSNR(OWWidget):
         data = Input("Data", Orange.data.Table, default=True)
 
     class Outputs:
-        averages = Output("SNR", Orange.data.Table, default=True)
+        final_data = Output("SNR", Orange.data.Table, default=True)
 
     OUT_OPTIONS = {'Signal-to-noise ratio': 0, #snr
                    'Average': 1, # average
-                   'Standard Deviation': 2} # STD
+                   'Standard Deviation': 2} # std
 
     settingsHandler = settings.DomainContextHandler()
     group_x = settings.ContextSetting(None)
@@ -34,7 +34,7 @@ class OWSNR(OWWidget):
     group = settings.ContextSetting(None)
     out_choiced = settings.ContextSetting(0)
 
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_main_area = False
     resizing_enabled = False
@@ -98,15 +98,7 @@ class OWSNR(OWWidget):
 
     @staticmethod
     def make_table(data, table):
-        """
-        Return a features-averaged table.
 
-        For metas and class_vars,
-          - return average value of ContinuousVariable
-          - return value of DiscreteVariable, StringVariable and TimeVariable
-            if all are the same.
-          - return unknown otherwise.
-        """        
         new_table = Orange.data.Table.from_numpy(table.domain,
                                                  X=data,
                                                  Y=np.atleast_2d(table.Y[0].copy()),
@@ -156,8 +148,8 @@ class OWSNR(OWWidget):
                 v_table = self.calc_table(data_y)
                 parts.append(v_table)
 
-        averages = Orange.data.Table.concatenate(parts, axis=0)
-        return averages
+        table_2_coord = Orange.data.Table.concatenate(parts, axis=0)
+        return table_2_coord
 
     def select_1coordinate(self):
         parts = []
@@ -165,42 +157,36 @@ class OWSNR(OWWidget):
             svfilter = SameValue(self.group, value)
             v_table = self.calc_table(svfilter(self.data))
             parts.append(v_table)
-        averages = Orange.data.Table.concatenate(parts, axis=0)
-        return averages
+        table_1_coord = Orange.data.Table.concatenate(parts, axis=0)
+        return table_1_coord
     
-    def test_types(self):
+    def select_coordinate(self):
         if self.group_y is None and self.group_x is None:
-            averages = self.calc_table(self.data)
+            final_data = self.calc_table(self.data)
         elif None in [self.group_x, self.group_y]:
             if self.group_x is None:
                 self.group = self.group_y
             else:
                 self.group = self.group_x
-            averages = self.select_1coordinate()
+            final_data = self.select_1coordinate()
         else:
-            averages = self.select_2coordinates()
+            final_data = self.select_2coordinates()
 
-        return averages
+        return final_data
 
     def commit(self):
-        averages = None
+        final_data = None
         if self.data is not None:
-            averages = self.test_types()
+            final_data = self.select_coordinate()
 
-        self.Outputs.averages.send(averages)
+        self.Outputs.final_data.send(final_data)
 
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    from orangecontrib.spectroscopy.data import NeaReaderGSF #Used to run outside Orange Canvas
-    from Orange.data.io import FileFormat
-    from Orange.data import dataset_dirs
-
-    fn = 'NeaReaderGSF_test/NeaReaderGSF_test O2A raw.gsf'
-    fn = "/home/ABTLUS/joao.levandoski/Documents/iniciacao_cientifica/ic-orange/dados/[original]-27-08-19-abertura-dados/automatic_saved/2019-08-27 140439 NF S hyperspectral_sample/2019-08-27 140439 NF S hyperspectral_sample O2A raw.gsf"
-    absolute_filename = FileFormat.locate(fn, dataset_dirs)
-    data = NeaReaderGSF(absolute_filename).read()
-    WidgetPreview(OWSNR).run(data)
-
-    # from Orange.widgets.utils.widgetpreview import WidgetPreview
-    # WidgetPreview(OWSNR).run(Orange.data.Table("iris"))
+    folder = """/home/levandoski/Documentos/ic-orange/\
+interface_orange/orange-spectroscopy/\
+orangecontrib/spectroscopy/datasets/"""
+    file_name = "three_coordinates_data.csv"
+    path = folder + file_name ### TODO open "three coordinates data.csv" without indicating the folder
+    WidgetPreview(OWSNR).run(Orange.data.Table(path))
