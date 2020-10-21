@@ -48,6 +48,7 @@ from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone, pixel_de
     float_to_str_decimals as strdec
 from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_selection, \
     selections_to_length, groups_or_annotated_table
+from orangecontrib.spectroscopy.utils import Peak_line as pl
 
 
 SELECT_SQUARE = 123
@@ -72,7 +73,8 @@ SELECT_POLYGON_TOLERANCE = 10
 COLORBREWER_SET1 = [(228, 26, 28), (55, 126, 184), (77, 175, 74), (152, 78, 163), (255, 127, 0),
                     (255, 255, 51), (166, 86, 40), (247, 129, 191), (153, 153, 153)]
 
-
+ADD_PEAK = 125
+REMOVE_PEAK = 126
 class SelectionGroupMixin:
     selection_group_saved = Setting(None, schema_only=True)
 
@@ -634,7 +636,6 @@ class InteractiveViewBox(ViewBox):
         self.setCursor(Qt.CrossCursor)
         self.update_selection_tooltip()
 
-
 class InteractiveViewBoxC(InteractiveViewBox):
 
     def wheelEvent(self, ev, axis=None):
@@ -809,6 +810,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         )
         self.invertX_menu.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(self.invertX_menu)
+        self.peak_label_a = QAction(
+            "Peak Marking", self, shortcut=Qt.Key_P, checkable=False,
+            triggered=self.peak_apply
+        )
+        self.peak_label_a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
+        actions.append(self.peak_label_a)
         if self.selection_type == SELECTMANY:
             select_curves = QAction(
                 "Select (line)", self, triggered=self.line_select_start,
@@ -1009,6 +1016,19 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot.showGrid(self.show_grid, self.show_grid, alpha=0.3)
         self.show_grid_a.setChecked(self.show_grid)
 
+
+    def peak_apply(self):
+        if self.viewtype == INDIVIDUAL:
+            new = pl.Peak_line()
+            new.setData(self.data)
+            new.getYvalues()
+            new.setMovable(True)
+            new.setPos(np.median(self.data_x))
+            new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            self.plot.addItem(new)
+
+    #TODO seems like I'll add in a changed and apply section here for it
+    #TODO Hm seems like I need to also add in this fun method for dragging and selecting stuff
     def invertX_changed(self):
         self.invertX = not self.invertX
         self.invertX_apply()
