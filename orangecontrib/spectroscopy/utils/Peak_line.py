@@ -6,7 +6,9 @@ from pyqtgraph import TextItem
 from pyqtgraph import ViewBox
 from pyqtgraph import functions as fn
 from scipy.signal import find_peaks
+from orangecontrib.spectroscopy.data import getx
 import numpy as np
+import math
 
 __all__ = ['Peak_line', 'Peak_label']
 """
@@ -236,17 +238,26 @@ class Peak_line(GraphicsObject):
 
     def getYvalues(self):
         data = self.Peaks
-        Peak = []
-        for i in np.arange(len(data)):
-            peaks = find_peaks(data[i])
-            Peak.append(peaks)
-        print(Peak)
-        #Can maybe write a function that takes the lengeth of the first x digits
-        #and then we use that to make a fraction .... uhhhh idk
-        Ymin = np.amin(data)
-        Ymax = np.amax(data)
-        self.setSpan(mn=0.2, mx=.8)
+        aver = []
+        dat = np.array(data)
+        Ydat = (np.mean(data, axis=0))
+        x = getx(data)
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            array = np.sort(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
+        index = np.where(x == find_nearest(x, self.getXPos()))
+        index = index[0]
+        Ymax = Ydat[index[0]] #gets us the index for our array
+
+        if np.where(data == Ymax) != np.where(data == np.max(data)):
+            Ymax = np.max(Ydat)/2
+        else:
+            Ymax = np.max(Ydat)
+        self.setSpan(mn=(np.amin(Ydat)), mx=(1))
         self.update()
+#set up to where the differencee between max and min is a ratio?
 
 
     def setSpan(self, mn, mx):
@@ -276,13 +287,15 @@ class Peak_line(GraphicsObject):
         br.setTop(w)
 
         length = br.width()
-        left = br.left() + length * self.span[0]
-        right = br.left() + length * self.span[1]
+        left = self.span[0]
+        right = self.span[1]
         br.setLeft(left)
         br.setRight(right)
         br = br.normalized()
 
         vs = self.getViewBox().size()
+        if self.mouseDragEvent:
+            left = self.span[0] - self.getYPos()
 
         if self._bounds != br or self._lastViewSize != vs:
             self._bounds = br
@@ -363,6 +376,8 @@ class Peak_line(GraphicsObject):
             if ev.isFinish():
                 self.moving = False
                 self.sigPositionChangeFinished.emit(self)
+                self.getYvalues()
+                self._computeBoundingRect()
 
     def mouseClickEvent(self, ev):
         if self.moving and ev.button() == QtCore.Qt.RightButton:
@@ -403,7 +418,7 @@ class Peak_line(GraphicsObject):
         return self._name
 
     def updateLabel(self):
-        self.label.setText(str(self.getXPos()))
+        self.label.setText(str(round(self.getXPos(), 4)))
         self.update()
 
 class Peak_label(TextItem):

@@ -1025,6 +1025,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             new.setMovable(True)
             new.setPos(np.median(self.data_x))
             new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            new.label.setColor(color=QColor(Qt.black))
+            new.label.setPosition(1)
+            new.label.setMovable(True)
             self.plot.addItem(new)
 
     #TODO seems like I'll add in a changed and apply section here for it
