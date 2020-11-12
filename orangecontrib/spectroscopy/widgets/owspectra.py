@@ -1024,6 +1024,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             new.getYvalues()
             new.setMovable(True)
             new.setPos(np.median(self.data_x))
+            new.label.setText(str(np.median(self.data_x)))
             new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
             new.label.setColor(color=QColor(Qt.black))
             new.label.setPosition(1)
@@ -1033,7 +1034,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             for i in np.array(self.data):
                 x, __ = signal.find_peaks(i)
                 locations.append(self.data_x[x])
-        for i in locations[0]:
+        """for i in locations[0]:
             new = pl.Peak_line()
             new.setData(self.data)
             new.getYvalues()
@@ -1045,7 +1046,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             new.setPos(i)
 
             self.plot.addItem(new)
-
+"""
 
 
 
