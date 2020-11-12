@@ -5,7 +5,7 @@ import gc
 import random
 import warnings
 from xml.sax.saxutils import escape
-
+from scipy import signal
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
     QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
@@ -1029,6 +1029,26 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             new.label.setPosition(1)
             new.label.setMovable(True)
             self.plot.addItem(new)
+            locations = []
+            for i in np.array(self.data):
+                x, __ = signal.find_peaks(i)
+                locations.append(self.data_x[x])
+        for i in locations[0]:
+            new = pl.Peak_line()
+            new.setData(self.data)
+            new.getYvalues()
+            new.setMovable(True)
+            new.setPos(np.median(self.data_x))
+            new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            new.label.setColor(color=QColor(Qt.black))
+            new.label.setText('i')
+            new.setPos(i)
+
+            self.plot.addItem(new)
+
+
+
+
 
     #TODO seems like I'll add in a changed and apply section here for it
     #TODO Hm seems like I need to also add in this fun method for dragging and selecting stuff
