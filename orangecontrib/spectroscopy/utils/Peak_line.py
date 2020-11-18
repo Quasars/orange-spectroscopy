@@ -8,14 +8,15 @@ from pyqtgraph import functions as fn
 from scipy.signal import find_peaks
 from orangecontrib.spectroscopy.data import getx
 import numpy as np
-import math
 
 __all__ = ['Peak_line', 'Peak_label']
 """
     A modification of the Infinite Line Graphicsobject.
     Uses the base function as a means to create labels specific for peak
-    marking in spectra
+    marking in spectra. 
 """
+
+
 class Peak_line(GraphicsObject):
     """
     **Bases:** :class:`GraphicsObject <pyqtgraph.GraphicsObject>`
@@ -152,8 +153,6 @@ class Peak_line(GraphicsObject):
             self.currentPen = self.hoverPen
             self.update()
 
-
-
     def setAngle(self, angle):
         """
         Takes angle argument in degrees.
@@ -223,42 +222,9 @@ class Peak_line(GraphicsObject):
         QPointF are all acceptable)."""
         self.setPos(v)
 
-    ## broken in 4.7
-    # def itemChange(self, change, val):
-    # if change in [self.ItemScenePositionHasChanged, self.ItemSceneHasChanged]:
-    # self.updateLine()
-    # print "update", change
-    # print self.getBoundingParents()
-    # else:
-    # print "ignore", change
-    # return GraphicsObject.itemChange(self, change, val)
     def setData(self, data):
         if self.Peaks != data:
             self.Peaks = data
-
-    def getYvalues(self):
-        data = self.Peaks
-        aver = []
-        dat = np.array(data)
-        Ydat = (np.mean(data, axis=0))
-        x = getx(data)
-        def find_nearest(array, value):
-            array = np.asarray(array)
-            array = np.sort(array)
-            idx = (np.abs(array - value)).argmin()
-            return array[idx]
-        index = np.where(x == find_nearest(x, self.getXPos()))
-        index = index[0]
-        Ymax = Ydat[index[0]] #gets us the index for our array
-
-        if np.where(data == Ymax) != np.where(data == np.max(data)):
-            Ymax = np.max(Ydat)/2
-        else:
-            Ymax = np.max(Ydat)
-        self.setSpan(mn=(np.amin(Ydat)), mx=(1))
-        self.update()
-#set up to where the differencee between max and min is a ratio?
-
 
     def setSpan(self, mn, mx):
         if self.span != (mn, mx):
@@ -274,9 +240,7 @@ class Peak_line(GraphicsObject):
         if vr is None:
             return QtCore.QRectF()
 
-        ## add a 4-pixel radius around the line for mouse interaction.
-
-        px = self.pixelLength(direction=Point(1, 0), ortho=True)  ## get pixel length orthogonal to the line
+        px = self.pixelLength(direction=Point(1, 0), ortho=True)
         if px is None:
             px = 0
         pw = max(self.pen.width() / 2, self.hoverPen.width() / 2)
@@ -372,11 +336,9 @@ class Peak_line(GraphicsObject):
             self.setPos(self.cursorOffset + self.mapToParent(ev.pos()))
             self.sigDragged.emit(self)
             self.updateLabel()
-            self.getYvalues()
             if ev.isFinish():
                 self.moving = False
                 self.sigPositionChangeFinished.emit(self)
-                self.getYvalues()
                 self._computeBoundingRect()
 
     def mouseClickEvent(self, ev):
@@ -386,6 +348,12 @@ class Peak_line(GraphicsObject):
             self.moving = False
             self.sigDragged.emit(self)
             self.sigPositionChangeFinished.emit(self)
+
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            ev.accept()
+            self.hide()
+            self.update()
 
     def hoverEvent(self, ev):
         if (not ev.isExit()) and self.movable and ev.acceptDrags(QtCore.Qt.LeftButton):
@@ -418,8 +386,17 @@ class Peak_line(GraphicsObject):
         return self._name
 
     def updateLabel(self):
-        self.label.setText(str(round(self.getXPos(), 4)))
+        x = self.getXPos()
+        leng = len(str(round(x)))
+        if leng >= 4:
+            leng = 2
+        elif leng < 4 and leng > 2:
+            leng = 3
+        elif leng <= 2:
+            leng = 4
+        self.label.setText(str(round(self.getXPos(), leng)))
         self.update()
+
 
 class Peak_label(TextItem):
     """

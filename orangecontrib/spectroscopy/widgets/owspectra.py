@@ -12,7 +12,6 @@ from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
-
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -811,7 +810,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.invertX_menu.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(self.invertX_menu)
         self.peak_label_a = QAction(
-            "Peak Marking", self, shortcut=Qt.Key_P, checkable=False,
+            "Label Peaks", self, shortcut=Qt.Key_P, checkable=False,
             triggered=self.peak_apply
         )
         self.peak_label_a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
@@ -1019,40 +1018,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def peak_apply(self):
         if self.viewtype == INDIVIDUAL:
-            new = pl.Peak_line()
-            new.setData(self.data)
-            new.getYvalues()
-            new.setMovable(True)
-            new.setPos(np.median(self.data_x))
-            new.label.setText(str(np.median(self.data_x)))
-            new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            new.label.setColor(color=QColor(Qt.black))
-            new.label.setPosition(1)
-            new.label.setMovable(True)
-            self.plot.addItem(new)
-            locations = []
-            for i in np.array(self.data):
-                x, __ = signal.find_peaks(i)
-                locations.append(self.data_x[x])
-        """for i in locations[0]:
-            new = pl.Peak_line()
-            new.setData(self.data)
-            new.getYvalues()
-            new.setMovable(True)
-            new.setPos(np.median(self.data_x))
-            new.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            new.label.setColor(color=QColor(Qt.black))
-            new.label.setText('i')
-            new.setPos(i)
+            peakline = pl.Peak_line()
+            peakline.setData(self.data)
+            peakline.setMovable(True)
+            self.min = np.amin(self.data)
+            self.maxv = np.amax(self.data)
+            self.start_point = np.median(self.data_x)
+            peakline.setPos(self.start_point)
+            peakline.label.setText(str(np.median(self.data_x)))
+            peakline.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            peakline.setSpan(mn=self.min,mx=np.mean(np.amax(self.maxv)))
+            peakline.label.setColor(color=QColor(Qt.black))
+            peakline.label.setPosition(1)
+            peakline.label.setMovable(True)
+            self.plot.addItem(peakline)
 
-            self.plot.addItem(new)
-"""
-
-
-
-
-    #TODO seems like I'll add in a changed and apply section here for it
-    #TODO Hm seems like I need to also add in this fun method for dragging and selecting stuff
     def invertX_changed(self):
         self.invertX = not self.invertX
         self.invertX_apply()
