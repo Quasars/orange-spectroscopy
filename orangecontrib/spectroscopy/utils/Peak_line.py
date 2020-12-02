@@ -5,19 +5,17 @@ from pyqtgraph import GraphicsObject
 from pyqtgraph import TextItem
 from pyqtgraph import ViewBox
 from pyqtgraph import functions as fn
-from scipy.signal import find_peaks
-from orangecontrib.spectroscopy.data import getx
 import numpy as np
 
-__all__ = ['Peak_line', 'Peak_label']
+__all__ = ['Peak_Line', 'Peak_Label']
+
 """
     A modification of the Infinite Line Graphicsobject.
     Uses the base function as a means to create labels specific for peak
     marking in spectra. 
 """
 
-
-class Peak_line(GraphicsObject):
+class Peak_Line(GraphicsObject):
     """
     **Bases:** :class:`GraphicsObject <pyqtgraph.GraphicsObject>`
     Displays a line of infinite length.
@@ -36,7 +34,7 @@ class Peak_line(GraphicsObject):
 
     def __init__(self, pos=None, angle=90, pen=None, movable=False, bounds=None,
                  hoverPen=None, label=None, labelOpts=None, span=(0, 1), markers=None,
-                 name=None, Peaks=None):
+                 name=None):
         """
         =============== ==================================================================
         **Arguments:**
@@ -68,7 +66,6 @@ class Peak_line(GraphicsObject):
         =============== ==================================================================
         """
         self._boundingRect = None
-        self.Peaks = None
         self._name = name
 
         GraphicsObject.__init__(self)
@@ -109,7 +106,7 @@ class Peak_line(GraphicsObject):
 
         if label is None:
             labelOpts = {} if labelOpts is None else labelOpts
-            self.label = Peak_label(self, text=str(self.getXPos()), **labelOpts, position=(1))
+            self.label = Peak_Label(self, text=str(self.getXPos()), **labelOpts, position=(1))
 
     def setMovable(self, m):
         """Set whether the line is movable by the user."""
@@ -250,7 +247,6 @@ class Peak_line(GraphicsObject):
         br.setBottom(-w)
         br.setTop(w)
 
-        length = br.width()
         left = self.span[0]
         right = self.span[1]
         br.setLeft(left)
@@ -398,7 +394,7 @@ class Peak_line(GraphicsObject):
         self.update()
 
 
-class Peak_label(TextItem):
+class Peak_Label(TextItem):
     """
     A TextItem that attaches itself to an InfiniteLine.
 
@@ -434,7 +430,8 @@ class Peak_label(TextItem):
         self.line = line
         self.movable = movable
         self.moving = False
-        self.orthoPos = position  # text will always be placed on the line at a position relative to view bounds
+        self.orthoPos = position
+        # text will always be placed on the line at a position relative to view bounds
         self.format = text
         self.line.sigPositionChanged.connect(self.valueChanged)
         self._endpoints = (None, None)
@@ -573,6 +570,5 @@ class Peak_label(TextItem):
         pt1, pt2 = self.getEndpoints()
         if pt1 is None:
             return 0
-        view = self.getViewBox()
         pos = self.mapToParent(pos)
         return (pos.x() - pt1.x()) / (pt2.x() - pt1.x())

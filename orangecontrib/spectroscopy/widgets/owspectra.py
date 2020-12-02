@@ -5,7 +5,6 @@ import gc
 import random
 import warnings
 from xml.sax.saxutils import escape
-from scipy import signal
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
     QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
@@ -16,7 +15,6 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 from pyqtgraph import Point, GraphicsObject
-
 import Orange.data
 from Orange.data import DiscreteVariable
 from Orange.widgets.widget import OWWidget, Msg, OWComponent, Input, Output
@@ -1015,23 +1013,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot.showGrid(self.show_grid, self.show_grid, alpha=0.3)
         self.show_grid_a.setChecked(self.show_grid)
 
-
     def peak_apply(self):
         if self.viewtype == INDIVIDUAL:
-            peakline = pl.Peak_line()
-            peakline.setData(self.data)
-            peakline.setMovable(True)
-            self.min = np.amin(self.data)
-            self.maxv = np.amax(self.data)
-            self.start_point = np.median(self.data_x)
-            peakline.setPos(self.start_point)
-            peakline.label.setText(str(np.median(self.data_x)))
-            peakline.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            peakline.setSpan(mn=self.min,mx=np.mean(np.amax(self.maxv)))
-            peakline.label.setColor(color=QColor(Qt.black))
-            peakline.label.setPosition(1)
-            peakline.label.setMovable(True)
-            self.plot.addItem(peakline)
+            Label_line = pl.Peak_line()
+            Label_line.setMovable(True)
+            self.Minimum_Point = np.amin(self.data)
+            self.Maximum_Point = np.amax(self.data)
+            self.Start_Point = round(np.median(self.data_x), 2)
+            Label_line.setPos(self.Start_Point)
+            Label_line.label.setText(str(round(np.median(self.data_x), 3)))
+            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            Label_line.setSpan(mn=self.Minimum_Point, mx=np.mean(np.amax(self.Maximum_Point)))
+            Label_line.label.setColor(color=QColor(Qt.black))
+            Label_line.label.setPosition(1)
+            Label_line.label.setMovable(True)
+            self.plot.addItem(Label_line)
 
     def invertX_changed(self):
         self.invertX = not self.invertX
