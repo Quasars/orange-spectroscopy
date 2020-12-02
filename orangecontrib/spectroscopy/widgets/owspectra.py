@@ -1023,7 +1023,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             Label_line.setPos(self.Start_Point)
             Label_line.label.setText(str(round(np.median(self.data_x), 3)))
             Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.Minimum_Point, mx=np.mean(np.amax(self.Maximum_Point)))
+            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
             Label_line.label.setColor(color=QColor(Qt.black))
             Label_line.label.setPosition(1)
             Label_line.label.setMovable(True)
