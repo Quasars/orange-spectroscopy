@@ -1015,7 +1015,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def peak_apply(self):
         if self.viewtype == INDIVIDUAL:
-            Label_line = pl.Peak_line()
+            Label_line = pl.Peak_Line()
             Label_line.setMovable(True)
             self.Minimum_Point = np.amin(self.data)
             self.Maximum_Point = np.amax(self.data)

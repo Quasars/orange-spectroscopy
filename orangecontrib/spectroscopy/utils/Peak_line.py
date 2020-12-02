@@ -219,10 +219,6 @@ class Peak_Line(GraphicsObject):
         QPointF are all acceptable)."""
         self.setPos(v)
 
-    def setData(self, data):
-        if self.Peaks != data:
-            self.Peaks = data
-
     def setSpan(self, mn, mx):
         if self.span != (mn, mx):
             self.span = (mn, mx)
