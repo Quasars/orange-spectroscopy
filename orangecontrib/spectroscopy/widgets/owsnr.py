@@ -1,14 +1,11 @@
 import numpy as np
 
 import Orange.data
-from Orange.data.filter import SameValue, FilterDiscrete, Values
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import DomainModel
 
-
-
-from Orange.data import Domain, Table
+from Orange.data import Domain
 from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan
 
 
@@ -55,14 +52,14 @@ class OWSNR(OWWidget):
 
         self.group_axis_x = DomainModel(
             placeholder="None", separators=False,
-            valid_types=Orange.data.DiscreteVariable)
+            valid_types=Orange.data.ContinuousVariable)
         self.group_view_x = gui.comboBox(
             self.controlArea, self, "group_x", box="Select axis: x",
             model=self.group_axis_x, callback=self.grouping_changed)
 
         self.group_axis_y = DomainModel(
             placeholder="None", separators=False,
-            valid_types=Orange.data.DiscreteVariable)
+            valid_types=Orange.data.ContinuousVariable)
         self.group_view_y = gui.comboBox(
             self.controlArea, self, "group_y", box="Select axis: y",
             model=self.group_axis_y, callback=self.grouping_changed)
@@ -91,16 +88,6 @@ class OWSNR(OWWidget):
 
         self.commit()
 
-    def calc_table(self, table):
-        if len(table) == 0:
-            return table
-        if self.out_choiced == 0: #snr
-            return self.make_table(np.nanmean(table.X, axis=0, keepdims=True) / np.std(table.X, axis=0, keepdims=True), table)
-        elif self.out_choiced == 1: #avg
-            return self.make_table(np.nanmean(table.X, axis=0, keepdims=True), table)
-        else: # std
-            return self.make_table(np.std(table.X, axis=0, keepdims=True), table)
-
     def calc_table_np(self, table):
         if len(table) == 0:
             return table
@@ -114,7 +101,6 @@ class OWSNR(OWWidget):
 
     @staticmethod
     def make_table(data, table):
-
         new_table = Orange.data.Table.from_numpy(table.domain,
                                                  X=data,
                                                  Y=np.atleast_2d(table.Y[0].copy()),
@@ -153,72 +139,34 @@ class OWSNR(OWWidget):
         self.commit()
 
     def select_2coordinates(self):
-        # parts = []
-        # for x in self.group_x.values:
-        #     svfilter_x = SameValue(self.group_x, x)
-        #     data_x = svfilter_x(self.data)
-        #     for y in self.group_y.values:
-        #         svfilter_y = SameValue(self.group_y, y)
-        #         data_y = svfilter_y(data_x)
-
-        #         v_table = self.calc_table(data_y)
-        #         parts.append(v_table)
-
-        # table_2_coord = Orange.data.Table.concatenate(parts, axis=0)
-        # return table_2_coord
-        #################################################################################################################
-        data = self.data
-        attr_x = self.group_x  # whatever the user chooses in the widget
-        attr_y = self.group_y #<----------------- Seria meu group_y
-        xat = data.domain[attr_x]
-        yat = data.domain[attr_y]
+        attr_x = self.group_x
+        attr_y = self.group_y
+        xat = self.data.domain[attr_x]
+        yat = self.data.domain[attr_y]
 
         def extract_col(data, var):
             nd = Domain([var])
-            d = data.transform(nd)
+            d = self.data.transform(nd)
             return d.X[:, 0]
 
-        # coordinates as numpy arrays which are fast to work with
-        coorx = extract_col(data, xat)
-        coory = extract_col(data, yat)
+        coorx = extract_col(self.data, xat)
+        coory = extract_col(self.data, yat)
 
-        # get pixel grid from continuous attributes
-        # your first solution could only handle discrete features, this helps remove the limitation
-        lsx = values_to_linspace(coorx)  # tuples (first value, last value, number of values)
+        lsx = values_to_linspace(coorx)
         lsy = values_to_linspace(coory)
 
-        # print("lsx", lsx)  # notice that x has 10 values
-        # print("lsy", lsy)  # y has more, because we left it original
-
-        xindex, xnan = index_values_nan(coorx, lsx)  #noise robust index
+        xindex, xnan = index_values_nan(coorx, lsx)
         yindex, ynan = index_values_nan(coory, lsy)
 
-        # now we need to select which things go together in a fast way, use trick from
+        # trick:
         # https://stackoverflow.com/questions/31878240/numpy-average-of-values-corresponding-to-unique-coordinate-positions
 
         coo = np.hstack([xindex.reshape(-1, 1), yindex.reshape(-1, 1)])
-
-        # Use lexsort to bring duplicate coo XY's in succession
         sortidx = np.lexsort(coo.T)
-        # print(coo)
-        # print(sortidx)
         sorted_coo = coo[sortidx]
-        # print(sorted_coo)
-
-        # Get mask of start of each unique coo XY
         unqID_mask = np.append(True,np.any(np.diff(sorted_coo,axis=0),axis=1))
-
-        # Tag/ID each coo XY based on their uniqueness among others
         ID = unqID_mask.cumsum()-1
-
-        # Get unique coo XY's
         unq_coo = sorted_coo[unqID_mask]
-
-        # end of stackovrflow trick
-
-
-        # The following could be made faster with clever use of sparse matrices or cython code,
-        # but for now it should be OKs
         unique, counts = np.unique(ID, return_counts=True)
         pos = 0
         bins = []
@@ -226,99 +174,39 @@ class OWSNR(OWWidget):
             bins.append(sortidx[pos:pos+size])
             pos += size
 
-
-
-        # Ok, Almost finished! Now we have computed which indices go together in a fast way,
-        # now just to make a table
-
-        # so, now bins is your result and tells you which rows go together, now you can run something like make_table
-
-
-        # in the Widget also other columns will probably to be averaged, such as your make_table,
-        # but that uses these indices.
-
         meanX = []
         for indices in bins:
-            selection = data.X[indices]
-            # print(indices)
+            selection = self.data.X[indices]
             v_teste = self.calc_table_np(selection)
             meanX.append(v_teste)
 
-        # meanX = np.vstack(meanX)
-        # print(meanX.shape)
-
-        # ndata = Table.from_numpy(data.domain,
-        #                           X=meanX,
-        #                           Y=np.full((len(unique), data.Y.shape[1]), np.nan),
-        #                           metas=np.full((len(unique), data.metas.shape[1]), np.nan))
-
-
-        # # unq_coo contains integer indices (xindex, yindex) -> map them back to the real positions
-        # ndata.metas[:, 0] = np.linspace(*lsx)[unq_coo[:, 0]]
-        # ndata.metas[:, 1] = np.linspace(*lsy)[unq_coo[:, 1]]
-
-        #################################################################################################################
-
         table_2_coord = Orange.data.Table.concatenate(meanX, axis=0)
+
+        ### TODO insert lsx in metas group_x not in 0
+        table_2_coord.metas[:, 0] = np.linspace(*lsx)[unq_coo[:, 0]]
+        ### TODO insert lsy in metas group_y not in 1
+        table_2_coord.metas[:, 1] = np.linspace(*lsy)[unq_coo[:, 1]]
         return table_2_coord
 
-    def select_1coordinate(self):
-        # parts = []
-        # for value in self.group.values:
-        #     svfilter = SameValue(self.group, value)
-        #     v_table = self.calc_table(svfilter(self.data))
-        #     parts.append(v_table)
-        # table_1_coord = Orange.data.Table.concatenate(parts, axis=0)
-        # return table_1_coord
 
-        #################################################################################################################
-        data = self.data
-        attr = self.group  # whatever the user chooses in the widget
-        at = data.domain[attr]
+    def select_1coordinate(self):
+        attr = self.group
+        at = self.data.domain[attr]
 
         def extract_col(data, var):
             nd = Domain([var])
-            d = data.transform(nd)
+            d = self.data.transform(nd)
             return d.X[:, 0]
 
-        # coordinates as numpy arrays which are fast to work with
-        coor = extract_col(data, at)
-
-        # get pixel grid from continuous attributes
-        # your first solution could only handle discrete features, this helps remove the limitation
-        ls = values_to_linspace(coor)  # tuples (first value, last value, number of values)
-
-        # print("lsx", lsx)  # notice that x has 10 values
-        # print("lsy", lsy)  # y has more, because we left it original
-
-        index, xnan = index_values_nan(coor, ls)  #noise robust index
-
-        # now we need to select which things go together in a fast way, use trick from
-        # https://stackoverflow.com/questions/31878240/numpy-average-of-values-corresponding-to-unique-coordinate-positions
-
+        coor = extract_col(self.data, at)
+        ls = values_to_linspace(coor)
+        index, _ = index_values_nan(coor, ls)
         coo = np.hstack([index.reshape(-1, 1)])
-
-        # Use lexsort to bring duplicate coo XY's in succession
         sortidx = np.lexsort(coo.T)
-        # print(coo)
-        # print(sortidx)
         sorted_coo = coo[sortidx]
-        # print(sorted_coo)
-
-        # Get mask of start of each unique coo XY
         unqID_mask = np.append(True,np.any(np.diff(sorted_coo,axis=0),axis=1))
-
-        # Tag/ID each coo XY based on their uniqueness among others
         ID = unqID_mask.cumsum()-1
-
-        # Get unique coo XY's
         unq_coo = sorted_coo[unqID_mask]
-
-        # end of stackovrflow trick
-
-
-        # The following could be made faster with clever use of sparse matrices or cython code,
-        # but for now it should be OKs
         unique, counts = np.unique(ID, return_counts=True)
         pos = 0
         bins = []
@@ -326,45 +214,22 @@ class OWSNR(OWWidget):
             bins.append(sortidx[pos:pos+size])
             pos += size
 
-
-
-        # Ok, Almost finished! Now we have computed which indices go together in a fast way,
-        # now just to make a table
-
-        # so, now bins is your result and tells you which rows go together, now you can run something like make_table
-
-
-        # in the Widget also other columns will probably to be averaged, such as your make_table,
-        # but that uses these indices.
-
         meanX = []
         for indices in bins:
-            selection = data.X[indices]
-            # print(indices)
+            selection = self.data.X[indices]
             v_teste = self.calc_table_np(selection)
             meanX.append(v_teste)
 
-        # meanX = np.vstack(meanX)
-        # print(meanX.shape)
-
-        # ndata = Table.from_numpy(data.domain,
-        #                           X=meanX,
-        #                           Y=np.full((len(unique), data.Y.shape[1]), np.nan),
-        #                           metas=np.full((len(unique), data.metas.shape[1]), np.nan))
-
-
-        # # unq_coo contains integer indices (xindex, yindex) -> map them back to the real positions
-        # ndata.metas[:, 0] = np.linspace(*lsx)[unq_coo[:, 0]]
-        # ndata.metas[:, 1] = np.linspace(*lsy)[unq_coo[:, 1]]
-
-        #################################################################################################################
         table_1_coord = Orange.data.Table.concatenate(meanX, axis=0)
+        ### TODO insert ls in metas group
+        table_1_coord.metas[:, 0] = np.linspace(*ls)[unq_coo[:, 0]]
+
         return table_1_coord
 
-    
+        
     def select_coordinate(self):
         if self.group_y is None and self.group_x is None:
-            final_data = self.calc_table(self.data)
+            final_data = self.calc_table_np(self.data.X)
         elif None in [self.group_x, self.group_y]:
             if self.group_x is None:
                 self.group = self.group_y
