@@ -163,7 +163,6 @@ class Peak_Line(GraphicsObject):
         self.update()
 
     def setPos(self, pos):
-
         if type(pos) in [list, tuple, np.ndarray]:
             newPos = list(pos)
         elif isinstance(pos, QtCore.QPointF):

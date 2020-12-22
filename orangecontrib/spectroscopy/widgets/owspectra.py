@@ -7,12 +7,13 @@ import warnings
 from xml.sax.saxutils import escape
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
-    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
+    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem, QCheckBox
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
 import numpy as np
 import pyqtgraph as pg
+from scipy.signal import find_peaks
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 from pyqtgraph import Point, GraphicsObject
 import Orange.data
@@ -666,6 +667,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     range_x2 = Setting(None)
     range_y1 = Setting(None)
     range_y2 = Setting(None)
+    Prominence = Setting(None)
+    peak_min = Setting(None)
+    peak_max = Setting(None)
     feature_color = ContextSetting(None)
     color_individual = Setting(False)  # color individual curves (in a cycle) if no feature_color
     invertX = Setting(False)
@@ -813,6 +817,37 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         )
         self.peak_label_a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(self.peak_label_a)
+
+        peaklabler_menu = MenuFocus("Peak Labeling Menu", self)
+        peak_action = QWidgetAction(self)
+        layout = QGridLayout()
+        prominence_box = gui.widgetBox(self, margin=5, orientation=layout)
+        prominence_box.setFocusPolicy(Qt.TabFocus)
+        self.single_peak = QPushButton("Add Label Line", self)
+        self.single_peak.clicked.connect(self.peak_apply)
+        self.Peak_Prominence = lineEditFloatOrNone(None, self, 'Prominence')
+        self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
+        self.peak_height_max = lineEditFloatOrNone(None, self, 'peak_max')
+        self.Prominence_check = QCheckBox(None, self)
+        self.min_check = QCheckBox(None, self)
+        self.max_check = QCheckBox(None, self)
+        prominence_box.setFocusProxy(self.Prominence)
+        layout.addWidget(self.single_peak, 3, 1)
+        layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
+        layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
+        layout.addWidget(QLabel('Maximum Peak Height'), 2, 0, Qt.AlignRight)
+        layout.addWidget(QLabel('Add Single Label'), 3, 0)
+        layout.addWidget(self.Peak_Prominence, 0, 1)
+        layout.addWidget(self.peak_height_min, 1, 1)
+        layout.addWidget(self.peak_height_max, 2, 1)
+        b = gui.button(None, self, "Apply", callback=self.set_auto_peaks)
+        layout.addWidget(b, 4, 1, Qt.AlignVCenter)
+        layout.addWidget(self.Prominence_check, 0, 2)
+        layout.addWidget(self.min_check, 1, 2)
+        layout.addWidget(self.max_check, 2, 2)
+        peak_action.setDefaultWidget(prominence_box)
+        peaklabler_menu.addAction(peak_action)
+
         if self.selection_type == SELECTMANY:
             select_curves = QAction(
                 "Select (line)", self, triggered=self.line_select_start,
@@ -861,6 +896,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         view_menu = MenuFocus(self)
         self.button.setMenu(view_menu)
         view_menu.addActions(actions)
+        view_menu.addMenu(peaklabler_menu)
         view_menu.addMenu(range_menu)
         self.addActions(actions)
 
@@ -993,6 +1029,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         y2 = self.range_y2 if self.range_y2 is not None else vr.bottom()
         self.plot.vb.setXRange(x1, x2)
         self.plot.vb.setYRange(y1, y2)
+    def set_auto_peaks(self):
+        print('hi')
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1017,8 +1055,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if self.viewtype == INDIVIDUAL:
             Label_line = pl.Peak_Line()
             Label_line.setMovable(True)
-            self.Minimum_Point = np.amin(self.data)
-            self.Maximum_Point = np.amax(self.data)
+            data = self.data[:][0:len(self.data_x)]
+            self.Minimum_Point = np.amin(data)
+            self.Maximum_Point = np.amax(data)
             self.Start_Point = round(np.median(self.data_x), 2)
             Label_line.setPos(self.Start_Point)
             Label_line.label.setText(str(round(np.median(self.data_x), 3)))
@@ -1028,6 +1067,65 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             Label_line.label.setPosition(1)
             Label_line.label.setMovable(True)
             self.plot.addItem(Label_line)
+            Label_line.updateLabel()
+
+    def peak_apply_auto(self, prominence, heights):
+        if self.viewtype ==INDIVIDUAL:
+            Label_line = pl.Peak_Line()
+            Label_line.setMovable(True)
+            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+            Label_line.label.setColor(color=QColor(Qt.black))
+            Label_line.label.setPosition(1)
+            Label_line.label.setMovable(True)
+
+            peak = []
+            values = []
+            data = self.data[:][0:len(self.data_x)]
+            x_axis = self.data_x
+
+            if np.shape(data) != (len(data), ):
+                for i in range(len(data)):
+                    test = data[i]
+                    print(np.shape(test))
+                    peaks, _ = find_peaks(test, height=0.5, prominence=0.25)
+                    peaks = np.array(peaks)
+                    peaks = x_axis[peaks]
+                    for z in range(len(peaks)):
+                        peak.append(peaks[z])
+                used_values = []
+                count = []
+                for i in range(len(peak)):
+                    if peak[i] not in used_values:
+                        used_values.append(peak[i])
+                        J = np.count_nonzero(peak==peak[i])
+                        count.append(J)
+                    else:
+                        count.append(None)
+                peak_locations = []
+                for i in range(len(count)):
+                    if count[i] != None and count[i] > 1:
+                        peak_locations.append(peak[i])
+                for i in range(len(peak_locations)):
+                    Label_line = pl.Peak_Line()
+                    Label_line.setPos(peak_locations[i])
+                    Label_line.label.setText(str(round(peak_locations[i], 3)))
+                    self.plot.addItem(Label_line)
+                    Label_line.updateLabel()
+            else:
+                single_spectra = []
+                for i in range(len(data)):
+                    single_spectra.append(data[i])
+                peaks, _ = find_peaks(single_spectra, prominence=15)
+                peaks = np.array(peaks)
+                peaks = x_axis[peaks]
+                for i in range(len(peaks)):
+                    Label_line = pl.Peak_Line()
+                    Label_line.setPos(peaks[i])
+                    Label_line.label.setText(str(round(peaks[i], 3)))
+                    self.plot.addItem(Label_line)
+                    Label_line.updateLabel()
+
 
     def invertX_changed(self):
         self.invertX = not self.invertX
