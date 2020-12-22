@@ -1029,8 +1029,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         y2 = self.range_y2 if self.range_y2 is not None else vr.bottom()
         self.plot.vb.setXRange(x1, x2)
         self.plot.vb.setYRange(y1, y2)
+
     def set_auto_peaks(self):
-        print('hi')
+        if self.Prominence_check == True:
+            Prominence = self.Prominence
+        else:
+            Prominence = None
+        if self.min_check == True:
+            minHeight = self.peak_min
+        else:
+            minHeight = None
+        if self.max_check == True:
+            maxHeight = self.peak_max
+        else:
+            maxHeight = None
+        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight)
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1069,26 +1082,22 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.plot.addItem(Label_line)
             Label_line.updateLabel()
 
-    def peak_apply_auto(self, prominence, heights):
+    def peak_apply_auto(self, Prominence, minHeight, maxHeight):
         if self.viewtype ==INDIVIDUAL:
-            Label_line = pl.Peak_Line()
-            Label_line.setMovable(True)
-            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
-            Label_line.label.setColor(color=QColor(Qt.black))
-            Label_line.label.setPosition(1)
-            Label_line.label.setMovable(True)
-
-            peak = []
-            values = []
             data = self.data[:][0:len(self.data_x)]
             x_axis = self.data_x
-
-            if np.shape(data) != (len(data), ):
+            self.Minimum_Point = np.amin(data)
+            self.Maximum_Point = np.amax(data)
+            self.Start_Point = round(np.median(x_axis), 2)
+            if minHeight == None:
+                minHeight = self.Minimum_Point
+            if maxHeight == None:
+                maxHeight = self.Maximum_Point
+            peak = []
+            if np.shape(data) != (len(data),):
                 for i in range(len(data)):
-                    test = data[i]
-                    print(np.shape(test))
-                    peaks, _ = find_peaks(test, height=0.5, prominence=0.25)
+                    single_spcetra = data[i]
+                    peaks, _ = find_peaks(single_spcetra, height=(minHeight, maxHeight), prominence=Prominence)
                     peaks = np.array(peaks)
                     peaks = x_axis[peaks]
                     for z in range(len(peaks)):
@@ -1098,21 +1107,34 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 for i in range(len(peak)):
                     if peak[i] not in used_values:
                         used_values.append(peak[i])
-                        J = np.count_nonzero(peak==peak[i])
-                        count.append(J)
+                        Overlap_Labels = np.count_nonzero(peak == peak[i])
+                        count.append(Overlap_Labels)
                     else:
                         count.append(None)
                 peak_locations = []
-                for i in range(len(count)):
-                    if count[i] != None and count[i] > 1:
-                        peak_locations.append(peak[i])
-                for i in range(len(peak_locations)):
+                for j in range(len(count)):
+                    if count[j] is not None and count[j] > 1:
+                        peak_locations.append(peak[j])
+                for k in range(len(peak_locations)):
                     Label_line = pl.Peak_Line()
-                    Label_line.setPos(peak_locations[i])
-                    Label_line.label.setText(str(round(peak_locations[i], 3)))
+                    Label_line.setMovable(True)
+                    Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+                    Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+                    Label_line.label.setColor(color=QColor(Qt.black))
+                    Label_line.label.setPosition(1)
+                    Label_line.label.setMovable(True)
+                    Label_line.setPos(peak_locations[k])
+                    Label_line.label.setText(str(round(peak_locations[k], 3)))
                     self.plot.addItem(Label_line)
                     Label_line.updateLabel()
             else:
+                Label_line = pl.Peak_Line()
+                Label_line.setMovable(True)
+                Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+                Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+                Label_line.label.setColor(color=QColor(Qt.black))
+                Label_line.label.setPosition(1)
+                Label_line.label.setMovable(True)
                 single_spectra = []
                 for i in range(len(data)):
                     single_spectra.append(data[i])
@@ -1120,7 +1142,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 peaks = np.array(peaks)
                 peaks = x_axis[peaks]
                 for i in range(len(peaks)):
-                    Label_line = pl.Peak_Line()
                     Label_line.setPos(peaks[i])
                     Label_line.label.setText(str(round(peaks[i], 3)))
                     self.plot.addItem(Label_line)
