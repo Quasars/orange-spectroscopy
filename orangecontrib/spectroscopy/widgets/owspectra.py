@@ -670,6 +670,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     Prominence = Setting(None)
     peak_min = Setting(None)
     peak_max = Setting(None)
+    min_check = Setting(False)
+    max_check = Setting(False)
+    Prominence_check = Setting(False)
     feature_color = ContextSetting(None)
     color_individual = Setting(False)  # color individual curves (in a cycle) if no feature_color
     invertX = Setting(False)
@@ -811,19 +814,18 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         )
         self.invertX_menu.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(self.invertX_menu)
-        self.peak_label_a = QAction(
-            "Label Peaks", self, shortcut=Qt.Key_P, checkable=False,
-            triggered=self.peak_apply
-        )
-        self.peak_label_a.setShortcutContext(Qt.WidgetWithChildrenShortcut)
-        actions.append(self.peak_label_a)
 
         peaklabler_menu = MenuFocus("Peak Labeling Menu", self)
         peak_action = QWidgetAction(self)
         layout = QGridLayout()
         prominence_box = gui.widgetBox(self, margin=5, orientation=layout)
         prominence_box.setFocusPolicy(Qt.TabFocus)
-        self.single_peak = QPushButton("Add Label Line", self)
+        self.single_peak = QAction(
+            "Add Single Label", self, shortcut=Qt.Key_P, checkable=False,
+            triggered=self.peak_apply
+        )
+        self.single_peak.setShortcutContext(Qt.WidgetWithChildrenShortcut)
+        self.single_peak = QPushButton("Add Single Line", self)
         self.single_peak.clicked.connect(self.peak_apply)
         self.Peak_Prominence = lineEditFloatOrNone(None, self, 'Prominence')
         self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
@@ -840,8 +842,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         layout.addWidget(self.Peak_Prominence, 0, 1)
         layout.addWidget(self.peak_height_min, 1, 1)
         layout.addWidget(self.peak_height_max, 2, 1)
-        b = gui.button(None, self, "Apply", callback=self.set_auto_peaks)
-        layout.addWidget(b, 4, 1, Qt.AlignVCenter)
+        self.apply_button = QPushButton("Automatic label", self)
+        self.apply_button.clicked.connect(self.set_auto_peaks)
+        layout.addWidget(self.apply_button, 4, 1, Qt.AlignVCenter)
         layout.addWidget(self.Prominence_check, 0, 2)
         layout.addWidget(self.min_check, 1, 2)
         layout.addWidget(self.max_check, 2, 2)
@@ -1031,18 +1034,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot.vb.setYRange(y1, y2)
 
     def set_auto_peaks(self):
-        if self.Prominence_check == True:
-            Prominence = self.Prominence
-        else:
-            Prominence = None
-        if self.min_check == True:
-            minHeight = self.peak_min
-        else:
-            minHeight = None
-        if self.max_check == True:
-            maxHeight = self.peak_max
-        else:
-            maxHeight = None
+        Prominence = self.Prominence if self.Prominence_check.checkState() == 2 else None
+        minHeight = self.peak_min if self.min_check.checkState() == 2 else None
+        maxHeight = self.peak_max if self.max_check.checkState() == 2 else None
         self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight)
 
     def labels_changed(self):
@@ -1089,15 +1083,11 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.Minimum_Point = np.amin(data)
             self.Maximum_Point = np.amax(data)
             self.Start_Point = round(np.median(x_axis), 2)
-            if minHeight == None:
-                minHeight = self.Minimum_Point
-            if maxHeight == None:
-                maxHeight = self.Maximum_Point
             peak = []
             if np.shape(data) != (len(data),):
                 for i in range(len(data)):
                     single_spcetra = data[i]
-                    peaks, _ = find_peaks(single_spcetra, height=(minHeight, maxHeight), prominence=Prominence)
+                    peaks, _ = find_peaks(single_spcetra, height=([minHeight, maxHeight]), prominence=Prominence)
                     peaks = np.array(peaks)
                     peaks = x_axis[peaks]
                     for z in range(len(peaks)):
