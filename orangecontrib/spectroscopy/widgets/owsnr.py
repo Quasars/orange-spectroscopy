@@ -4,18 +4,16 @@ import Orange.data
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import DomainModel
-
-from Orange.data import Domain
 from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan
 
 
 class OWSNR(OWWidget):
     # Widget's name as displayed in the canvas
-    name = "snr"
+    name = "SNR"
 
     # Short widget description
     description = (
-        "Calculates SNR, averages or Standard Deviation.")
+        "Calculates Signal-to-Noise Ratio (SNR), Averages or Standard Deviation by coordinates.")
 
     icon = "icons/snr.svg"
 
@@ -31,9 +29,9 @@ class OWSNR(OWWidget):
                    'Standard Deviation': 2} # std
 
     settingsHandler = settings.DomainContextHandler()
-    group_x = settings.ContextSetting(None)
-    group_y = settings.ContextSetting(None)
-    group = settings.ContextSetting(None)
+    # group_x = settings.ContextSetting(None)
+    # group_y = settings.ContextSetting(None)
+    # group = settings.ContextSetting(None)
     out_choiced = settings.ContextSetting(0)
 
     autocommit = settings.Setting(True)
@@ -88,43 +86,29 @@ class OWSNR(OWWidget):
 
         self.commit()
 
-    def calc_table_np(self, table):
-        if len(table) == 0:
-            return table
+    def calc_table_np(self, array):
+        if len(array) == 0:
+            return array
         if self.out_choiced == 0: #snr
-            return self.make_table(np.nanmean(table, axis=0, keepdims=True) / np.std(table, axis=0, keepdims=True), self.data)
+            return self.make_table(np.nanmean(array, axis=0,
+                                              keepdims=True) / np.std(array, axis=0,
+                                                                      keepdims=True), self.data)
         elif self.out_choiced == 1: #avg
-            return self.make_table(np.nanmean(table, axis=0, keepdims=True),  self.data)
+            return self.make_table(np.nanmean(array, axis=0, keepdims=True), self.data)
         else: # std
-            return self.make_table(np.std(table, axis=0, keepdims=True),  self.data)
+            return self.make_table(np.std(array, axis=0, keepdims=True), self.data)
 
 
     @staticmethod
-    def make_table(data, table):
-        new_table = Orange.data.Table.from_numpy(table.domain,
-                                                 X=data,
-                                                 Y=np.atleast_2d(table.Y[0].copy()),
-                                                 metas=np.atleast_2d(table.metas[0].copy()))
-        cont_vars = [var for var in table.domain.class_vars + table.domain.metas
-                     if isinstance(var, Orange.data.ContinuousVariable)]
+    def make_table(array, data_table):
+        new_table = Orange.data.Table.from_numpy(data_table.domain,
+                                                 X=array,
+                                                 Y=np.atleast_2d(data_table.Y[0].copy()),
+                                                 metas=np.atleast_2d(data_table.metas[0].copy()))
+        cont_vars = data_table.domain.class_vars + data_table.domain.metas
         for var in cont_vars:
-            index = table.domain.index(var)
-            col, _ = table.get_column_view(index)
-            try:
-                new_table[0, index] = np.nanmean(col)
-            except AttributeError:
-                # numpy.lib.nanfunctions._replace_nan just guesses and returns
-                # a boolean array mask for object arrays because object arrays
-                # do not support `isnan` (numpy-gh-9009)
-                # Since we know that ContinuousVariable values must be np.float64
-                # do an explicit cast here
-                new_table[0, index] = np.nanmean(col, dtype=np.float64)
-
-        other_vars = [var for var in table.domain.class_vars + table.domain.metas
-                      if not isinstance(var, Orange.data.ContinuousVariable)]
-        for var in other_vars:
-            index = table.domain.index(var)
-            col, _ = table.get_column_view(index)
+            index = data_table.domain.index(var)
+            col, _ = data_table.get_column_view(index)
             val = var.to_val(new_table[0, var])
             if not np.all(col == val):
                 new_table[0, var] = Orange.data.Unknown
@@ -134,7 +118,7 @@ class OWSNR(OWWidget):
     def grouping_changed(self):
         """Calls commit() indirectly to respect auto_commit setting."""
         self.commit()
-       
+
     def out_choice_changed(self):
         self.commit()
 
@@ -145,7 +129,7 @@ class OWSNR(OWWidget):
         yat = self.data.domain[attr_y]
 
         def extract_col(data, var):
-            nd = Domain([var])
+            nd = Orange.data.Domain([var])
             d = self.data.transform(nd)
             return d.X[:, 0]
 
@@ -164,28 +148,31 @@ class OWSNR(OWWidget):
         coo = np.hstack([xindex.reshape(-1, 1), yindex.reshape(-1, 1)])
         sortidx = np.lexsort(coo.T)
         sorted_coo = coo[sortidx]
-        unqID_mask = np.append(True,np.any(np.diff(sorted_coo,axis=0),axis=1))
+        unqID_mask = np.append(True, np.any(np.diff(sorted_coo, axis=0), axis=1))
         ID = unqID_mask.cumsum()-1
         unq_coo = sorted_coo[unqID_mask]
         unique, counts = np.unique(ID, return_counts=True)
+
         pos = 0
         bins = []
         for size in counts:
             bins.append(sortidx[pos:pos+size])
             pos += size
 
-        meanX = []
+        matrix = []
         for indices in bins:
             selection = self.data.X[indices]
-            v_teste = self.calc_table_np(selection)
-            meanX.append(v_teste)
+            array = self.calc_table_np(selection)
+            matrix.append(array)
+        table_2_coord = Orange.data.Table.concatenate(matrix, axis=0)
 
-        table_2_coord = Orange.data.Table.concatenate(meanX, axis=0)
+        index_x = table_2_coord.domain.index(attr_x)
+        index_y = table_2_coord.domain.index(attr_y)
+        index_x = abs(index_x)-1
+        index_y = abs(index_y)-1
 
-        ### TODO insert lsx in metas group_x not in 0
-        table_2_coord.metas[:, 0] = np.linspace(*lsx)[unq_coo[:, 0]]
-        ### TODO insert lsy in metas group_y not in 1
-        table_2_coord.metas[:, 1] = np.linspace(*lsy)[unq_coo[:, 1]]
+        table_2_coord.metas[:, index_x] = np.linspace(*lsx)[unq_coo[:, 0]]
+        table_2_coord.metas[:, index_y] = np.linspace(*lsy)[unq_coo[:, 1]]
         return table_2_coord
 
 
@@ -194,7 +181,7 @@ class OWSNR(OWWidget):
         at = self.data.domain[attr]
 
         def extract_col(data, var):
-            nd = Domain([var])
+            nd = Orange.data.Domain([var])
             d = self.data.transform(nd)
             return d.X[:, 0]
 
@@ -204,29 +191,30 @@ class OWSNR(OWWidget):
         coo = np.hstack([index.reshape(-1, 1)])
         sortidx = np.lexsort(coo.T)
         sorted_coo = coo[sortidx]
-        unqID_mask = np.append(True,np.any(np.diff(sorted_coo,axis=0),axis=1))
+        unqID_mask = np.append(True, np.any(np.diff(sorted_coo, axis=0), axis=1))
         ID = unqID_mask.cumsum()-1
         unq_coo = sorted_coo[unqID_mask]
         unique, counts = np.unique(ID, return_counts=True)
+
         pos = 0
         bins = []
         for size in counts:
             bins.append(sortidx[pos:pos+size])
             pos += size
 
-        meanX = []
+        matrix = []
         for indices in bins:
             selection = self.data.X[indices]
-            v_teste = self.calc_table_np(selection)
-            meanX.append(v_teste)
+            array = self.calc_table_np(selection)
+            matrix.append(array)
+        table_1_coord = Orange.data.Table.concatenate(matrix, axis=0)
 
-        table_1_coord = Orange.data.Table.concatenate(meanX, axis=0)
-        ### TODO insert ls in metas group
-        table_1_coord.metas[:, 0] = np.linspace(*ls)[unq_coo[:, 0]]
+        index = table_1_coord.domain.index(attr)
+        index = abs(index)-1
+        table_1_coord.metas[:, index] = np.linspace(*ls)[unq_coo[:, 0]]
 
         return table_1_coord
 
-        
     def select_coordinate(self):
         if self.group_y is None and self.group_x is None:
             final_data = self.calc_table_np(self.data.X)
@@ -248,12 +236,12 @@ class OWSNR(OWWidget):
 
         self.Outputs.final_data.send(final_data)
 
-
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
     folder = """/home/levandoski/Documentos/ic-orange/\
 interface_orange/orange-spectroscopy/\
 orangecontrib/spectroscopy/datasets/"""
     file_name = "three_coordinates_data.csv"
-    path = folder + file_name ### TODO open "three coordinates data.csv" without indicating the folder
+    path = folder + file_name ### TODO open "three coordinates data.csv"
+    # without indicating the folder
     WidgetPreview(OWSNR).run(Orange.data.Table(path))
