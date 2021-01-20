@@ -7,7 +7,7 @@ import warnings
 from xml.sax.saxutils import escape
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
-    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem, QCheckBox
+    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem, QRadioButton
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
@@ -634,6 +634,7 @@ class InteractiveViewBox(ViewBox):
         self.setCursor(Qt.CrossCursor)
         self.update_selection_tooltip()
 
+
 class InteractiveViewBoxC(InteractiveViewBox):
 
     def wheelEvent(self, ev, axis=None):
@@ -821,7 +822,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         prominence_box = gui.widgetBox(self, margin=5, orientation=layout)
         prominence_box.setFocusPolicy(Qt.TabFocus)
         self.single_peak = QAction(
-            "Add Single Label", self, shortcut=Qt.Key_P, checkable=False,
+            None, self, shortcut=Qt.Key_P, checkable=False,
             triggered=self.peak_apply
         )
         self.single_peak.setShortcutContext(Qt.WidgetWithChildrenShortcut)
@@ -830,24 +831,17 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.Peak_Prominence = lineEditFloatOrNone(None, self, 'Prominence')
         self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditFloatOrNone(None, self, 'peak_max')
-        self.Prominence_check = QCheckBox(None, self)
-        self.min_check = QCheckBox(None, self)
-        self.max_check = QCheckBox(None, self)
-        prominence_box.setFocusProxy(self.Prominence)
+        prominence_box.setFocusProxy(self.Peak_Prominence)
         layout.addWidget(self.single_peak, 3, 1)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Maximum Peak Height'), 2, 0, Qt.AlignRight)
-        layout.addWidget(QLabel('Add Single Label'), 3, 0)
         layout.addWidget(self.Peak_Prominence, 0, 1)
         layout.addWidget(self.peak_height_min, 1, 1)
         layout.addWidget(self.peak_height_max, 2, 1)
         self.apply_button = QPushButton("Automatic label", self)
         self.apply_button.clicked.connect(self.set_auto_peaks)
-        layout.addWidget(self.apply_button, 4, 1, Qt.AlignVCenter)
-        layout.addWidget(self.Prominence_check, 0, 2)
-        layout.addWidget(self.min_check, 1, 2)
-        layout.addWidget(self.max_check, 2, 2)
+        layout.addWidget(self.apply_button, 4, 1, Qt.AlignRight)
         peak_action.setDefaultWidget(prominence_box)
         peaklabler_menu.addAction(peak_action)
 
@@ -1034,9 +1028,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot.vb.setYRange(y1, y2)
 
     def set_auto_peaks(self):
-        Prominence = self.Prominence if self.Prominence_check.checkState() == 2 else None
-        minHeight = self.peak_min if self.min_check.checkState() == 2 else None
-        maxHeight = self.peak_max if self.max_check.checkState() == 2 else None
+        Prominence = self.Prominence
+        minHeight = self.peak_min
+        maxHeight = self.peak_max
         self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight)
 
     def labels_changed(self):
@@ -1077,47 +1071,35 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             Label_line.updateLabel()
 
     def peak_apply_auto(self, Prominence, minHeight, maxHeight):
-        if self.viewtype ==INDIVIDUAL:
-            data = self.data[:][0:len(self.data_x)]
-            x_axis = self.data_x
-            self.Minimum_Point = np.amin(data)
-            self.Maximum_Point = np.amax(data)
-            self.Start_Point = round(np.median(x_axis), 2)
-            peak = []
-            if np.shape(data) != (len(data),):
-                for i in range(len(data)):
-                    single_spcetra = data[i]
-                    peaks, _ = find_peaks(single_spcetra, height=([minHeight, maxHeight]), prominence=Prominence)
-                    peaks = np.array(peaks)
-                    peaks = x_axis[peaks]
-                    for z in range(len(peaks)):
-                        peak.append(peaks[z])
-                used_values = []
-                count = []
-                for i in range(len(peak)):
-                    if peak[i] not in used_values:
-                        used_values.append(peak[i])
-                        Overlap_Labels = np.count_nonzero(peak == peak[i])
-                        count.append(Overlap_Labels)
-                    else:
-                        count.append(None)
-                peak_locations = []
-                for j in range(len(count)):
-                    if count[j] is not None and count[j] > 1:
-                        peak_locations.append(peak[j])
-                for k in range(len(peak_locations)):
-                    Label_line = pl.Peak_Line()
-                    Label_line.setMovable(True)
-                    Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-                    Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
-                    Label_line.label.setColor(color=QColor(Qt.black))
-                    Label_line.label.setPosition(1)
-                    Label_line.label.setMovable(True)
-                    Label_line.setPos(peak_locations[k])
-                    Label_line.label.setText(str(round(peak_locations[k], 3)))
-                    self.plot.addItem(Label_line)
-                    Label_line.updateLabel()
-            else:
+        x_axis = self.data_x[::-1]
+        data = np.array(self.data)
+        self.Minimum_Point = np.amin(data)
+        self.Maximum_Point = np.amax(data)
+        self.Start_Point = round(np.median(x_axis), 2)
+        peak = []
+        if np.shape(data) != (len(data),):
+            for i in range(len(data)):
+                single_spcetra = data[i]
+                peaks, _ = find_peaks(single_spcetra, height=([minHeight,
+                                                               maxHeight]), prominence=Prominence)
+                peaks = np.array(peaks)
+                peaks = x_axis[peaks]
+                for z in range(len(peaks)):
+                    peak.append(peaks[z])
+            used_values = []
+            count = []
+            for i in range(len(peak)):
+                if peak[i] not in used_values:
+                    used_values.append(peak[i])
+                    Overlap_Labels = np.count_nonzero(peak == peak[i])
+                    count.append(Overlap_Labels)
+                else:
+                    count.append(None)
+            peak_locations = []
+            for j in range(len(count)):
+                if count[j] is not None and count[j] > 1:
+                    peak_locations.append(peak[j])
+            for k in range(len(peak_locations)):
                 Label_line = pl.Peak_Line()
                 Label_line.setMovable(True)
                 Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
@@ -1125,18 +1107,36 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 Label_line.label.setColor(color=QColor(Qt.black))
                 Label_line.label.setPosition(1)
                 Label_line.label.setMovable(True)
-                single_spectra = []
-                for i in range(len(data)):
-                    single_spectra.append(data[i])
-                peaks, _ = find_peaks(single_spectra, prominence=15)
-                peaks = np.array(peaks)
-                peaks = x_axis[peaks]
-                for i in range(len(peaks)):
-                    Label_line.setPos(peaks[i])
-                    Label_line.label.setText(str(round(peaks[i], 3)))
-                    self.plot.addItem(Label_line)
-                    Label_line.updateLabel()
-
+                Label_line.setPos(peak_locations[k])
+                Label_line.label.setText(str(round(peak_locations[k], 3)))
+                self.plot.addItem(Label_line)
+                Label_line.updateLabel()
+        else:
+            Label_line = pl.Peak_Line()
+            Label_line.setMovable(True)
+            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+            Label_line.label.setColor(color=QColor(Qt.black))
+            Label_line.label.setPosition(1)
+            Label_line.label.setMovable(True)
+            single_spectra = []
+            for i in range(len(data)):
+                single_spectra.append(data[i])
+            peaks, _ = find_peaks(single_spectra, height=([minHeight,
+                                                               maxHeight]), prominence=Prominence)
+            peaks = x_axis[peaks]
+            for i in range(len(peaks)):
+                Label_line = pl.Peak_Line()
+                Label_line.setMovable(True)
+                Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+                Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+                Label_line.label.setColor(color=QColor(Qt.black))
+                Label_line.label.setPosition(1)
+                Label_line.label.setMovable(True)
+                Label_line.setPos(peaks[i])
+                Label_line.label.setText(str(round(peaks[i], 3)))
+                self.plot.addItem(Label_line)
+                Label_line.updateLabel()
 
     def invertX_changed(self):
         self.invertX = not self.invertX
