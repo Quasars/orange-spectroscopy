@@ -7,7 +7,7 @@ import warnings
 from xml.sax.saxutils import escape
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
-    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem, QRadioButton
+    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem,
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
@@ -1034,7 +1034,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         minHeight = self.peak_min
         maxHeight = self.peak_max
         Line_Overlap = self.Line_Overlap
-        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight, Line_Overlap=Line_Overlap)
+        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight,
+                             maxHeight=maxHeight, Line_Overlap=Line_Overlap)
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1094,17 +1095,16 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             if Line_Overlap is None:
                 Line_Overlap = 0
             for i in range(len(peak)):
-                if peak[i] not in used_values:
-                    if used_values:
+                if peak[i] not in used_values and used_values:
                         smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
                         if smallest_difference >= Line_Overlap:
                             used_values.append(peak[i])
                             Overlap_Values = np.count_nonzero(peak == peak[i])
                             count.append(Overlap_Values)
-                    else:
-                        used_values.append(peak[i])
-                        Overlap_Values = np.count_nonzero(peak == peak[i])
-                        count.append(Overlap_Values)
+                elif not used_values:
+                    used_values.append(peak[i])
+                    Overlap_Values = np.count_nonzero(peak == peak[i])
+                    count.append(Overlap_Values)
                 else:
                     count.append(None)
             peak_locations = []
