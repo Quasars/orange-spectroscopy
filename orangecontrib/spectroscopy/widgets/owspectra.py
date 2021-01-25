@@ -7,7 +7,7 @@ import warnings
 from xml.sax.saxutils import escape
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
-    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem,
+    QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
