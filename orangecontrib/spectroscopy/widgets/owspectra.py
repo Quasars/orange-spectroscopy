@@ -37,7 +37,6 @@ try:
 except ImportError:
     from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
 
-
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.utils import apply_columns_numpy
 from orangecontrib.spectroscopy.widgets.line_geometry import \
@@ -47,7 +46,6 @@ from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone, pixel_de
 from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_selection, \
     selections_to_length, groups_or_annotated_table
 from orangecontrib.spectroscopy.utils import Peak_line as pl
-
 
 SELECT_SQUARE = 123
 SELECT_POLYGON = 124
@@ -73,6 +71,8 @@ COLORBREWER_SET1 = [(228, 26, 28), (55, 126, 184), (77, 175, 74), (152, 78, 163)
 
 ADD_PEAK = 125
 REMOVE_PEAK = 126
+
+
 class SelectionGroupMixin:
     selection_group_saved = Setting(None, schema_only=True)
 
@@ -227,7 +227,6 @@ class InterruptException(Exception):
 
 
 class ShowAverage(QObject, ConcurrentMixin):
-
     average_shown = pyqtSignal()
 
     def __init__(self, master):
@@ -359,9 +358,9 @@ class InteractiveViewBox(ViewBox):
         # yellow marker for ending the polygon
         self.selection_poly_marker = pg.ScatterPlotItem()
         self.selection_poly_marker.setPen(pg.mkPen(color=QColor(Qt.yellow), width=2))
-        self.selection_poly_marker.setSize(SELECT_POLYGON_TOLERANCE*2)
+        self.selection_poly_marker.setSize(SELECT_POLYGON_TOLERANCE * 2)
         self.selection_poly_marker.setBrush(None)
-        self.selection_poly_marker.setZValue(1e9+1)
+        self.selection_poly_marker.setZValue(1e9 + 1)
         self.selection_poly_marker.hide()
         self.selection_poly_marker.mouseClickEvent = lambda x: x  # ignore mouse clicks
         self.addItem(self.selection_poly_marker, ignoreBounds=True)
@@ -482,7 +481,7 @@ class InteractiveViewBox(ViewBox):
         xpixel, ypixel = self.viewPixelSize()
         dx = (p1.x() - p2.x()) / xpixel
         dy = (p1.y() - p2.y()) / ypixel
-        return (dx**2 + dy**2)**0.5
+        return (dx ** 2 + dy ** 2) ** 0.5
 
     def updateSelectionPolygon(self, p):
         first = self.current_selection[0]
@@ -669,11 +668,11 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     range_y1 = Setting(None)
     range_y2 = Setting(None)
     Prominence = Setting(None)
+    Line_Overlap = Setting(None)
     peak_min = Setting(None)
     peak_max = Setting(None)
     min_check = Setting(False)
     max_check = Setting(False)
-    Prominence_check = Setting(False)
     feature_color = ContextSetting(None)
     color_individual = Setting(False)  # color individual curves (in a cycle) if no feature_color
     invertX = Setting(False)
@@ -765,7 +764,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
         resample_curves = QAction(
             "Resample curves", self, shortcut=Qt.Key_R,
-            triggered=lambda x: self.resample_curves(self.sample_seed+1)
+            triggered=lambda x: self.resample_curves(self.sample_seed + 1)
         )
         resample_curves.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(resample_curves)
@@ -831,17 +830,20 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.Peak_Prominence = lineEditFloatOrNone(None, self, 'Prominence')
         self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditFloatOrNone(None, self, 'peak_max')
+        self.peak_label_distance = lineEditFloatOrNone(None, self, "Line_Overlap")
         prominence_box.setFocusProxy(self.Peak_Prominence)
-        layout.addWidget(self.single_peak, 3, 1)
+        layout.addWidget(self.single_peak, 4, 1)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Maximum Peak Height'), 2, 0, Qt.AlignRight)
+        layout.addWidget(QLabel('Minimum Distance Between lines'), 3, 0)
         layout.addWidget(self.Peak_Prominence, 0, 1)
         layout.addWidget(self.peak_height_min, 1, 1)
         layout.addWidget(self.peak_height_max, 2, 1)
+        layout.addWidget(self.peak_label_distance, 3, 1)
         self.apply_button = QPushButton("Automatic label", self)
         self.apply_button.clicked.connect(self.set_auto_peaks)
-        layout.addWidget(self.apply_button, 4, 1, Qt.AlignRight)
+        layout.addWidget(self.apply_button, 5, 1, Qt.AlignRight)
         peak_action.setDefaultWidget(prominence_box)
         peaklabler_menu.addAction(peak_action)
 
@@ -1031,7 +1033,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         Prominence = self.Prominence
         minHeight = self.peak_min
         maxHeight = self.peak_max
-        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight)
+        Line_Overlap = self.Line_Overlap
+        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight, maxHeight=maxHeight, Line_Overlap=Line_Overlap)
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1070,8 +1073,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.plot.addItem(Label_line)
             Label_line.updateLabel()
 
-    def peak_apply_auto(self, Prominence, minHeight, maxHeight):
-        x_axis = self.data_x[::-1]
+    def peak_apply_auto(self, Prominence, minHeight, maxHeight, Line_Overlap):
+        x_axis = getx(self.data)
         data = np.array(self.data)
         self.Minimum_Point = np.amin(data)
         self.Maximum_Point = np.amax(data)
@@ -1088,16 +1091,25 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                     peak.append(peaks[z])
             used_values = []
             count = []
+            if Line_Overlap is None:
+                Line_Overlap = 0
             for i in range(len(peak)):
                 if peak[i] not in used_values:
-                    used_values.append(peak[i])
-                    Overlap_Labels = np.count_nonzero(peak == peak[i])
-                    count.append(Overlap_Labels)
+                    if used_values:
+                        smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
+                        if smallest_difference >= Line_Overlap:
+                            used_values.append(peak[i])
+                            Overlap_Values = np.count_nonzero(peak == peak[i])
+                            count.append(Overlap_Values)
+                    else:
+                        used_values.append(peak[i])
+                        Overlap_Values = np.count_nonzero(peak == peak[i])
+                        count.append(Overlap_Values)
                 else:
                     count.append(None)
             peak_locations = []
             for j in range(len(count)):
-                if count[j] is not None and count[j] > 1:
+                if count[j] is not None and count[j] >= 1:
                     peak_locations.append(peak[j])
             for k in range(len(peak_locations)):
                 Label_line = pl.Peak_Line()
@@ -1112,19 +1124,15 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 self.plot.addItem(Label_line)
                 Label_line.updateLabel()
         else:
-            Label_line = pl.Peak_Line()
-            Label_line.setMovable(True)
-            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
-            Label_line.label.setColor(color=QColor(Qt.black))
-            Label_line.label.setPosition(1)
-            Label_line.label.setMovable(True)
             single_spectra = []
             for i in range(len(data)):
                 single_spectra.append(data[i])
             peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                               maxHeight]), prominence=Prominence)
+                                                           maxHeight]), prominence=Prominence)
             peaks = x_axis[peaks]
+            new = []
+            for i in range(len(peaks)):
+                new.append(peaks[i])
             for i in range(len(peaks)):
                 Label_line = pl.Peak_Line()
                 Label_line.setMovable(True)
@@ -1134,7 +1142,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 Label_line.label.setPosition(1)
                 Label_line.label.setMovable(True)
                 Label_line.setPos(peaks[i])
-                Label_line.label.setText(str(round(peaks[i], 3)))
                 self.plot.addItem(Label_line)
                 Label_line.updateLabel()
 
@@ -1257,7 +1264,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
         # redraw whole selection if it increased or decreased over the threshold
         if len(old_sel_ci) <= MAX_THICK_SELECTED < len(new_sel_ci) or \
-           len(old_sel_ci) > MAX_THICK_SELECTED >= len(new_sel_ci):
+                len(old_sel_ci) > MAX_THICK_SELECTED >= len(new_sel_ci):
             redraw_curve_indices.update(old_sel_ci)
 
         self.set_curve_pens(redraw_curve_indices)
@@ -1396,7 +1403,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             value = idc % len(self._color_individual_cycle)
         self.curves_cont.objs[idc].setPen(thispen[value])
         # to always draw selected above subset, multiply with 2
-        self.curves_cont.objs[idc].setZValue(int(insubset) + 2*int(inselected))
+        self.curves_cont.objs[idc].setZValue(int(insubset) + 2 * int(inselected))
 
     def set_curve_pens(self, curves=None):
         if self.viewtype == INDIVIDUAL and self.curves:
@@ -1490,7 +1497,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         # for zoom to work correctly
         self.curves_plotted.append((x, np.array([ylow, yhigh])))
 
-
     @staticmethod
     def _generate_pens(color, color_unselected=None, color_selected=None):
         pen_subset = pg.mkPen(color=color, width=1)
@@ -1554,10 +1560,10 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             bright = qrect.right()
 
             ymax = max(np.max(ys[:, np.searchsorted(x, bleft):
-                                 np.searchsorted(x, bright, side="right")])
+                                    np.searchsorted(x, bright, side="right")])
                        for x, ys in self.curves_plotted)
             ymin = min(np.min(ys[:, np.searchsorted(x, bleft):
-                                 np.searchsorted(x, bright, side="right")])
+                                    np.searchsorted(x, bright, side="right")])
                        for x, ys in self.curves_plotted)
 
             self.plot.vb.setYRange(ymin, ymax, padding=0.0)
