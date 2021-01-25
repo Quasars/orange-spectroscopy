@@ -1112,7 +1112,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 if count[j] is not None and count[j] >= 1:
                     peak_locations.append(peak[j])
             for k, val in enumerate(peak_locations):
-                Label_line = pl.peakline()
+                Label_line = pl.PeakLine()
                 Label_line.setMovable(True)
                 Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
                 Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
@@ -1125,15 +1125,15 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 Label_line.updateLabel()
         else:
             single_spectra = []
-            for i in range(len(data)):
+            for i, val in enumerate(data):
                 single_spectra.append(data[i])
             peaks, _ = find_peaks(single_spectra, height=([minHeight,
                                                            maxHeight]), prominence=prominence)
             peaks = x_axis[peaks]
             new = []
-            for i in range(len(peaks)):
+            for i, val in enumerate(peaks):
                 new.append(peaks[i])
-            for i in range(len(peaks)):
+            for i in enumerate(peaks):
                 Label_line = pl.Peak_Line()
                 Label_line.setMovable(True)
                 Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))

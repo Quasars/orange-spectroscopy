@@ -7,7 +7,7 @@ from pyqtgraph import ViewBox
 from pyqtgraph import functions as fn
 import numpy as np
 
-__all__ = ['peakline', 'PeakLabel']
+__all__ = ['PeakLine', 'PeakLabel']
 
 """
     A modification of the Infinite Line Graphicsobject.
@@ -16,7 +16,7 @@ __all__ = ['peakline', 'PeakLabel']
 """
 
 
-class peakline(GraphicsObject):
+class PeakLine(GraphicsObject):
     """
     **Bases:** :class:`GraphicsObject <pyqtgraph.GraphicsObject>`
     Displays a line of infinite length.
@@ -107,7 +107,7 @@ class peakline(GraphicsObject):
 
         if label is None:
             labelOpts = {} if labelOpts is None else labelOpts
-            self.label = peaklabel(self, text=str(self.getXPos()), **labelOpts, position=(1))
+            self.label = PeakLabel(self, text=str(self.getXPos()), **labelOpts, position=(1))
 
     def setMovable(self, m):
         """Set whether the line is movable by the user."""
@@ -389,8 +389,7 @@ class peakline(GraphicsObject):
         self.label.setText(str(round(self.getXPos(), leng)))
         self.update()
 
-
-class peaklabel(TextItem):
+class PeakLabel(TextItem):
     """
     A TextItem that attaches itself to an InfiniteLine.
 
