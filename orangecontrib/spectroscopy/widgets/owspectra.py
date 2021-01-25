@@ -667,7 +667,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     range_x2 = Setting(None)
     range_y1 = Setting(None)
     range_y2 = Setting(None)
-    Prominence = Setting(None)
+    prominence = Setting(None)
     Line_Overlap = Setting(None)
     peak_min = Setting(None)
     peak_max = Setting(None)
@@ -827,17 +827,17 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.single_peak.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         self.single_peak = QPushButton("Add Single Line", self)
         self.single_peak.clicked.connect(self.peak_apply)
-        self.Peak_Prominence = lineEditFloatOrNone(None, self, 'Prominence')
+        self.prominence_box = lineEditFloatOrNone(None, self, 'prominence')
         self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditFloatOrNone(None, self, 'peak_max')
         self.peak_label_distance = lineEditFloatOrNone(None, self, "Line_Overlap")
-        prominence_box.setFocusProxy(self.Peak_Prominence)
+        prominence_box.setFocusProxy(self.prominence)
         layout.addWidget(self.single_peak, 4, 1)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Maximum Peak Height'), 2, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Distance Between lines'), 3, 0)
-        layout.addWidget(self.Peak_Prominence, 0, 1)
+        layout.addWidget(self.prominence_box, 0, 1)
         layout.addWidget(self.peak_height_min, 1, 1)
         layout.addWidget(self.peak_height_max, 2, 1)
         layout.addWidget(self.peak_label_distance, 3, 1)
@@ -1030,12 +1030,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot.vb.setYRange(y1, y2)
 
     def set_auto_peaks(self):
-        Prominence = self.Prominence
+        prominence = self.prominence
         minHeight = self.peak_min
         maxHeight = self.peak_max
         Line_Overlap = self.Line_Overlap
-        self.peak_apply_auto(Prominence=Prominence, minHeight=minHeight,
-                             maxHeight=maxHeight, Line_Overlap=Line_Overlap)
+        self.peak_apply_auto(prominence=prominence, minHeight=minHeight,
+                             maxHeight=maxHeight, line_overlap=Line_Overlap)
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1058,49 +1058,49 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def peak_apply(self):
         if self.viewtype == INDIVIDUAL:
-            Label_line = pl.Peak_Line()
+            Label_line = pl.PeakLine()
             Label_line.setMovable(True)
             data = self.data[:][0:len(self.data_x)]
-            self.Minimum_Point = np.amin(data)
-            self.Maximum_Point = np.amax(data)
-            self.Start_Point = round(np.median(self.data_x), 2)
-            Label_line.setPos(self.Start_Point)
+            self.minimum_point = np.amin(data)
+            self.maximum_point = np.amax(data)
+            self.start_point = round(np.median(self.data_x), 2)
+            Label_line.setPos(self.start_point)
             Label_line.label.setText(str(round(np.median(self.data_x), 3)))
             Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+            Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
             Label_line.label.setColor(color=QColor(Qt.black))
             Label_line.label.setPosition(1)
             Label_line.label.setMovable(True)
             self.plot.addItem(Label_line)
             Label_line.updateLabel()
 
-    def peak_apply_auto(self, Prominence, minHeight, maxHeight, Line_Overlap):
+    def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
         x_axis = getx(self.data)
         data = np.array(self.data)
-        self.Minimum_Point = np.amin(data)
-        self.Maximum_Point = np.amax(data)
-        self.Start_Point = round(np.median(x_axis), 2)
+        self.minimum_point = np.amin(data)
+        self.maximum_point = np.amax(data)
+        self.start_point = round(np.median(x_axis), 2)
         peak = []
         if np.shape(data) != (len(data),):
-            for i in range(len(data)):
+            for i, val in enumerate(data):
                 single_spcetra = data[i]
                 peaks, _ = find_peaks(single_spcetra, height=([minHeight,
-                                                               maxHeight]), prominence=Prominence)
+                                                               maxHeight]), prominence=prominence)
                 peaks = np.array(peaks)
                 peaks = x_axis[peaks]
-                for z in range(len(peaks)):
+                for z, vals in enumerate(peaks):
                     peak.append(peaks[z])
             used_values = []
             count = []
-            if Line_Overlap is None:
-                Line_Overlap = 0
-            for i in range(len(peak)):
+            if line_overlap is None:
+                line_overlap = 0
+            for i, val in enumerate(peak):
                 if peak[i] not in used_values and used_values:
-                        smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
-                        if smallest_difference >= Line_Overlap:
-                            used_values.append(peak[i])
-                            Overlap_Values = np.count_nonzero(peak == peak[i])
-                            count.append(Overlap_Values)
+                    smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
+                    if smallest_difference >= line_overlap:
+                        used_values.append(peak[i])
+                        Overlap_Values = np.count_nonzero(peak == peak[i])
+                        count.append(Overlap_Values)
                 elif not used_values:
                     used_values.append(peak[i])
                     Overlap_Values = np.count_nonzero(peak == peak[i])
@@ -1108,14 +1108,14 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 else:
                     count.append(None)
             peak_locations = []
-            for j in range(len(count)):
+            for j, val in enumerate(count):
                 if count[j] is not None and count[j] >= 1:
                     peak_locations.append(peak[j])
-            for k in range(len(peak_locations)):
-                Label_line = pl.Peak_Line()
+            for k, val in enumerate(peak_locations):
+                Label_line = pl.peakline()
                 Label_line.setMovable(True)
                 Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-                Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+                Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
                 Label_line.label.setColor(color=QColor(Qt.black))
                 Label_line.label.setPosition(1)
                 Label_line.label.setMovable(True)
@@ -1128,7 +1128,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             for i in range(len(data)):
                 single_spectra.append(data[i])
             peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                           maxHeight]), prominence=Prominence)
+                                                           maxHeight]), prominence=prominence)
             peaks = x_axis[peaks]
             new = []
             for i in range(len(peaks)):
@@ -1137,7 +1137,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 Label_line = pl.Peak_Line()
                 Label_line.setMovable(True)
                 Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-                Label_line.setSpan(mn=self.Minimum_Point, mx=self.Maximum_Point)
+                Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
                 Label_line.label.setColor(color=QColor(Qt.black))
                 Label_line.label.setPosition(1)
                 Label_line.label.setMovable(True)

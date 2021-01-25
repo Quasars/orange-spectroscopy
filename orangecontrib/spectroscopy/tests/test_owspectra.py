@@ -150,8 +150,8 @@ class TestOWSpectra(WidgetTest):
         self.send_signal("Data", self.collagen)
         self.widget.curveplot.peak_apply()
         np.testing.assert_almost_equal(self.widget.curveplot.Start_Point, 1351, 0)
-        np.testing.assert_almost_equal(self.widget.curveplot.Minimum_Point, 0)
-        np.testing.assert_almost_equal(self.widget.curveplot.Maximum_Point, 1.2, 1)
+        np.testing.assert_almost_equal(self.widget.curveplot.minimum_point, 0)
+        np.testing.assert_almost_equal(self.widget.curveplot.maximum_point, 1.2, 1)
         #issue with maxvalue and collagen data leading to a value of 3 from the label
 
     def do_zoom_rect(self, invertX):
