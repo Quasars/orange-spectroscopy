@@ -42,7 +42,7 @@ from orangecontrib.spectroscopy.utils import apply_columns_numpy
 from orangecontrib.spectroscopy.widgets.line_geometry import \
     distance_curves, intersect_curves_chunked
 from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone, pixel_decimals, \
-    float_to_str_decimals as strdec
+    lineEditDecimalOrNone, float_to_str_decimals as strdec
 from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_selection, \
     selections_to_length, groups_or_annotated_table
 from orangecontrib.spectroscopy.utils import Peak_line as pl
@@ -828,10 +828,10 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.single_peak = QPushButton("Add Single Line", self)
         self.single_peak.clicked.connect(self.find_peak_variables)
         self.single_peak.clicked.connect(self.peak_apply)
-        self.prominence_box = lineEditFloatOrNone(None, self, 'prominence')
-        self.peak_height_min = lineEditFloatOrNone(None, self, 'peak_min')
-        self.peak_height_max = lineEditFloatOrNone(None, self, 'peak_max')
-        self.peak_label_distance = lineEditFloatOrNone(None, self, "Line_Overlap")
+        self.prominence_box = lineEditDecimalOrNone(None, self, 'prominence', bottom=0)
+        self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
+        self.peak_height_max = lineEditDecimalOrNone(None, self, 'peak_max')
+        self.peak_label_distance = lineEditDecimalOrNone(None, self, "Line_Overlap", bottom=0)
         prominence_box.setFocusProxy(self.prominence)
         layout.addWidget(self.single_peak, 4, 1)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
@@ -1078,7 +1078,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             Label_line = pl.PeakLine()
             Label_line.setMovable(True)
             Label_line.setPos(self.start_point)
-            Label_line.label.setText(str(round(np.median(self.data_x), 3)))
+            Label_line.label.setText(str(round(self.start_point), 3))
             Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
             Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
             Label_line.label.setColor(color=QColor(Qt.black))
