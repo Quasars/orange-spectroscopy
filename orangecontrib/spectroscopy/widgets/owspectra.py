@@ -697,9 +697,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.clear_data()
         self.subset = None  # current subset input, an array of indices
         self.subset_indices = None  # boolean index array with indices in self.data
-        self.maximum_point = None # Greatest value for peak labeling line
-        self.start_point = None # automatic position for adding single lines in peak_apply
-        self.minimum_point = None #lowest point in spectra for peak_apply
+        self.maximum_point = None  # Greatest value for peak labeling line
+        self.start_point = None  # automatic position for adding single lines in peak_apply
+        self.minimum_point = None  # lowest point in spectra for peak_apply
         self.plotview = pg.PlotWidget(background="w", viewBox=InteractiveViewBoxC(self))
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
@@ -826,14 +826,17 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         )
         self.single_peak.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         self.single_peak = QPushButton("Add Single Line", self)
+        self.reset_labels = QPushButton('Reset graph', self)
         self.single_peak.clicked.connect(self.find_peak_variables)
         self.single_peak.clicked.connect(self.peak_apply)
+        self.reset_labels.clicked.connect(self.clear_graph)
+        self.reset_labels.clicked.connect(self.update_view)
         self.prominence_box = lineEditDecimalOrNone(None, self, 'prominence', bottom=0)
         self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditDecimalOrNone(None, self, 'peak_max')
         self.peak_label_distance = lineEditDecimalOrNone(None, self, "Line_Overlap", bottom=0)
         prominence_box.setFocusProxy(self.prominence)
-        layout.addWidget(self.single_peak, 4, 1)
+        layout.addWidget(self.single_peak, 4, 0)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Maximum Peak Height'), 2, 0, Qt.AlignRight)
@@ -842,10 +845,11 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         layout.addWidget(self.peak_height_min, 1, 1)
         layout.addWidget(self.peak_height_max, 2, 1)
         layout.addWidget(self.peak_label_distance, 3, 1)
+        layout.addWidget(self.reset_labels, 5, 1)
         self.apply_button = QPushButton("Automatic label", self)
         self.apply_button.clicked.connect(self.find_peak_variables)
         self.apply_button.clicked.connect(self.set_auto_peaks)
-        layout.addWidget(self.apply_button, 5, 1, Qt.AlignRight)
+        layout.addWidget(self.apply_button, 4, 1, Qt.AlignRight)
         peak_action.setDefaultWidget(prominence_box)
         peaklabler_menu.addAction(peak_action)
 
@@ -1066,12 +1070,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 single_spcetra = data[i]
                 peaks, _ = find_peaks(single_spcetra)
                 max_value.append(np.amax(single_spcetra[peaks]))
+                # method for finding maxes without interference from extra data labels
             self.maximum_point = np.amax(max_value)
         if self.minimum_point is None:
             self.minimum_point = np.amin(self.data)
         if self.start_point is None:
             self.start_point = round(np.median(getx(self.data)), 2)
-
 
     def peak_apply(self):
         if self.viewtype == INDIVIDUAL:
@@ -1096,7 +1100,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 single_spcetra = data[i]
                 peaks, _ = find_peaks(single_spcetra, height=([minHeight,
                                                                maxHeight]), prominence=prominence)
-                peaks = x_axis[peaks]
+                peaks = x_axis[peaks]  # array with all locations of peaks
                 for z, val in enumerate(peaks):
                     peak.append(peaks[z])
             used_values = []
@@ -1106,20 +1110,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             for i, val in enumerate(peak):
                 if peak[i] not in used_values and used_values:
                     smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
+                    # comparing values to remove nearby duplicates
                     if smallest_difference >= line_overlap:
                         used_values.append(peak[i])
-                        Overlap_Values = np.count_nonzero(peak == peak[i])
-                        count.append(Overlap_Values)
+                        count.append(1)
                 elif not used_values:
                     used_values.append(peak[i])
-                    Overlap_Values = np.count_nonzero(peak == peak[i])
-                    count.append(Overlap_Values)
+                    count.append(1)
+                    # used for first value computation as it isn't in the array
                 else:
                     count.append(None)
             peak_locations = []
             for j, val in enumerate(count):
-                if count[j] is not None and count[j] >= 1:
+                if count[j] is not None and count[j] == 1:
                     peak_locations.append(peak[j])
+                    # find any peaks which aren't duplicates(None) or nearby mislabels
             for k, val in enumerate(peak_locations):
                 Label_line = pl.PeakLine()
                 Label_line.setMovable(True)
@@ -1133,6 +1138,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 self.plot.addItem(Label_line)
                 Label_line.updateLabel()
         else:
+            # covers singular spectra data instances
             single_spectra = []
             for i, val in enumerate(data):
                 single_spectra.append(data[i])
