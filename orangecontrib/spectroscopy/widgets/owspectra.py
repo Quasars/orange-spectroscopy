@@ -1095,8 +1095,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.plot.addItem(Label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
-        x_axis = getx(self.data)
-        data = np.array(self.data)
+        x_axis = self.data_x
+        data = self.data
         peak = []
         if np.shape(data) != (len(data),):
             for i, val in enumerate(data):
@@ -1104,6 +1104,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 peaks, _ = find_peaks(single_spcetra, height=([minHeight,
                                                                maxHeight]), prominence=prominence)
                 peaks = x_axis[peaks]  # array with all locations of peaks
+                print(peaks)
                 for z, val in enumerate(peaks):
                     peak.append(peaks[z])
             used_values = []
