@@ -485,14 +485,19 @@ class VerticalPeakLine(pg.InfiniteLine):
     """
 
     def __init__(self, pos=None, angle=90, pen=None, movable=True,
-                 bounds=None, label=None):
+                 bounds=None, label=None, span=None):
         super().__init__(pos, angle, pen, movable, bounds)
         self._endpoints = (None, None)
         self.moving = False
         self.mouseHovering = False
-
+        self.span = None
         if label is None:
             self.label = VerticalPeakLineLabel(self, text=str(self.getXPos()), position=(1))
+
+    def setSpan(self, mn, mx):
+        if self.span != (mn, mx):
+            self.span = (mn, mx)
+            self.update()
 
     def _computeBoundingRect(self):
         # br = UIGraphicsItem.boundingRect(self)
@@ -557,6 +562,12 @@ class VerticalPeakLine(pg.InfiniteLine):
             self.sigDragged.emit(self)
             self.sigPositionChangeFinished.emit(self)
 
+    def mouseDoubleClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton:
+            ev.accept()
+            self.hide()
+            self.update()
+
     def updateLabel(self):
         x = self.getXPos()
         leng = len(str(round(x)))
@@ -597,4 +608,3 @@ class VerticalPeakLineLabel(pg.InfLineLabel):
             self.updatePosition()
             if ev.isFinish():
                 self._moving = False
-                

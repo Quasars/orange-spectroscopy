@@ -835,7 +835,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditDecimalOrNone(None, self, 'peak_max')
         self.peak_label_distance = lineEditDecimalOrNone(None, self, "Line_Overlap", bottom=0)
-        prominence_box.setFocusProxy(self.prominence)
         layout.addWidget(self.single_peak, 4, 0)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
@@ -1095,52 +1094,46 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.plot.addItem(Label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
-        x_axis = self.data_x
-        data = self.data
-        peak = []
-        if np.shape(data) != (len(data),):
-            for i, val in enumerate(data):
-                single_spcetra = data[i]
-                peaks, _ = find_peaks(single_spcetra, height=([minHeight,
-                                                               maxHeight]), prominence=prominence)
-                peaks = x_axis[peaks]  # array with all locations of peaks
-                print(peaks)
-                for z, val in enumerate(peaks):
-                    peak.append(peaks[z])
-            used_values = []
-            count = []
+        if self.viewtype == INDIVIDUAL:
             if line_overlap is None:
                 line_overlap = 0
-            for i, val in enumerate(peak):
-                if peak[i] not in used_values and used_values:
-                    smallest_difference = np.min(abs(np.array(used_values) - peak[i]))
-                    # comparing values to remove nearby duplicates
-                    if smallest_difference >= line_overlap:
-                        used_values.append(peak[i])
-                        count.append(1)
-                elif not used_values:
-                    used_values.append(peak[i])
-                    count.append(1)
-                    # used for first value computation as it isn't in the array
-                else:
-                    count.append(None)
-            peak_locations = []
-            for j, val in enumerate(count):
-                if count[j] is not None and count[j] == 1:
-                    peak_locations.append(peak[j])
-                    # find any peaks which aren't duplicates(None) or nearby mislabels
-            for k, val in enumerate(peak_locations):
-                self.peak_apply(position=peak_locations[k])
-        else:
-            # covers singular spectra data instances
-            single_spectra = []
-            for i, val in enumerate(data):
-                single_spectra.append(data[i])
-            peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                           maxHeight]), prominence=prominence)
-            peaks = x_axis[peaks]
-            for i, val in enumerate(peaks):
-                self.peak_apply(position=peaks[i])
+            x_axis = self.data_x
+            data = self.data.X[:, self.data_xsind]
+            # Plotting shown samples to limit max number
+            peak = []
+            if np.shape(data) != (len(data),):
+                for i, val in enumerate(data):
+                    single_spcetra = val
+                    peaks, _ = find_peaks(single_spcetra, height=([minHeight,
+                                                                   maxHeight]), prominence=prominence)
+                    peaks = x_axis[peaks]  # array with all locations of peaks
+                    peak.append(peaks)
+                    for z, vals in enumerate(peaks):
+                        peak.append(vals)
+                peak_locations = []
+                sorted_peaks = np.sort(peak)
+                for i, val in enumerate(sorted_peaks):
+                    if val not in peak_locations and peak_locations != []:
+                        smallest_difference = np.min(abs(peak_locations - val))
+                        # comparing values to remove nearby duplicates
+                        if smallest_difference >= line_overlap:
+                            peak_locations.append(val)
+                    elif not peak_locations:
+                        peak_locations.append(val)
+                        # used for first value computation as it isn't in the array
+                self.peak_locations = peak_locations
+                for k, val in enumerate(peak_locations):
+                    self.peak_apply(position=val)
+            else:
+                # covers singular spectra data instances
+                single_spectra = []
+                for i, val in enumerate(data):
+                    single_spectra.append(data[i])
+                peaks, _ = find_peaks(single_spectra, height=([minHeight,
+                                                               maxHeight]), prominence=prominence)
+                self.peak_locations = x_axis[peaks]
+                for i, val in enumerate(self.peak_locations):
+                    self.peak_apply(position=val)
 
     def invertX_changed(self):
         self.invertX = not self.invertX
