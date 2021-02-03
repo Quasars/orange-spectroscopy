@@ -42,10 +42,10 @@ from orangecontrib.spectroscopy.utils import apply_columns_numpy
 from orangecontrib.spectroscopy.widgets.line_geometry import \
     distance_curves, intersect_curves_chunked
 from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone, pixel_decimals, \
-    lineEditDecimalOrNone, float_to_str_decimals as strdec
+    lineEditDecimalOrNone, VerticalPeakLine, \
+    float_to_str_decimals as strdec
 from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_selection, \
     selections_to_length, groups_or_annotated_table
-from orangecontrib.spectroscopy.utils import Peak_line as pl
 
 SELECT_SQUARE = 123
 SELECT_POLYGON = 124
@@ -1077,19 +1077,22 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if self.start_point is None:
             self.start_point = round(np.median(getx(self.data)), 2)
 
-    def peak_apply(self):
+    def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
-            Label_line = pl.PeakLine()
+            Label_line = VerticalPeakLine()
             Label_line.setMovable(True)
-            Label_line.setPos(self.start_point)
-            Label_line.label.setText(str(round(self.start_point), 3))
+            if position:
+                Label_line.setPos(position)
+                Label_line.label.setText(str(round(position, 3)))
+            else:
+                Label_line.setPos(self.start_point)
+                Label_line.label.setText(str(round(self.start_point, 3)))
             Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
             Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
             Label_line.label.setColor(color=QColor(Qt.black))
             Label_line.label.setPosition(1)
             Label_line.label.setMovable(True)
             self.plot.addItem(Label_line)
-            Label_line.updateLabel()
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
         x_axis = getx(self.data)
@@ -1126,17 +1129,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                     peak_locations.append(peak[j])
                     # find any peaks which aren't duplicates(None) or nearby mislabels
             for k, val in enumerate(peak_locations):
-                Label_line = pl.PeakLine()
-                Label_line.setMovable(True)
-                Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-                Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
-                Label_line.label.setColor(color=QColor(Qt.black))
-                Label_line.label.setPosition(1)
-                Label_line.label.setMovable(True)
-                Label_line.setPos(peak_locations[k])
-                Label_line.label.setText(str(round(peak_locations[k], 3)))
-                self.plot.addItem(Label_line)
-                Label_line.updateLabel()
+                self.peak_apply(position=peak_locations[k])
         else:
             # covers singular spectra data instances
             single_spectra = []
@@ -1146,16 +1139,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                                                            maxHeight]), prominence=prominence)
             peaks = x_axis[peaks]
             for i, val in enumerate(peaks):
-                Label_line = pl.PeakLine()
-                Label_line.setMovable(True)
-                Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-                Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
-                Label_line.label.setColor(color=QColor(Qt.black))
-                Label_line.label.setPosition(1)
-                Label_line.label.setMovable(True)
-                Label_line.setPos(peaks[i])
-                self.plot.addItem(Label_line)
-                Label_line.updateLabel()
+                self.peak_apply(position=peaks[i])
 
     def invertX_changed(self):
         self.invertX = not self.invertX

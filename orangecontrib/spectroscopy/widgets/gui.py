@@ -1,13 +1,16 @@
 import math
+import numpy as np
 from decimal import Decimal
 from abc import ABCMeta, abstractmethod
 
 from AnyQt.QtCore import QLocale, Qt, QSize
-from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator
+from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator, QColor
 from AnyQt.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QSizePolicy
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
+from PyQt5.uic.properties import QtGui
+from pyqtgraph import Point, QtCore, ViewBox
 
 from Orange.widgets.utils import getdeepattr
 from Orange.widgets.widget import OWComponent
@@ -474,3 +477,124 @@ class XPosLineEdit(QWidget, OWComponent):
     def focusInEvent(self, *e):
         self.focusIn.emit()
         return QWidget.focusInEvent(self, *e)
+
+
+class VerticalPeakLine(pg.InfiniteLine):
+
+    """pyqtgraph.InfiniteLine with adjustments for spectra analysis
+    """
+
+    def __init__(self, pos=None, angle=90, pen=None, movable=True,
+                 bounds=None, label=None):
+        super().__init__(pos, angle, pen, movable, bounds)
+        self._endpoints = (None, None)
+        self.moving = False
+        self.mouseHovering = False
+
+        if label is None:
+            self.label = VerticalPeakLineLabel(self, text=str(self.getXPos()), position=(1))
+
+    def _computeBoundingRect(self):
+        # br = UIGraphicsItem.boundingRect(self)
+        vr = self.viewRect()  # bounds of containing ViewBox mapped to local coords.
+        if vr is None:
+            return QtCore.QRectF()
+
+        px = self.pixelLength(direction=Point(1, 0), ortho=True)
+        if px is None:
+            px = 0
+        pw = max(self.pen.width() / 2, self.hoverPen.width() / 2)
+        w = max(4, self._maxMarkerSize + pw) + 1
+        w = w * px
+        br = QtCore.QRectF(vr)
+        br.setBottom(-w)
+        br.setTop(w)
+
+        left = self.span[0]
+        right = self.span[1]
+        br.setLeft(left)
+        br.setRight(right)
+        br = br.normalized()
+
+        vs = self.getViewBox().size()
+        if self.mouseDragEvent:
+            left = self.span[0] - self.getYPos()
+
+        if self._bounds != br or self._lastViewSize != vs:
+            self._bounds = br
+            self._lastViewSize = vs
+            self.prepareGeometryChange()
+
+        self._endPoints = (left, right)
+        self._lastViewRect = vr
+
+        return self._bounds
+
+    def mouseDragEvent(self, ev):
+        if self.movable and ev.button() == QtCore.Qt.LeftButton:
+            if ev.isStart():
+                self.moving = True
+                self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
+                self.startPosition = self.pos()
+            ev.accept()
+
+            if not self.moving:
+                return
+
+            self.setPos(self.cursorOffset + self.mapToParent(ev.pos()))
+            self.sigDragged.emit(self)
+            self.updateLabel()
+            if ev.isFinish():
+                self.moving = False
+                self.sigPositionChangeFinished.emit(self)
+                self._computeBoundingRect()
+
+    def mouseClickEvent(self, ev):
+        if self.moving and ev.button() == QtCore.Qt.RightButton:
+            ev.accept()
+            self.setPos(self.startPosition)
+            self.moving = False
+            self.sigDragged.emit(self)
+            self.sigPositionChangeFinished.emit(self)
+
+    def updateLabel(self):
+        x = self.getXPos()
+        leng = len(str(round(x)))
+        if leng >= 4:
+            leng = 2
+        elif leng < 4 and leng > 2:
+            leng = 3
+        elif leng <= 2:
+            leng = 4
+        self.label.setText(str(round(self.getXPos(), leng)))
+        self.update()
+
+class VerticalPeakLineLabel(pg.InfLineLabel):
+    def __init__(self, line, text="", movable=False, position=0.5, anchors=None, **kwds):
+        super().__init__(line)
+        self.line = line
+
+    def valueChanged(self):
+        if not self.isVisible():
+            return
+        value = self.line.value()
+        self.setText(self.format.format(value=value))
+        self.updatePosition()
+
+    def mouseDragEvent(self, ev):
+        if self.movable and ev.button() == QtCore.Qt.LeftButton:
+            if ev.isStart():
+                self._moving = True
+                self._cursorOffset = self._posToRel(ev.buttonDownPos())
+                self._startPosition = self.orthoPos
+            ev.accept()
+
+            if not self._moving:
+                return
+
+            rel = self._posToRel(ev.pos())
+            self.orthoPos = np.clip(self._startPosition + rel - self._cursorOffset, 0, 1)
+            self.updatePosition()
+            if ev.isFinish():
+                self._moving = False
+                
