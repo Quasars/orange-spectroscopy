@@ -151,7 +151,7 @@ class TestOWSpectra(WidgetTest):
         self.widget.curveplot.find_peak_variables()
         np.testing.assert_almost_equal(self.widget.curveplot.maximum_point, 1.2, 1)
         np.testing.assert_almost_equal(self.widget.curveplot.start_point, 1351, 0)
-        np.testing.assert_almost_equal(self.widget.curveplot.minimum_point, 0)
+        np.testing.assert_almost_equal(self.widget.curveplot.minimum_point, 0.04, 2)
         self.widget.curveplot.peak_apply_auto(prominence=None, maxHeight=None,
                                               minHeight=0.5, line_overlap=20)
         np.testing.assert_almost_equal(self.widget.curveplot.peak_locations,

@@ -1078,12 +1078,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             Label_line.label.setColor(color=QColor(Qt.black))
             Label_line.label.setPosition(1)
             Label_line.label.setMovable(True)
+            Label_line.label.setText(str(round(self.start_point, 3)))
             if position:
                 Label_line.setPos(position)
                 Label_line.label.setText(str(round(position, 3)))
             else:
                 Label_line.setPos(self.start_point)
-                Label_line.label.setText(str(round(self.start_point, 3)))
             self.plot.addItem(Label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
@@ -1095,12 +1095,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             peak = []
             if np.shape(data) != (len(data),):
                 for i, val in enumerate(data):
-                    single_spcetra = val
-                    peaks, _ = find_peaks(single_spcetra, height=([minHeight,
+                    single_spectra = val
+                    peaks, _ = find_peaks(single_spectra, height=([minHeight,
                                                                    maxHeight]), prominence=prominence)
                     peaks = x_axis[peaks]  # array with all locations of peaks
-                    for z, vals in enumerate(peaks):
-                        peak.append(vals)
+                    for z, var in enumerate(peaks):
+                        peak.append(var)
                 peak_locations = []
                 sorted_peaks = np.sort(peak)
                 for i, val in enumerate(sorted_peaks):

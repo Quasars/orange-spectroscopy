@@ -520,6 +520,7 @@ class VerticalPeakLine(pg.InfiniteLine):
         br.setTop(w)
         left = self.span[0]
         right = self.span[1]
+        #sets our line span to go from our minimum value to maximum
         br.setLeft(left)
         br.setRight(right)
         br = br.normalized()
