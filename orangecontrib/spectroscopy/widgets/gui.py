@@ -487,12 +487,17 @@ class VerticalPeakLine(pg.InfiniteLine):
     def __init__(self, pos=None, angle=90, pen=None, movable=True,
                  bounds=None, label=None, span=None):
         super().__init__(pos, angle, pen, movable, bounds)
-        self._endpoints = (None, None)
         self.moving = False
         self.mouseHovering = False
-        self.span = None
+        self.span = span
+        self._boundingRect = None
+        self._endPoints = [0, 1]
+        self._bounds = None
+        self._lastViewSize = None
+
         if label is None:
-            self.label = VerticalPeakLineLabel(self, text=str(self.getXPos()), position=(1))
+            self.label = VerticalPeakLineLabel(self,
+                                               text=str(self.getXPos()), position=(1))
 
     def setSpan(self, mn, mx):
         if self.span != (mn, mx):
@@ -500,8 +505,7 @@ class VerticalPeakLine(pg.InfiniteLine):
             self.update()
 
     def _computeBoundingRect(self):
-        # br = UIGraphicsItem.boundingRect(self)
-        vr = self.viewRect()  # bounds of containing ViewBox mapped to local coords.
+        vr = self.viewRect()
         if vr is None:
             return QtCore.QRectF()
 
@@ -509,12 +513,11 @@ class VerticalPeakLine(pg.InfiniteLine):
         if px is None:
             px = 0
         pw = max(self.pen.width() / 2, self.hoverPen.width() / 2)
-        w = max(4, self._maxMarkerSize + pw) + 1
+        w = max(4, 0 + pw) + 1
         w = w * px
         br = QtCore.QRectF(vr)
         br.setBottom(-w)
         br.setTop(w)
-
         left = self.span[0]
         right = self.span[1]
         br.setLeft(left)
@@ -534,6 +537,20 @@ class VerticalPeakLine(pg.InfiniteLine):
         self._lastViewRect = vr
 
         return self._bounds
+
+    def boundingRect(self):
+        if self._boundingRect is None:
+            self._boundingRect = self._computeBoundingRect()
+        return self._boundingRect
+
+    def paint(self, p, *args):
+        p.setRenderHint(p.Antialiasing)
+        left, right = self._endPoints
+        pen = self.currentPen
+        pen.setJoinStyle(QtCore.Qt.MiterJoin)
+        p.setPen(pen)
+        p.drawLine(Point(left, 0), Point(right, 0))
+
 
     def mouseDragEvent(self, ev):
         if self.movable and ev.button() == QtCore.Qt.LeftButton:

@@ -1073,17 +1073,17 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if self.viewtype == INDIVIDUAL:
             Label_line = VerticalPeakLine()
             Label_line.setMovable(True)
+            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
+            Label_line.label.setColor(color=QColor(Qt.black))
+            Label_line.label.setPosition(1)
+            Label_line.label.setMovable(True)
             if position:
                 Label_line.setPos(position)
                 Label_line.label.setText(str(round(position, 3)))
             else:
                 Label_line.setPos(self.start_point)
                 Label_line.label.setText(str(round(self.start_point, 3)))
-            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
-            Label_line.label.setColor(color=QColor(Qt.black))
-            Label_line.label.setPosition(1)
-            Label_line.label.setMovable(True)
             self.plot.addItem(Label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
