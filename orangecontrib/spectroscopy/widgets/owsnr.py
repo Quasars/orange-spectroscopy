@@ -29,10 +29,9 @@ class OWSNR(OWWidget):
                    'Standard Deviation': 2} # std
 
     settingsHandler = settings.DomainContextHandler()
-    # group_x = settings.ContextSetting(None)
-    # group_y = settings.ContextSetting(None)
-    # group = settings.ContextSetting(None)
-    out_choiced = settings.ContextSetting(0)
+    group_x = settings.ContextSetting(None)
+    group_y = settings.ContextSetting(None)
+    out_choiced = settings.Setting(0)
 
     autocommit = settings.Setting(True)
 
@@ -48,19 +47,20 @@ class OWSNR(OWWidget):
         self.data = None
         self.set_data(self.data)  # show warning
 
-        self.group_axis_x = DomainModel(
+        self.group_x = None
+        self.group_y = None
+
+        # methods in this widget assume group axes in metas
+        self.xy_model = DomainModel(DomainModel.METAS,
             placeholder="None", separators=False,
             valid_types=Orange.data.ContinuousVariable)
         self.group_view_x = gui.comboBox(
             self.controlArea, self, "group_x", box="Select axis: x",
-            model=self.group_axis_x, callback=self.grouping_changed)
+            model=self.xy_model, callback=self.grouping_changed)
 
-        self.group_axis_y = DomainModel(
-            placeholder="None", separators=False,
-            valid_types=Orange.data.ContinuousVariable)
         self.group_view_y = gui.comboBox(
             self.controlArea, self, "group_y", box="Select axis: y",
-            model=self.group_axis_y, callback=self.grouping_changed)
+            model=self.xy_model, callback=self.grouping_changed)
 
         self.selected_out = gui.comboBox(
             self.controlArea, self, "out_choiced", box="Select Output:",
@@ -68,20 +68,23 @@ class OWSNR(OWWidget):
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
+        # prepare interface according to the new context
+        self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
+
+    def init_attr_values(self, domain):
+        self.xy_model.set_domain(domain)
+        self.group_x = None
+        self.group_y = None
 
     @Inputs.data
     def set_data(self, dataset):
         self.Warning.nodata.clear()
         self.closeContext()
         self.data = dataset
-        self.group_x = None
-        self.group_y = None
         self.group = None
         if dataset is None:
             self.Warning.nodata()
         else:
-            self.group_axis_x.set_domain(dataset.domain)
-            self.group_axis_y.set_domain(dataset.domain)
             self.openContext(dataset.domain)
 
         self.commit()
@@ -122,9 +125,7 @@ class OWSNR(OWWidget):
     def out_choice_changed(self):
         self.commit()
 
-    def select_2coordinates(self):
-        attr_x = self.group_x
-        attr_y = self.group_y
+    def select_2coordinates(self, attr_x, attr_y):
         xat = self.data.domain[attr_x]
         yat = self.data.domain[attr_y]
 
@@ -170,9 +171,7 @@ class OWSNR(OWWidget):
         table_2_coord[:, attr_y] = np.linspace(*lsy)[unq_coo[:, 1]].reshape(-1, 1)
         return table_2_coord
 
-
-    def select_1coordinate(self):
-        attr = self.group
+    def select_1coordinate(self, attr):
         at = self.data.domain[attr]
 
         def extract_col(data, var):
@@ -213,12 +212,12 @@ class OWSNR(OWWidget):
             final_data = self.calc_table_np(self.data.X)
         elif None in [self.group_x, self.group_y]:
             if self.group_x is None:
-                self.group = self.group_y
+                group = self.group_y
             else:
-                self.group = self.group_x
-            final_data = self.select_1coordinate()
+                group = self.group_x
+            final_data = self.select_1coordinate(group)
         else:
-            final_data = self.select_2coordinates()
+            final_data = self.select_2coordinates(self.group_x, self.group_y)
 
         return final_data
 

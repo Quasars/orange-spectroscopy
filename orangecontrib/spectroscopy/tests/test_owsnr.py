@@ -32,7 +32,7 @@ class TestOWSNR(WidgetTest):
         self.send_signal("Data", self.file_test)
         self.widget.out_choiced = 0
         self.widget.out_choice_changed()
-        self.widget.group_x = self.widget.group_axis_x[1]
+        self.widget.group_y = self.file_test.domain["column (x)"]
         self.widget.out_choice_changed()
         out = self.get_output("SNR")
         ref = [1.0726, 1.46003, 1.28718]
@@ -42,7 +42,7 @@ class TestOWSNR(WidgetTest):
     def test_1coordinate_average(self):
         self.send_signal("Data", self.file_test)
         self.widget.out_choiced = 1
-        self.widget.group_y = self.widget.group_axis_y[2]
+        self.widget.group_y = self.file_test.domain["row (y)"]
         self.widget.out_choice_changed()
         out = self.get_output("SNR")
         ref = [0.08537, 0.0684601, 0.0553439]
@@ -63,8 +63,8 @@ class TestOWSNR(WidgetTest):
     def test_2coordinates_std(self):
         self.send_signal("Data", self.file_test)
         self.widget.out_choiced = 0
-        self.widget.group_x = self.widget.group_axis_x[1]
-        self.widget.group_y = self.widget.group_axis_y[2]
+        self.widget.group_x = self.file_test.domain["column (x)"]
+        self.widget.group_y = self.file_test.domain["row (y)"]
         self.widget.out_choice_changed()
         out = self.get_output("SNR")
         ref = [2.89239, 1.44214, 1.97268]
