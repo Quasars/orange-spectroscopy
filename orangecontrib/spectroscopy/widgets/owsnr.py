@@ -236,12 +236,7 @@ class OWSNR(OWWidget):
 
         self.Outputs.final_data.send(final_data)
 
+
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    folder = """/home/levandoski/Documentos/ic-orange/\
-interface_orange/orange-spectroscopy/\
-orangecontrib/spectroscopy/datasets/"""
-    file_name = "three_coordinates_data.csv"
-    path = folder + file_name ### TODO open "three coordinates data.csv"
-    # without indicating the folder
-    WidgetPreview(OWSNR).run(Orange.data.Table(path))
+    WidgetPreview(OWSNR).run(Orange.data.Table("three_coordinates_data.csv"))
