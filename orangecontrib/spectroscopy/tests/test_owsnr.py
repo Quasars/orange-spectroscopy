@@ -48,6 +48,8 @@ class TestOWSNR(WidgetTest):
         ref = [0.08537, 0.0684601, 0.0553439]
         np.testing.assert_equal(out.X.shape, (5, 10))
         np.testing.assert_allclose(out.X[0, :3], ref, rtol=1e-06, atol=1e-06)
+        np.testing.assert_equal(out.metas[:3, :2].astype(float),
+                                [[np.nan, 0], [np.nan, 1], [np.nan, 2]])
 
     def test_none_coordinate_std(self):
         self.send_signal("Data", self.file_test)
@@ -68,3 +70,6 @@ class TestOWSNR(WidgetTest):
         ref = [2.89239, 1.44214, 1.97268]
         np.testing.assert_equal(out.X.shape, (25, 10))
         np.testing.assert_allclose(out.X[0, :3], ref, rtol=1e-05, atol=1e-05)
+        np.testing.assert_equal(out.metas[:3, :2], [[0, 0], [1, 0], [2, 0]])
+        np.testing.assert_equal(out.metas[-3:, :2], [[2, 4], [3, 4], [4, 4]])
+        print(out.metas)

@@ -166,13 +166,8 @@ class OWSNR(OWWidget):
             matrix.append(array)
         table_2_coord = Orange.data.Table.concatenate(matrix, axis=0)
 
-        index_x = table_2_coord.domain.index(attr_x)
-        index_y = table_2_coord.domain.index(attr_y)
-        index_x = abs(index_x)-1
-        index_y = abs(index_y)-1
-
-        table_2_coord.metas[:, index_x] = np.linspace(*lsx)[unq_coo[:, 0]]
-        table_2_coord.metas[:, index_y] = np.linspace(*lsy)[unq_coo[:, 1]]
+        table_2_coord[:, attr_x] = np.linspace(*lsx)[unq_coo[:, 0]].reshape(-1, 1)
+        table_2_coord[:, attr_y] = np.linspace(*lsy)[unq_coo[:, 1]].reshape(-1, 1)
         return table_2_coord
 
 
@@ -209,9 +204,7 @@ class OWSNR(OWWidget):
             matrix.append(array)
         table_1_coord = Orange.data.Table.concatenate(matrix, axis=0)
 
-        index = table_1_coord.domain.index(attr)
-        index = abs(index)-1
-        table_1_coord.metas[:, index] = np.linspace(*ls)[unq_coo[:, 0]]
+        table_1_coord[:, attr] = np.linspace(*ls)[unq_coo[:, 0]].reshape(-1, 1)
 
         return table_1_coord
 
