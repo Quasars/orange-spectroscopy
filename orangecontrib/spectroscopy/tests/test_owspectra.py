@@ -156,7 +156,6 @@ class TestOWSpectra(WidgetTest):
                                               minHeight=0.5, line_overlap=20)
         np.testing.assert_almost_equal(self.widget.curveplot.peak_locations,
                                        [1025, 1079, 1160, 1461, 1542, 1646, 1739], 0)
-        #Add in test for peaks with specific values
 
 
     def do_zoom_rect(self, invertX):

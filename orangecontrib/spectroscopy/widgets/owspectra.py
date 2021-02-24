@@ -69,8 +69,6 @@ SELECT_POLYGON_TOLERANCE = 10
 COLORBREWER_SET1 = [(228, 26, 28), (55, 126, 184), (77, 175, 74), (152, 78, 163), (255, 127, 0),
                     (255, 255, 51), (166, 86, 40), (247, 129, 191), (153, 153, 153)]
 
-ADD_PEAK = 125
-REMOVE_PEAK = 126
 
 
 class SelectionGroupMixin:
@@ -667,10 +665,10 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     range_x2 = Setting(None)
     range_y1 = Setting(None)
     range_y2 = Setting(None)
-    prominence = Setting(None)
-    Line_Overlap = Setting(None)
-    peak_min = Setting(None)
-    peak_max = Setting(None)
+    prominence = Setting(None, schema_only=True)
+    Line_Overlap = Setting(None, schema_only=True)
+    peak_min = Setting(None, schema_only=True)
+    peak_max = Setting(None, schema_only=True)
     feature_color = ContextSetting(None)
     color_individual = Setting(False)  # color individual curves (in a cycle) if no feature_color
     invertX = Setting(False)
@@ -704,7 +702,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
         self.plot.setDownsampling(auto=True, mode="peak")
-
         self.connected_views = []
         self.plot.vb.sigResized.connect(self._update_connected_views)
 
@@ -756,10 +753,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self.plotview)
-
         # prepare interface according to the new context
         self.parent.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
-
         actions = []
 
         resample_curves = QAction(
@@ -1122,8 +1117,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                     single_spectra.append(data[i])
                 peaks, _ = find_peaks(single_spectra, height=([minHeight,
                                                                maxHeight]), prominence=prominence)
-                self.peak_locations = x_axis[peaks]
-                for i, val in enumerate(self.peak_locations):
+                self.peak_position = x_axis[peaks]
+                for i, val in enumerate(self.peak_position):
                     self.peak_apply(position=val)
 
     def invertX_changed(self):
