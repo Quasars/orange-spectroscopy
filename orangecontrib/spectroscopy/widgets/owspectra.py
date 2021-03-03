@@ -699,7 +699,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.subset = None  # current subset input, an array of indices
         self.subset_indices = None  # boolean index array with indices in self.data
         self.start_point = None  # automatic position for adding single lines in peak_apply
-        self.peak_state = 0
+        self.peak_state = 0  # Value for determining what our peak clear should do
         self.plotview = pg.PlotWidget(background="w", viewBox=InteractiveViewBoxC(self))
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
@@ -1200,8 +1200,10 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if self.peak_state != 1:
             if self.minimum_point is not None and \
                     self.maximum_point is not None:
+                #ensures we don't try and plot to a nonexistent bound
                 for i in range(len(self.peak_locations)):
                     self.peak_apply(position=self.peak_locations[i])
+                    #reloads our peaks when we reopen
 
     def resized(self):
         self.important_decimals = pixel_decimals(self.plot.vb)
