@@ -508,8 +508,8 @@ class VerticalPeakLine(pg.InfiniteLine):
         br = QtCore.QRectF(vr)
         br.setBottom(-w)
         br.setTop(w)
-        left = self.span[0]
-        right = self.span[1]
+        left = self.span[0] #left = br.left() + length * self.span[0]
+        right = self.span[1] #right = br.left() + length * self.span[1]
         #right and left changed to only go from min to max values of data
         br.setLeft(left)
         br.setRight(right)
