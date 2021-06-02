@@ -487,22 +487,12 @@ class VerticalPeakLine(pg.InfiniteLine):
     def __init__(self, pos=None, angle=90, pen=None, movable=True,
                  bounds=None, label=None, span=None):
         super().__init__(pos, angle, pen, movable, bounds)
-        self.moving = False
-        self.mouseHovering = False
-        self.span = span
-        self._boundingRect = None
-        self._endPoints = [0, 1]
-        self._bounds = None
-        self._lastViewSize = None
 
         if label is None:
             self.label = VerticalPeakLineLabel(self,
                                                text=str(self.getXPos()), position=(1))
 
-    def setSpan(self, mn, mx):
-        if self.span != (mn, mx):
-            self.span = (mn, mx)
-            self.update()
+        self.sigDragged.connect(self.updateLabel)
 
     def _computeBoundingRect(self):
         vr = self.viewRect()
@@ -520,7 +510,7 @@ class VerticalPeakLine(pg.InfiniteLine):
         br.setTop(w)
         left = self.span[0]
         right = self.span[1]
-        #sets our line span to go from our minimum value to maximum
+        #right and left changed to only go from min to max values of data
         br.setLeft(left)
         br.setRight(right)
         br = br.normalized()
@@ -539,90 +529,21 @@ class VerticalPeakLine(pg.InfiniteLine):
 
         return self._bounds
 
-    def boundingRect(self):
-        if self._boundingRect is None:
-            self._boundingRect = self._computeBoundingRect()
-        return self._boundingRect
-
-    def paint(self, p, *args):
-        p.setRenderHint(p.Antialiasing)
-        left, right = self._endPoints
-        pen = self.currentPen
-        pen.setJoinStyle(QtCore.Qt.MiterJoin)
-        p.setPen(pen)
-        p.drawLine(Point(left, 0), Point(right, 0))
-
-
-    def mouseDragEvent(self, ev):
-        if self.movable and ev.button() == QtCore.Qt.LeftButton:
-            if ev.isStart():
-                self.moving = True
-                self.cursorOffset = self.pos() - self.mapToParent(ev.buttonDownPos())
-                self.startPosition = self.pos()
-            ev.accept()
-
-            if not self.moving:
-                return
-
-            self.setPos(self.cursorOffset + self.mapToParent(ev.pos()))
-            self.sigDragged.emit(self)
-            self.updateLabel()
-            if ev.isFinish():
-                self.moving = False
-                self.sigPositionChangeFinished.emit(self)
-                self._computeBoundingRect()
-
-    def mouseClickEvent(self, ev):
-        if self.moving and ev.button() == QtCore.Qt.RightButton:
-            ev.accept()
-            self.setPos(self.startPosition)
-            self.moving = False
-            self.sigDragged.emit(self)
-            self.sigPositionChangeFinished.emit(self)
-
-    def mouseDoubleClickEvent(self, ev):
-        if ev.button() == QtCore.Qt.RightButton:
-            ev.accept()
-            self.hide()
-            self.update()
-
     def updateLabel(self):
         x = self.getXPos()
-        leng = len(str(round(x)))
-        if leng >= 4:
-            leng = 2
-        elif leng < 4 and leng > 2:
-            leng = 3
-        elif leng <= 2:
-            leng = 4
-        self.label.setText(str(round(self.getXPos(), leng)))
+        length = len(str(round(x)))
+        if length >= 4:
+            length = 2
+        elif 4 > length > 2:
+            length = 3
+        elif length <= 2:
+            length = 4
+        elif length == 0:
+            length = len(x)
+        self.label.setText(str(round(self.getXPos(), length)))
         self.update()
 
 class VerticalPeakLineLabel(pg.InfLineLabel):
     def __init__(self, line, text="", movable=False, position=0.5, anchors=None, **kwds):
         super().__init__(line)
         self.line = line
-
-    def valueChanged(self):
-        if not self.isVisible():
-            return
-        value = self.line.value()
-        self.setText(self.format.format(value=value))
-        self.updatePosition()
-
-    def mouseDragEvent(self, ev):
-        if self.movable and ev.button() == QtCore.Qt.LeftButton:
-            if ev.isStart():
-                self._moving = True
-                self._cursorOffset = self._posToRel(ev.buttonDownPos())
-                self._startPosition = self.orthoPos
-            ev.accept()
-
-            if not self._moving:
-                return
-
-            rel = self._posToRel(ev.pos())
-            self.orthoPos = np.clip(self._startPosition + rel - self._cursorOffset, 0, 1)
-            self.updatePosition()
-            if ev.isFinish():
-                self._moving = False
