@@ -46,7 +46,7 @@ will appear dashed.
 - Show averages (A): show the average and standard deviation (per group)
 - Show grid (G): show the grid for a better inspection of the plot
 - Invert X (X): invert the order of the X axis
-- Label Peaks (P) : Add an adjustable vertical line with a x-position label (Remove lines with a right double click) [more...](Labeling.md)
+- Label Peaks (P) : Add an adjustable vertical line with label (Remove lines with a right double click) [more...](Labeling.md)
 - Select (line) (S): select the spectra touching a line (draw a line with a mouse)
 - Save graph (Mod + S): export the visualization to an imags
 - Define view range: define  a specific range to display

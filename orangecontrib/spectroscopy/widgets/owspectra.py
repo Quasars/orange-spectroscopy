@@ -666,7 +666,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     range_y1 = Setting(None)
     range_y2 = Setting(None)
     prominence = Setting(None, schema_only=True)
-    Line_Overlap = Setting(None, schema_only=True)
+    line_overlap = Setting(None, schema_only=True)
     peak_min = Setting(None, schema_only=True)
     peak_max = Setting(None, schema_only=True)
     peak_locations = Setting([], schema_only=True)
@@ -698,8 +698,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.clear_data()
         self.subset = None  # current subset input, an array of indices
         self.subset_indices = None  # boolean index array with indices in self.data
-        self.start_point = None  # automatic position for adding single lines in peak_apply
         self.peak_state = 0  # Value for determining what our peak clear should do
+        self.minium_point = None
+        self.maximum_point = None
         self.plotview = pg.PlotWidget(background="w", viewBox=InteractiveViewBoxC(self))
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
@@ -833,7 +834,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.prominence_box = lineEditDecimalOrNone(None, self, 'prominence', bottom=0)
         self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditDecimalOrNone(None, self, 'peak_max')
-        self.peak_label_distance = lineEditDecimalOrNone(None, self, "Line_Overlap", bottom=0)
+        self.peak_label_distance = lineEditDecimalOrNone(None, self, "line_overlap", bottom=0)
         layout.addWidget(self.single_peak, 4, 0)
         layout.addWidget(QLabel("Prominence"), 0, 0, Qt.AlignRight)
         layout.addWidget(QLabel('Minimum Peak Height'), 1, 0, Qt.AlignRight)
@@ -1044,9 +1045,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         prominence = self.prominence
         minHeight = self.peak_min
         maxHeight = self.peak_max
-        Line_Overlap = self.Line_Overlap
+        line_overlap = self.line_overlap
         self.peak_apply_auto(prominence=prominence, minHeight=minHeight,
-                             maxHeight=maxHeight, line_overlap=Line_Overlap)
+                             maxHeight=maxHeight, line_overlap=line_overlap)
 
     def labels_changed(self):
         self.plot.setTitle(self.label_title)
@@ -1068,12 +1069,9 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.show_grid_a.setChecked(self.show_grid)
 
     def find_peak_variables(self):
-        if self.maximum_point is None:
-            self.maximum_point = np.amax(self.data.X[:, self.data_xsind])
-        if self.minimum_point is None:
-            self.minimum_point = np.amin(self.data.X[:, self.data_xsind])
-        if self.start_point is None:
-            self.start_point = round(np.median(getx(self.data)), 2)
+            self.maximum_point = np.nanmax(self.data.X[:, self.data_xsind])
+            self.minimum_point = np.nanmin(self.data.X[:, self.data_xsind])
+            self.start_point = np.median(getx(self.data))
 
     def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
