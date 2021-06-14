@@ -486,7 +486,8 @@ class VerticalPeakLine(pg.InfiniteLine):
 
     def __init__(self, pos=None, angle=90, pen=None, movable=True,
                  bounds=None, label=None, span=None):
-        super().__init__(pos, angle, pen, movable, bounds)
+
+        super().__init__(pos, angle, pen, movable, bounds, span)
 
         if label is None:
             self.label = VerticalPeakLineLabel(self,

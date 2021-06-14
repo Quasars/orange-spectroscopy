@@ -1095,40 +1095,37 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             if line_overlap is None:
                 line_overlap = 0
             x_axis = self.data_x
-            data = self.data.X[:, self.data_xsind]
+            data = self.curves_plotted[0][1]
             peak = []
-            if np.shape(data) != (len(data),):
-                for i, val in enumerate(data):
+            single_curve = None
+            for i, val in enumerate(data):
+                if not isinstance(val, (list, np.ndarray, tuple)) or single_curve == True :
+                    single_curve = True
+                    single_spectra = data
+                else:
                     single_spectra = val
-                    peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                                   maxHeight]), prominence=prominence)
-                    peaks = x_axis[peaks]  # array with all locations of peaks
-                    for z, var in enumerate(peaks):
-                        peak.append(var)
-                peak_locations = []
-                sorted_peaks = np.sort(peak)
-                for i, val in enumerate(sorted_peaks):
-                    if val not in peak_locations and peak_locations != [] \
-                            and abs(sorted_peaks[i-1]-val) >= line_overlap:
-                        # First check for used peaks then check
-                        # if its greater than than nearby values
-                        peak_locations.append(val)
-                    elif not peak_locations:
-                        peak_locations.append(val)
-                        # used for first value computation as it isn't in the array
-                self.peak_locations = peak_locations
-                for k, val in enumerate(peak_locations):
-                    self.peak_apply(position=val)
-            else:
-                # covers singular spectra data instances
-                single_spectra = []
-                for i, val in enumerate(data):
-                    single_spectra.append(data[i])
+                    single_curve = False
                 peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                               maxHeight]), prominence=prominence)
-                self.peak_locations = x_axis[peaks]
-                for i, val in enumerate(self.peak_locations):
-                    self.peak_apply(position=val)
+                                                                maxHeight]), prominence=prominence)
+                peaks = x_axis[peaks]  # array with all locations of peaks
+                for z, var in enumerate(peaks):
+                    peak.append(var)
+                if single_curve:
+                    break
+            peak_locations = []
+            sorted_peaks = np.sort(peak)
+            for i, val in enumerate(sorted_peaks):
+                if val not in peak_locations and peak_locations != [] \
+                        and abs(sorted_peaks[i-1]-val) >= line_overlap:
+                    # First check for used peaks then check
+                    # if its greater than than nearby values
+                    peak_locations.append(val)
+                elif not peak_locations:
+                    peak_locations.append(val)
+                    # used for first value computation as it isn't in the array
+            self.peak_locations = peak_locations
+            for k, val in enumerate(peak_locations):
+                self.peak_apply(position=val)
 
     def invertX_changed(self):
         self.invertX = not self.invertX
