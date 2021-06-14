@@ -1069,8 +1069,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.show_grid_a.setChecked(self.show_grid)
 
     def find_peak_variables(self):
-            self.maximum_point = np.nanmax(self.data.X[:, self.data_xsind])
-            self.minimum_point = np.nanmin(self.data.X[:, self.data_xsind])
+            self.maximum_point = np.nanmax(self.curves_plotted[0][1])
+            self.minimum_point = np.nanmin(self.curves_plotted[0][1])
             self.start_point = np.median(getx(self.data))
 
     def peak_apply(self, position):
