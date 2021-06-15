@@ -13,7 +13,7 @@ from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
 import numpy as np
 import pyqtgraph as pg
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, argrelmax, argrelmin
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 from pyqtgraph import Point, GraphicsObject
 import Orange.data
@@ -959,7 +959,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.viewhelpers_show()
 
     def change_state(self):
-        #A very ineffcient workaround to line 1201 and having our peaks reappear
+        # A very ineffcient workaround to line 1201 and having our peaks reappear
         if self.peak_state == 0:
             self.peak_state = 1
         else:
@@ -1069,7 +1069,6 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.show_grid_a.setChecked(self.show_grid)
 
     def find_peak_variables(self):
-        from scipy.signal import argrelmax, argrelmin
         if np.size(self.curves_plotted) > 0:
             data = self.curves_plotted[0][1:]
             data = data[0]
@@ -1121,8 +1120,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             peak = []
             for i, val in enumerate(data):
                 single_spectra = val
-                peaks,_ = find_peaks(single_spectra, height=([minHeight,
-                                                            maxHeight]), prominence=prominence)
+                peaks, _ = find_peaks(single_spectra, height=([minHeight,
+                                                               maxHeight]), prominence=prominence)
                 peaks = x_axis[peaks]  # array with all locations of peaks
                 for z, var in enumerate(peaks):
                     peak.append(var)
@@ -1130,7 +1129,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             sorted_peaks = np.sort(peak)
             for i, val in enumerate(sorted_peaks):
                 if val not in peak_locations and peak_locations != [] \
-                        and abs(sorted_peaks[i-1]-val) >= line_overlap:
+                        and abs(sorted_peaks[i - 1] - val) >= line_overlap:
                     # First check for used peaks then check
                     # if its greater than than nearby values
                     peak_locations.append(val)
@@ -1209,10 +1208,10 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if self.peak_state != 1:
             if self.minimum_point is not None and \
                     self.maximum_point is not None:
-                #ensures we don't try and plot to a nonexistent bound
+                # ensures we don't try and plot to a nonexistent bound
                 for i in range(len(self.peak_locations)):
                     self.peak_apply(position=self.peak_locations[i])
-                    #reloads our peaks when we reopen
+                    # reloads our peaks when we reopen
 
     def resized(self):
         self.important_decimals = pixel_decimals(self.plot.vb)
