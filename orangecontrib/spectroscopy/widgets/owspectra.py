@@ -1087,7 +1087,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.minimum_point = 0
         else:
             self.minimum_point = np.nanmin(self.minimum_point)
-        self.start_point = np.median(getx(self.data))
+
+        self.start_point = np.mean(self.plot.viewRange()[0])
 
     def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
@@ -1116,7 +1117,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 data = data[0]
             else:
                 data = self.data.X[:, self.data_xsind]
-                #Should only arise when datasets are empty
+                # should only arise when datasets are empty
             peak = []
             for i, val in enumerate(data):
                 single_spectra = val
