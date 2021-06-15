@@ -5,16 +5,19 @@ import gc
 import random
 import warnings
 from xml.sax.saxutils import escape
+
 from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QGridLayout, QAction, QVBoxLayout, QApplication, QWidgetAction, QLabel, \
     QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence
 from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
 from AnyQt.QtCore import pyqtSignal
+
 import numpy as np
 import pyqtgraph as pg
 from scipy.signal import find_peaks, argrelmax, argrelmin
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
+
 from pyqtgraph import Point, GraphicsObject
 import Orange.data
 from Orange.data import DiscreteVariable
@@ -37,6 +40,7 @@ try:
 except ImportError:
     from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
 
+
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.utils import apply_columns_numpy
 from orangecontrib.spectroscopy.widgets.line_geometry import \
@@ -46,6 +50,7 @@ from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone, pixel_de
     float_to_str_decimals as strdec
 from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_selection, \
     selections_to_length, groups_or_annotated_table
+
 
 SELECT_SQUARE = 123
 SELECT_POLYGON = 124
@@ -65,6 +70,7 @@ NAN = float("nan")
 
 # distance to the first point in pixels that finishes the polygon
 SELECT_POLYGON_TOLERANCE = 10
+
 
 COLORBREWER_SET1 = [(228, 26, 28), (55, 126, 184), (77, 175, 74), (152, 78, 163), (255, 127, 0),
                     (255, 255, 51), (166, 86, 40), (247, 129, 191), (153, 153, 153)]
@@ -225,6 +231,7 @@ class InterruptException(Exception):
 
 
 class ShowAverage(QObject, ConcurrentMixin):
+
     average_shown = pyqtSignal()
 
     def __init__(self, master):
@@ -356,9 +363,9 @@ class InteractiveViewBox(ViewBox):
         # yellow marker for ending the polygon
         self.selection_poly_marker = pg.ScatterPlotItem()
         self.selection_poly_marker.setPen(pg.mkPen(color=QColor(Qt.yellow), width=2))
-        self.selection_poly_marker.setSize(SELECT_POLYGON_TOLERANCE * 2)
+        self.selection_poly_marker.setSize(SELECT_POLYGON_TOLERANCE*2)
         self.selection_poly_marker.setBrush(None)
-        self.selection_poly_marker.setZValue(1e9 + 1)
+        self.selection_poly_marker.setZValue(1e9+1)
         self.selection_poly_marker.hide()
         self.selection_poly_marker.mouseClickEvent = lambda x: x  # ignore mouse clicks
         self.addItem(self.selection_poly_marker, ignoreBounds=True)
@@ -479,7 +486,7 @@ class InteractiveViewBox(ViewBox):
         xpixel, ypixel = self.viewPixelSize()
         dx = (p1.x() - p2.x()) / xpixel
         dy = (p1.y() - p2.y()) / ypixel
-        return (dx ** 2 + dy ** 2) ** 0.5
+        return (dx**2 + dy**2)**0.5
 
     def updateSelectionPolygon(self, p):
         first = self.current_selection[0]
@@ -705,6 +712,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
         self.plot.setDownsampling(auto=True, mode="peak")
+
         self.connected_views = []
         self.plot.vb.sigResized.connect(self._update_connected_views)
 
@@ -756,13 +764,15 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self.plotview)
+
         # prepare interface according to the new context
         self.parent.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
+
         actions = []
 
         resample_curves = QAction(
             "Resample curves", self, shortcut=Qt.Key_R,
-            triggered=lambda x: self.resample_curves(self.sample_seed + 1)
+            triggered=lambda x: self.resample_curves(self.sample_seed+1)
         )
         resample_curves.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         actions.append(resample_curves)
