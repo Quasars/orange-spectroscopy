@@ -1,16 +1,14 @@
 import math
-import numpy as np
 from decimal import Decimal
 from abc import ABCMeta, abstractmethod
 
 from AnyQt.QtCore import QLocale, Qt, QSize
-from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator, QColor
+from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator
 from AnyQt.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QSizePolicy
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
-from PyQt5.uic.properties import QtGui
-from pyqtgraph import Point, QtCore, ViewBox
+from pyqtgraph import Point, QtCore
 
 from Orange.widgets.utils import getdeepattr
 from Orange.widgets.widget import OWComponent

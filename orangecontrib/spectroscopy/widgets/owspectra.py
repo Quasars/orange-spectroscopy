@@ -1137,7 +1137,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                     peak_locations.append(val)
                     # used for first value computation as it isn't in the array
             self.peak_locations = peak_locations
-            for k, val in enumerate(peak_locations):
+            for i, val in enumerate(peak_locations):
                 self.peak_apply(position=val)
 
     def invertX_changed(self):
