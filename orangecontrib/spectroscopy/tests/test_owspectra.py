@@ -157,6 +157,15 @@ class TestOWSpectra(WidgetTest):
         np.testing.assert_almost_equal(self.widget.curveplot.peak_locations,
                                        [1025, 1079, 1160, 1461, 1542, 1646, 1739], 0)
 
+    def test_label_peaks_data(self):
+        for data in self.normal_data + self.strange_data:
+            self.send_signal("Data", data)
+            self.widget.curveplot.find_peak_variables()
+            self.widget.curveplot.peak_apply_auto(
+                prominence=None, minHeight=None, maxHeight=None, line_overlap=None)
+            wait_for_graph(self.widget)
+
+
 
     def do_zoom_rect(self, invertX):
         """ Test zooming with two clicks. """

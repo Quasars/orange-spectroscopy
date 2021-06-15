@@ -1069,9 +1069,25 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.show_grid_a.setChecked(self.show_grid)
 
     def find_peak_variables(self):
-            self.maximum_point = np.nanmax(self.curves_plotted[0][1])
-            self.minimum_point = np.nanmin(self.curves_plotted[0][1])
-            self.start_point = np.median(getx(self.data))
+        from scipy.signal import argrelmax, argrelmin
+        if np.size(self.curves_plotted) > 0:
+            data = self.curves_plotted[0][1:]
+            data = data[0]
+        else:
+            data = self.data.X[:, self.data_xsind]
+
+        self.maximum_point = data[argrelmax(data)]
+        if self.maximum_point.size == 0:
+            self.maximum_point = np.infty
+        else:
+            self.maximum_point = np.nanmax(self.maximum_point)
+
+        self.minimum_point = data[argrelmin(data)]
+        if self.minimum_point.size == 0:
+            self.minimum_point = 0
+        else:
+            self.minimum_point = np.nanmin(self.minimum_point)
+        self.start_point = np.median(getx(self.data))
 
     def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
@@ -1095,23 +1111,20 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             if line_overlap is None:
                 line_overlap = 0
             x_axis = self.data_x
-            data = self.curves_plotted[0][1]
+            if np.size(self.curves_plotted) > 0:
+                data = self.curves_plotted[0][1:]
+                data = data[0]
+            else:
+                data = self.data.X[:, self.data_xsind]
+                #Should only arise when datasets are empty
             peak = []
-            single_curve = None
             for i, val in enumerate(data):
-                if not isinstance(val, (list, np.ndarray, tuple)) or single_curve == True :
-                    single_curve = True
-                    single_spectra = data
-                else:
-                    single_spectra = val
-                    single_curve = False
-                peaks, _ = find_peaks(single_spectra, height=([minHeight,
-                                                                maxHeight]), prominence=prominence)
+                single_spectra = val
+                peaks,_ = find_peaks(single_spectra, height=([minHeight,
+                                                            maxHeight]), prominence=prominence)
                 peaks = x_axis[peaks]  # array with all locations of peaks
                 for z, var in enumerate(peaks):
                     peak.append(var)
-                if single_curve:
-                    break
             peak_locations = []
             sorted_peaks = np.sort(peak)
             for i, val in enumerate(sorted_peaks):
