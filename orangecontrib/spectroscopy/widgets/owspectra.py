@@ -1123,7 +1123,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 peaks, _ = find_peaks(single_spectra, height=([minHeight,
                                                                maxHeight]), prominence=prominence)
                 peaks = x_axis[peaks]  # array with all locations of peaks
-                for z, var in enumerate(peaks):
+                for i, var in enumerate(peaks):
                     peak.append(var)
             peak_locations = []
             sorted_peaks = np.sort(peak)
