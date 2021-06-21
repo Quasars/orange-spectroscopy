@@ -3,7 +3,7 @@ from decimal import Decimal
 from abc import ABCMeta, abstractmethod
 
 from AnyQt.QtCore import QLocale, Qt, QSize
-from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator
+from AnyQt.QtGui import QDoubleValidator, QIntValidator, QValidator, QColor
 from AnyQt.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QSizePolicy
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -492,6 +492,7 @@ class VerticalPeakLine(pg.InfiniteLine):
                                                text=str(self.getXPos()), position=(1))
 
         self.sigDragged.connect(self.updateLabel)
+        self.selection = 0
 
     def _computeBoundingRect(self):
         vr = self.viewRect()
@@ -527,6 +528,21 @@ class VerticalPeakLine(pg.InfiniteLine):
         self._lastViewRect = vr
 
         return self._bounds
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.LeftButton and not self.moving and self.selection == 0:
+            self.setPen(pg.mkPen(color=QColor(Qt.blue), width=2, style=Qt.DotLine))
+            self.update()
+            self.selection = 1
+        else:
+            self.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            self.update()
+            self.selection = 0
+
+    def delete_line(self):
+        if self.selection == 1:
+            self.hide()
+            self.update()
 
     def updateLabel(self):
         x = self.getXPos()

@@ -708,6 +708,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.peak_state = 0  # Value for determining what our peak clear should do
         self.minium_point = None
         self.maximum_point = None
+        self.line_list = []
         self.plotview = pg.PlotWidget(background="w", viewBox=InteractiveViewBoxC(self))
         self.plot = self.plotview.getPlotItem()
         self.plot.hideButtons()  # hide the autorange button
@@ -835,12 +836,14 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.single_peak.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         self.single_peak = QPushButton("Add Single Line", self)
         self.reset_labels = QPushButton('Reset graph', self)
+        self.delete_labels = QPushButton('Delete Selected Labels', self)
         self.single_peak.clicked.connect(self.find_peak_variables)
         self.single_peak.clicked.connect(self.peak_apply)
         self.reset_labels.clicked.connect(self.change_state)
         self.reset_labels.clicked.connect(self.clear_graph)
         self.reset_labels.clicked.connect(self.update_view)
         self.reset_labels.clicked.connect(self.change_state)
+        self.delete_labels.clicked.connect(self.delete_selected_labels)
         self.prominence_box = lineEditDecimalOrNone(None, self, 'prominence', bottom=0)
         self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
         self.peak_height_max = lineEditDecimalOrNone(None, self, 'peak_max')
@@ -855,6 +858,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         layout.addWidget(self.peak_height_max, 2, 1)
         layout.addWidget(self.peak_label_distance, 3, 1)
         layout.addWidget(self.reset_labels, 5, 1)
+        layout.addWidget(self.delete_labels, 5, 0)
         self.apply_button = QPushButton("Automatic label", self)
         self.apply_button.clicked.connect(self.find_peak_variables)
         self.apply_button.clicked.connect(self.set_auto_peaks)
@@ -1101,20 +1105,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
-            Label_line = VerticalPeakLine()
-            Label_line.setMovable(True)
-            Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
-            Label_line.label.setColor(color=QColor(Qt.black))
-            Label_line.label.setPosition(1)
-            Label_line.label.setMovable(True)
+            self.Label_line = VerticalPeakLine()
+            self.Label_line.setMovable(True)
+            self.Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            self.Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
+            self.Label_line.label.setColor(color=QColor(Qt.black))
+            self.Label_line.label.setPosition(1)
+            self.Label_line.label.setMovable(True)
             if position:
-                Label_line.setPos(position)
-                Label_line.label.setText(str(round(position, 3)))
+                self.Label_line.setPos(position)
+                self.Label_line.label.setText(str(round(position, 3)))
             else:
-                Label_line.setPos(self.start_point)
-                Label_line.label.setText(str(round(self.start_point, 3)))
-            self.plotview.addItem(Label_line)
+                self.Label_line.setPos(self.start_point)
+                self.Label_line.label.setText(str(round(self.start_point, 3)))
+            self.line_list.append(self.Label_line)
+            self.plotview.addItem(self.Label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
         if self.viewtype == INDIVIDUAL:
@@ -1149,6 +1154,12 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.peak_locations = peak_locations
             for i, val in enumerate(peak_locations):
                 self.peak_apply(position=val)
+
+    def delete_selected_labels(self):
+        for i, val in enumerate(self.line_list):
+            if val.selection == 1:
+                val.delete_line()
+                del self.line_list[i]
 
     def invertX_changed(self):
         self.invertX = not self.invertX
