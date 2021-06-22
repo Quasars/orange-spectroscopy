@@ -835,7 +835,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         self.delete_labels = QPushButton('Delete Selected Labels', self)
         self.single_peak.clicked.connect(self.find_peak_variables)
         self.single_peak.clicked.connect(self.peak_apply)
-        self.reset_labels.clicked.connect(self.deleted_all_labels)
+        self.reset_labels.clicked.connect(self.delete_all_labels)
         self.delete_labels.clicked.connect(self.delete_selected_labels)
         self.prominence_box = lineEditDecimalOrNone(None, self, 'prominence', bottom=0)
         self.peak_height_min = lineEditDecimalOrNone(None, self, 'peak_min')
@@ -1091,21 +1091,21 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def peak_apply(self, position):
         if self.viewtype == INDIVIDUAL:
-            self.Label_line = VerticalPeakLine()
-            self.Label_line.setMovable(True)
-            self.Label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
-            self.Label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
-            self.Label_line.label.setColor(color=QColor(Qt.black))
-            self.Label_line.label.setPosition(1)
-            self.Label_line.label.setMovable(True)
+            label_line = VerticalPeakLine()
+            label_line.setMovable(True)
+            label_line.setPen(pg.mkPen(color=QColor(Qt.black), width=2, style=Qt.DotLine))
+            label_line.setSpan(mn=self.minimum_point, mx=self.maximum_point)
+            label_line.label.setColor(color=QColor(Qt.black))
+            label_line.label.setPosition(1)
+            label_line.label.setMovable(True)
             if position:
-                self.Label_line.setPos(position)
-                self.Label_line.label.setText(str(round(position, 3)))
+                label_line.setPos(position)
+                label_line.label.setText(str(round(position, 3)))
             else:
-                self.Label_line.setPos(self.start_point)
-                self.Label_line.label.setText(str(round(self.start_point, 3)))
-            self.peak_positions.append(self.Label_line)
-            self.plotview.addItem(self.Label_line)
+                label_line.setPos(self.start_point)
+                label_line.label.setText(str(round(self.start_point, 3)))
+            self.peak_positions.append(label_line)
+            self.plotview.addItem(label_line)
 
     def peak_apply_auto(self, prominence, minHeight, maxHeight, line_overlap):
         if self.viewtype == INDIVIDUAL:
@@ -1146,7 +1146,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 val.delete_line()
                 del self.peak_positions[i]
 
-    def deleted_all_labels(self):
+    def delete_all_labels(self):
         for peak in self.peak_positions:
             peak.hide()
 
