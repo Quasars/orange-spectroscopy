@@ -493,12 +493,6 @@ class VerticalPeakLine(pg.InfiniteLine):
 
         self.sigDragged.connect(self.updateLabel)
         self.selection = 0
-        self.span = span
-
-    def setSpan(self, mn, mx):
-        if self.span != (mn, mx):
-            self.span = (mn, mx)
-            self.update()
 
     def _computeBoundingRect(self):
         vr = self.viewRect()
