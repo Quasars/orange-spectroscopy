@@ -1091,7 +1091,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             self.minimum_point = 0
         else:
             self.minimum_point = np.nanmin(self.minimum_point)
-            
+
         self.start_point = np.mean(self.plot.viewRange()[0])
 
     def peak_apply(self, position):
@@ -1167,9 +1167,8 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
     def save_peak_labels(self):
         for peak in self.peak_positions:
             # Saves the position and the adjusted max span
-            information = [peak.pos()[0], (peak.span[0],
-                                           peak.span[1]+peak.pos()[1])]
-            self.peak_labels.append(information)
+            self.peak_labels.append([peak.pos()[0], (peak.span[0],
+                                                     peak.span[1]+peak.pos()[1])])
 
     def replot_labels(self):
         for label in self.peak_labels:
