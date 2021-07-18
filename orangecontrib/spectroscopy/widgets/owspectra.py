@@ -1141,15 +1141,14 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
                 self.peak_apply(position=val)
 
     def delete_selected_labels(self):
-        for i, val in enumerate(self.peak_positions):
-            if val.selection == 1:
-                val.delete_line()
-                del self.peak_positions[i]
+        for label in reversed(self.peak_positions):
+            if label.selection == 1:
+                label.delete_line()
+                del label
 
     def delete_all_labels(self):
         for peak in self.peak_positions:
             peak.hide()
-
 
     def invertX_changed(self):
         self.invertX = not self.invertX
