@@ -948,16 +948,19 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             amp = res.p_amp / max(res.p_amp)  # TODO, new setting: range
             wy = shifty*2
             wx = shiftx*2
-            lx = np.linspace(*lsx)
-            ly = np.linspace(*lsy)
-            for iy, ix, a, t in zip(yindex[valid], xindex[valid], amp, th):
-                y = ly[iy]
-                x = lx[ix]
-                from math import sin, cos, pi
-                c = pg.PlotCurveItem(x=[x - a*wx/2*cos(t), x + a*wx/2*cos(t)],
-                                     y=[y - + a*wy/2*sin(t), y + a*wy/2*sin(t)])
-                self.p_markings.append(c)
-                self.plot.addItem(c)
+            y = np.linspace(*lsy)[yindex[valid]]
+            x = np.linspace(*lsx)[xindex[valid]]
+            dispx = amp*wx/2*np.cos(th)
+            dispy = amp*wy/2*np.sin(th)
+            xcurve = np.empty((dispx.shape[0]*2))
+            ycurve = np.empty((dispy.shape[0]*2))
+            xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+            ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+            connect = np.ones((dispx.shape[0]*2))
+            connect[1::2] = 0
+            c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect)
+            self.p_markings.append(c)
+            self.plot.addItem(c)
 
         self.refresh_img_selection()
         self.image_updated.emit()
