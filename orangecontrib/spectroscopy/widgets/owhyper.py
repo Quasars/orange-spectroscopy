@@ -697,6 +697,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data = None
         self.data_ids = {}
 
+        self.p_markings = []
+
     def init_interface_data(self, data):
         self.init_attr_values(data)
 
@@ -810,6 +812,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.parent.Information.not_shown.clear()
         self.img.clear()
         self.img.setSelection(None)
+        for m in self.p_markings:
+            self.plot.removeItem(m)
+        self.p_markings = []
         self.legend.set_colors(None)
         self.lsx = None
         self.lsy = None
@@ -821,7 +826,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
                        self.parent.image_values(),
-                       self.parent.image_values_fixed_levels())
+                       self.parent.image_values_fixed_levels(), self.parent.choose)
         else:
             self.image_updated.emit()
 
@@ -845,7 +850,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      image_values, image_values_fixed_levels, state: TaskState):
+                      image_values, image_values_fixed_levels, choose, state: TaskState):
 
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
@@ -885,7 +890,17 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             progress_interrupt(0)
         d = np.concatenate(parts)
 
+        def closest(tablep, str):
+            if hasattr(tablep, str):
+                tablei = getattr(tablep, str)
+                return Integrate(methods=Integrate.PeakAt,
+                                 limits=[[choose, choose]])(tablei).X[:, 0]
+            else:
+                return None
+
         res.d = d
+        res.p_th = closest(data, "th")
+        res.p_amp = closest(data, "amp")
         progress_interrupt(0)
 
         return res
@@ -927,6 +942,22 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         width = (lsx[1]-lsx[0]) + 2*shiftx
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
+
+        if res.p_th is not None:
+            th = res.p_th
+            amp = res.p_amp / max(res.p_amp)  # TODO, new setting: range
+            wy = shifty*2
+            wx = shiftx*2
+            lx = np.linspace(*lsx)
+            ly = np.linspace(*lsy)
+            for iy, ix, a, t in zip(yindex[valid], xindex[valid], amp, th):
+                y = ly[iy]
+                x = lx[ix]
+                from math import sin, cos, pi
+                c = pg.PlotCurveItem(x=[x - a*wx/2*cos(t), x + a*wx/2*cos(t)],
+                                     y=[y - + a*wy/2*sin(t), y + a*wy/2*sin(t)])
+                self.p_markings.append(c)
+                self.plot.addItem(c)
 
         self.refresh_img_selection()
         self.image_updated.emit()
