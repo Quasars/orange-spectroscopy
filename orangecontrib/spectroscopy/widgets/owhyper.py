@@ -229,6 +229,10 @@ _color_palettes = [
     # misc
     ("rainbow", {0: np.array(colorcet.rainbow_bgyr_35_85_c73) * 255}),
     ("isolum", {0: np.array(colorcet.isoluminant_cgo_80_c38) * 255}),
+
+    # cyclic
+    ("HSV", {0: pg.colormap.get("hsv", source='matplotlib').getLookupTable(nPts=256)}),
+
 ]
 
 
