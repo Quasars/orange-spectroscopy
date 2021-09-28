@@ -949,7 +949,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         if res.p_th is not None:
             th = res.p_th
-            amp = res.p_amp / max(res.p_amp)  # TODO, new setting: range
+            amp = res.p_amp / max(res.p_amp) * 1.4  # TODO, new setting: range
             wy = shifty*2
             wx = shiftx*2
             y = np.linspace(*lsy)[yindex[valid]]
