@@ -43,6 +43,10 @@ from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimal
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
+#from orangecontrib.spectroscopy.widgets.utils import groups_or_annotated_table
+
+#from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
+
 
 IMAGE_TOO_BIG = 1024*1024*100
 
@@ -163,6 +167,7 @@ class ImageItemNan(pg.ImageItem):
         else:
             lut = self.lut
 
+        image = self.image
         levels = self.levels
 
         if self.axisOrder == 'col-major':
@@ -229,6 +234,12 @@ _color_palettes = [
     # misc
     ("rainbow", {0: np.array(colorcet.rainbow_bgyr_35_85_c73) * 255}),
     ("isolum", {0: np.array(colorcet.isoluminant_cgo_80_c38) * 255}),
+    ("Jet", {0: pg.colormap.get("jet", source='matplotlib').getLookupTable(nPts=256)}),
+    ("Viridis", {0: pg.colormap.get("viridis", source='matplotlib').getLookupTable(nPts=256)}),
+
+    # cyclic
+    ("HSV", {0: pg.colormap.get("hsv", source='matplotlib').getLookupTable(nPts=256)}),
+
 ]
 
 
@@ -573,7 +584,7 @@ class ImageColorLegend(GraphicsWidget):
 
 
 class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
-                ImageColorSettingMixin, ImageRGBSettingMixin,
+                ImageColorSettingMixin, ImageRGBSettingMixin, 
                 ImageZoomMixin, ConcurrentMixin):
 
     attr_x = ContextSetting(None)
@@ -698,6 +709,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data = None
         self.data_ids = {}
 
+        self.p_markings = []
+
     def init_interface_data(self, data):
         same_domain = (self.data and data and
                        data.domain == self.data.domain)
@@ -814,6 +827,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.parent.Information.not_shown.clear()
         self.img.clear()
         self.img.setSelection(None)
+        for m in self.p_markings:
+            self.plot.removeItem(m)
+        self.p_markings = []
         self.legend.set_colors(None)
         self.lsx = None
         self.lsy = None
@@ -825,7 +841,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
                        self.parent.image_values(),
-                       self.parent.image_values_fixed_levels())
+                       self.parent.image_values_fixed_levels(), self.parent.choose)
         else:
             self.image_updated.emit()
 
@@ -849,7 +865,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      image_values, image_values_fixed_levels, state: TaskState):
+                      image_values, image_values_fixed_levels, choose, state: TaskState):
 
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
@@ -884,12 +900,22 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         # d = image_values(data).X[:, 0]
         parts = []
         for slice in split_to_size(len(data), 10000):
-            part = image_values(data[slice]).X
+            part = image_values(data[slice]).X#[:, 0]
             parts.append(part)
             progress_interrupt(0)
         d = np.concatenate(parts)
 
+        def closest(tablep, str):
+            if hasattr(tablep, str):
+                tablei = getattr(tablep, str)
+                return Integrate(methods=Integrate.PeakAt,
+                                 limits=[[choose, choose]])(tablei).X[:, 0]
+            else:
+                return None
+
         res.d = d
+        res.p_th = closest(data, "th")
+        res.p_amp = closest(data, "amp")
         progress_interrupt(0)
 
         return res
@@ -917,6 +943,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         self.data_values = d
         self.data_imagepixels = np.vstack((yindex, xindex)).T
+
         self.img.setImage(imdata, autoLevels=False)
         self.update_levels()
         self.update_rgb_levels()
@@ -931,6 +958,25 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         width = (lsx[1]-lsx[0]) + 2*shiftx
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
+
+        if res.p_th is not None:
+            th = res.p_th
+            amp = res.p_amp / max(res.p_amp) * 1.4  # TODO, new setting: range
+            wy = shifty*2
+            wx = shiftx*2
+            y = np.linspace(*lsy)[yindex[valid]]
+            x = np.linspace(*lsx)[xindex[valid]]
+            dispx = amp*wx/2*np.cos(th)
+            dispy = amp*wy/2*np.sin(th)
+            xcurve = np.empty((dispx.shape[0]*2))
+            ycurve = np.empty((dispy.shape[0]*2))
+            xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+            ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+            connect = np.ones((dispx.shape[0]*2))
+            connect[1::2] = 0
+            c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect)
+            self.p_markings.append(c)
+            self.plot.addItem(c)
 
         self.refresh_img_selection()
         self.image_updated.emit()
@@ -954,7 +1000,7 @@ class CurvePlotHyper(CurvePlot):
 
 
 class OWHyper(OWWidget, SelectionOutputsMixin):
-    name = "HyperSpectra"
+    name = "HyperSpectra2"
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)
