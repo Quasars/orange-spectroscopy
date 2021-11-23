@@ -22,7 +22,7 @@ from PyQt5.QtGui import *
 
 
 class OWCurveFit(OWWidget):
-    name = 'Curve Fit Plot2'
+    name = 'Curve Fit Plot'
 
     want_control_area = False
 
