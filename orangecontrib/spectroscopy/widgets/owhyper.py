@@ -1000,7 +1000,7 @@ class CurvePlotHyper(CurvePlot):
 
 
 class OWHyper(OWWidget, SelectionOutputsMixin):
-    name = "HyperSpectra2"
+    name = "HyperSpectra"
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)
