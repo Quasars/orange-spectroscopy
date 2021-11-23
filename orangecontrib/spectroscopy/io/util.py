@@ -73,7 +73,7 @@ def build_spec_table(domvals, data, additional_table=None):
         - Orange.data.Table with only meta or class attributes (size n)
     """
     data = np.atleast_2d(data)
-    features = [ContinuousVariable.make("%f" % f) for f in domvals]
+    features = [ContinuousVariable.make(f"{f}") for f in domvals]
     if additional_table is None:
         domain = Domain(features, None)
         return Table.from_numpy(domain, X=data)
