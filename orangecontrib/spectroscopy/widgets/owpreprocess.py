@@ -30,7 +30,7 @@ from AnyQt.QtCore import (
 from AnyQt.QtWidgets import (
     QWidget, QComboBox, QSpinBox,
     QListView, QVBoxLayout, QFormLayout, QSizePolicy, QStyle,
-    QPushButton, QLabel, QMenu, QAction, QScrollArea, QGridLayout,
+    QPushButton, QLabel, QMenu, QApplication, QAction, QScrollArea, QGridLayout,
     QToolButton, QSplitter
 )
 from AnyQt.QtGui import (
@@ -44,7 +44,7 @@ from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import (
     PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering,
     Absorbance, Transmittance, XASnormalization, ExtractEXAFS,
-    CurveShift, SpSubtract
+    CurveShift, SpSubtract, SpDivide
 )
 from orangecontrib.spectroscopy.preprocess.transform import SpecTypes
 from orangecontrib.spectroscopy.preprocess.utils import PreprocessException
@@ -429,6 +429,64 @@ class SpSubtractEditor(BaseEditorOrange):
         reference = params.get(REFERENCE_DATA_PARAM, None)
         return SpSubtract(reference, amount=amount)
 
+class SpDivideEditor(BaseEditorOrange):
+    """
+    Editor for preprocess.SpDivide
+    """
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        self.amount = 0.
+
+        form = QFormLayout()
+        amounte = lineEditFloatRange(self, self, "amount", callback=self.edited.emit)
+        form.addRow("Reference multiplier", amounte)
+        self.controlArea.setLayout(form)
+
+        self.reference = None
+
+        self.reference_info = QLabel("", self)
+        self.controlArea.layout().addWidget(self.reference_info)
+
+        self.reference_curve = pg.PlotCurveItem()
+        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.))
+        self.reference_curve.setZValue(10)
+
+    def activateOptions(self):
+        self.parent_widget.curveplot.clear_markings()
+        if self.reference_curve not in self.parent_widget.curveplot.markings:
+            self.parent_widget.curveplot.add_marking(self.reference_curve)
+
+    def set_reference_data(self, reference):
+        self.reference = reference
+        self.update_reference_info()
+
+    def setParameters(self, params):
+        self.amount = params.get("amount", 0.)
+        self.reference = params.get("reference", None)
+        self.update_reference_info()
+
+    def update_reference_info(self):
+        if not self.reference:
+            self.reference_info.setText("Reference: None")
+            self.reference_curve.hide()
+        else:
+            rinfo = "{0:d} spectra".format(len(self.reference)) \
+                if len(self.reference) > 1 else "1 spectrum"
+            self.reference_info.setText("Reference: " + rinfo)
+            X_ref = self.reference.X[0]
+            x = getx(self.reference)
+            xsind = np.argsort(x)
+            self.reference_curve.setData(x=x[xsind], y=X_ref[xsind])
+            self.reference_curve.show()
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        amount = float(params.get("amount", 0.))
+        reference = params.get(REFERENCE_DATA_PARAM, None)
+        return SpDivide(reference, amount=amount)
 
 class SavitzkyGolayFilteringEditor(BaseEditorOrange):
     """
@@ -1078,6 +1136,12 @@ PREPROCESSORS = [
         Description("Spectrum subtraction",
                     icon_path("Discretize.svg")),
         SpSubtractEditor
+    ),
+    PreprocessAction(
+    "Divide subtraction", "orangecontrib.spectroscopy.sp_divide", "Division",
+    Description("Spectrum division",
+                icon_path("Discretize.svg")),
+    SpDivideEditor
     ),
     PreprocessAction(
         "EMSC", "orangecontrib.spectroscopy.preprocess.emsc", "EMSC",
