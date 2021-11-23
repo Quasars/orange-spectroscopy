@@ -249,7 +249,7 @@ def hypercube_to_table(hc, wns, lsx, lsy):
 
 class OWPolar(OWWidget):
     # Widget's name as displayed in the canvas
-    name = "Polar10"
+    name = "4-Angle Polarisation"
     
     # Short widget description
     description = (
