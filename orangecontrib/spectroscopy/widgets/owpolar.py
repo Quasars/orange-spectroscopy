@@ -628,7 +628,7 @@ def hypercube_to_table(hc, wns, lsx, lsy):
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
     
     # Widget's name as displayed in the canvas
-    name = "4-Angle Polarisation 2"
+    name = "4-Angle Polarisation"
     
     # Short widget description
     description = (
