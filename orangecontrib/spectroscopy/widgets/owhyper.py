@@ -851,7 +851,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
                        self.parent.vectors(),
                        self.parent.image_values(),
-                       self.parent.image_values_fixed_levels())#, self.parent.choose
+                       self.parent.image_values_fixed_levels(), self.parent.choose)
         else:
             self.image_updated.emit()
 
