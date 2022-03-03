@@ -43,6 +43,7 @@ from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimal
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
+from pyqtgraph.functions import mkBrush
 
 IMAGE_TOO_BIG = 1024*1024*100
 
@@ -163,6 +164,7 @@ class ImageItemNan(pg.ImageItem):
         else:
             lut = self.lut
 
+        image = self.image
         levels = self.levels
 
         if self.axisOrder == 'col-major':
@@ -229,12 +231,23 @@ _color_palettes = [
     # misc
     ("rainbow", {0: np.array(colorcet.rainbow_bgyr_35_85_c73) * 255}),
     ("isolum", {0: np.array(colorcet.isoluminant_cgo_80_c38) * 255}),
+    ("Jet", {0: pg.colormap.get("jet", source='matplotlib').getLookupTable(nPts=256)}),
+    ("Viridis", {0: pg.colormap.get("viridis", source='matplotlib').getLookupTable(nPts=256)}),
 
     # cyclic
     ("HSV", {0: pg.colormap.get("hsv", source='matplotlib').getLookupTable(nPts=256)}),
-
 ]
-
+#r, g, b, c, m, y, k, w
+vector_colour = [
+    ("Black", {0: (0,0,0)}),
+    ("White", {0: (255,255,255)}),
+    ("Red", {0: (255,0,0)}),
+    ("Green", {0: (0,255,0)}),
+    ("Blue", {0: (0,0,255)}),
+    ("Cyan", {0: (0,255,255)}),
+    ("Magenta", {0: (255,0,255)}),
+    ("Yellow", {0: (255,255,0)}),    
+]
 
 def palette_gradient(colors):
     n = len(colors)
@@ -272,6 +285,13 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
         model.appendRow([item])
     return model
 
+def vector_colour_model(colours):
+    model = QStandardItemModel()
+    for name, palette in colours:
+        item = QStandardItem(name)
+        item.setData(palette, Qt.UserRole)
+        model.appendRow([item])
+    return model
 
 class ImageColorSettingMixin:
     threshold_low = Setting(0.0, schema_only=True)
@@ -576,7 +596,7 @@ class ImageColorLegend(GraphicsWidget):
 
 
 class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
-                ImageColorSettingMixin, ImageRGBSettingMixin,
+                ImageColorSettingMixin, ImageRGBSettingMixin, 
                 ImageZoomMixin, ConcurrentMixin):
 
     attr_x = ContextSetting(None)
@@ -829,8 +849,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
+                       self.parent.vectors(),
                        self.parent.image_values(),
-                       self.parent.image_values_fixed_levels(), self.parent.choose)
+                       self.parent.image_values_fixed_levels())#, self.parent.choose
         else:
             self.image_updated.emit()
 
@@ -852,9 +873,30 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
     def set_visible_image_comp_mode(self, comp_mode: QPainter.CompositionMode):
         self.vis_img.setCompositionMode(comp_mode)
 
+    def set_vector_co(self, pen):
+        self.c.setPen(pen)
+    
+    def set_vector_scale(self, scale):
+        th = self.v[:,0]
+        v_mag = self.v[:,1]
+        amp = v_mag / max(v_mag) * (scale/100)# TODO, new setting: range
+        wy = self.shifty*2
+        wx = self.shiftx*2
+        y = np.linspace(*self.lsy)[self.yindex[self.valid]]
+        x = np.linspace(*self.lsx)[self.xindex[self.valid]]
+        dispx = amp*wx/2*np.cos(np.radians(th))
+        dispy = amp*wy/2*np.sin(np.radians(th))
+        xcurve = np.empty((dispx.shape[0]*2))
+        ycurve = np.empty((dispy.shape[0]*2))
+        xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+        ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+        connect = np.ones((dispx.shape[0]*2))
+        connect[1::2] = 0
+        self.c.setData(x=xcurve, y=ycurve, connect=connect) 
+
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      image_values, image_values_fixed_levels, choose, state: TaskState):
+                      vector_values, image_values, image_values_fixed_levels, choose, state: TaskState):
 
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
@@ -894,6 +936,16 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             progress_interrupt(0)
         d = np.concatenate(parts)
 
+        if vector_values != None:
+            vectors = []
+            for slice in split_to_size(len(data), 10000):
+                vectordata = vector_values(data[slice]).X
+                vectors.append(vectordata)
+                progress_interrupt(0)
+            v = np.concatenate(vectors)
+        else:
+            v = None
+
         def closest(tablep, str):
             if hasattr(tablep, str):
                 tablei = getattr(tablep, str)
@@ -903,6 +955,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
                 return None
 
         res.d = d
+        res.v = v
         res.p_th = closest(data, "th")
         res.p_amp = closest(data, "amp")
         progress_interrupt(0)
@@ -915,6 +968,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         lsx, lsy = self.lsx, self.lsy
 
         d = res.d
+        v = res.v
 
         self.fixed_levels = res.image_values_fixed_levels
 
@@ -947,27 +1001,43 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
 
-        if res.p_th is not None:
-            th = res.p_th
-            amp = res.p_amp / max(res.p_amp) * 1.4  # TODO, new setting: range
+        res.vc, res.vs = self.parent.vector_view()
+        pen = res.vc
+
+        if self.data and v is not None:            
+            th = v[:,0]
+            v_mag = v[:,1]
+            amp = v_mag / max(v_mag) * (res.vs/100)# TODO, new setting: range
             wy = shifty*2
             wx = shiftx*2
             y = np.linspace(*lsy)[yindex[valid]]
             x = np.linspace(*lsx)[xindex[valid]]
-            dispx = amp*wx/2*np.cos(th)
-            dispy = amp*wy/2*np.sin(th)
+            dispx = amp*wx/2*np.cos(np.radians(th))
+            dispy = amp*wy/2*np.sin(np.radians(th))
             xcurve = np.empty((dispx.shape[0]*2))
             ycurve = np.empty((dispy.shape[0]*2))
             xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
             ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
             connect = np.ones((dispx.shape[0]*2))
             connect[1::2] = 0
-            c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect)
-            self.p_markings.append(c)
-            self.plot.addItem(c)
+            self.c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect, pen=pen)
+            self.p_markings.append(self.c)
+            self.plot.addItem(self.c)                     
+
+        self.v = v
+        self.shifty = shifty
+        self.shiftx = shiftx
+        self.lsy = lsy
+        self.lsx = lsx
+        self.valid = valid
+        self.yindex = yindex
+        self.xindex = xindex
 
         self.refresh_img_selection()
         self.image_updated.emit()
+
+    def delvectors(self):
+        pass
 
     def on_partial_result(self, result):
         pass
@@ -1014,6 +1084,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     rgb_red_value = ContextSetting(None)
     rgb_green_value = ContextSetting(None)
     rgb_blue_value = ContextSetting(None)
+
+    show_vector_plot = Setting(False)
+    vector_angle = ContextSetting(None)
+    vector_magnitude = ContextSetting(None)
+    vector_colour_index = Setting(0)
+    vector_scale = Setting(1)
+    vector_opacity = Setting(255)
 
     show_visible_image = Setting(False)
     visible_image_name = Setting(None)
@@ -1119,11 +1196,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.imageplot = ImagePlot(self)
         self.imageplot.selection_changed.connect(self.output_image_selection)
 
+        self.setup_vector_plot_controls()
+
         # do not save visible image (a complex structure as a setting;
         # only save its name)
         self.visible_image = None
         self.setup_visible_image_controls()
-
+        
         self.curveplot = CurvePlotHyper(self, select=SELECTONE)
         self.curveplot.selection_changed.connect(self.redraw_integral_info)
         self.curveplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
@@ -1152,6 +1231,69 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         # prepare interface according to the new context
         self.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
+
+    def setup_vector_plot_controls(self):
+        self.vectorbox = gui.widgetBox(self.controlArea, True, "Vector Overlays")
+
+        gui.checkBox(self.vectorbox, self, 'show_vector_plot', label='Plot vector overlay', callback=self._update_vector)
+
+        self.vector_opts = DomainModel(DomainModel.SEPARATED, valid_types=DomainModel.PRIMITIVE)
+        self.vector_angle = None
+        self.vector_magnitude = None
+        Vcolours = vector_colour
+        self.colour_opts = Vcolours
+        self.vector_colour_index = min(self.vector_colour_index, len(Vcolours) - 1)
+
+        self.VAngleSelect = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True, label="Vector Angle", model=self.vector_opts, callback=self._update_vector)
+
+        self.VMagSelect = gui.comboBox(self.vectorbox, self, 'vector_magnitude', searchable=True, label="Vector Magnitude", model=self.vector_opts, callback=self._update_vector)
+        
+        self.VColourSelect = gui.comboBox(self.vectorbox, self, 'vector_colour_index', label="Vector Colour", callback=self.update_vector_co)
+        model = vector_colour_model(Vcolours)
+        model.setParent(self)
+        self.VColourSelect.setModel(model)
+
+        self.VScaleSlider = gui.hSlider(self.vectorbox, self, 'vector_scale', label="Scale", minValue=0, maxValue=1000, step=10, createLabel=False, callback=self.update_vector_scale)
+
+        self.VOpacitySlider = gui.hSlider(self.vectorbox, self, 'vector_opacity', label="Opacity", minValue=0, maxValue=255, step=5, createLabel=False, callback=self.update_vector_co)
+        
+        self._update_vector()
+        
+
+    def update_vector_plot_interface(self):
+        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index', 'vector_scale', 'vector_opacity']
+        for i in vector_params:
+            getattr(self.controls, i).setEnabled(self.show_vector_plot)
+    
+    def _update_vector(self):        
+        self.update_vector_plot_interface()
+        self.imageplot.update_view()
+
+    def vectors(self):
+        if self.vector_angle and self.vector_magnitude is not None and self.show_vector_plot == True:
+            v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
+            v_mags = ContinuousVariable("Magnitude", compute_value=Identity(self.vector_magnitude))
+            return lambda vectordata: \
+                vectordata.transform(Domain([v_angs, v_mags]))
+        elif self.show_vector_plot == False:
+            self.imageplot.delvectors()
+            return None
+
+    def vector_view(self):
+        vc = (vector_colour[self.vector_colour_index][1][0][0], vector_colour[self.vector_colour_index][1][0][1], vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
+        vs = self.vector_scale
+        return vc, vs
+
+    def update_vector_co(self):
+        vc = (vector_colour[self.vector_colour_index][1][0][0], vector_colour[self.vector_colour_index][1][0][1], vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
+        self.imageplot.set_vector_co(vc)
+
+    def update_vector_scale(self):
+        self.imageplot.set_vector_scale(self.vector_scale)
+
+    def init_vector_plot(self, data):
+        domain = data.domain if data is not None else None
+        self.vector_opts.set_domain(domain)
 
     def setup_visible_image_controls(self):
         self.visbox = gui.widgetBox(self.controlArea, True)
@@ -1204,6 +1346,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_interface_data(self, data):
         self.init_attr_values(data)
         self.init_visible_images(data)
+        self.init_vector_plot(data)        
 
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
