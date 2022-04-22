@@ -1,65 +1,67 @@
-import warnings
 import os
 import multiprocessing
 from multiprocessing import shared_memory
 from typing import List, Optional, Sequence
-from collections import OrderedDict
-
-from Orange.util import wrap_callback
-from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
-from PyQt5.QtWidgets import QGridLayout
-from scipy.optimize import OptimizeWarning
+import copy
+import time
+from xmlrpc.server import DocXMLRPCRequestHandler
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import curve_fit, minpack
+from scipy.optimize import curve_fit
 import math
 from types import SimpleNamespace
-
-from orangecanvas.scheme import scheme
-from orangecanvas.scheme import SchemeNode
-from orangewidget.workflow.widgetsscheme import WidgetsScheme
 
 import Orange.data
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Variable
 from Orange.data.table import Table
-from Orange.widgets.widget import OWWidget, Msg, Input, Output, MultiInput
+from Orange.widgets.widget import OWWidget, Msg, Output, MultiInput
 from Orange.widgets import gui, settings
-from orangewidget.gui import LineEditWFocusOut
 
 from Orange.widgets.settings import \
-    Setting, ContextSetting, DomainContextHandler, SettingProvider
-from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone
-from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
+    Setting, ContextSetting, DomainContextHandler
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
-from Orange.widgets.utils.annotated_data import add_columns
+# from Orange.widgets.data.owconcatenate import OWConcatenate
+from Orange.widgets.data import owconcatenate
 from orangewidget.utils.listview import ListViewSearch
-from Orange.data.util import get_indices
+from orangewidget.workflow.widgetsscheme import WidgetsScheme, WidgetsSignalManager
 
-from AnyQt.QtWidgets import QFormLayout, QWidget, QSplitter, QListView, QLabel, QLineEdit, QAbstractItemView, QSizePolicy
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
 
-from orangecontrib.spectroscopy.data import _spectra_from_image, getx, build_spec_table
+from orangecontrib.spectroscopy.data import _spectra_from_image, build_spec_table
 from orangecontrib.spectroscopy.utils import get_hypercube
-
-import time
 
 class Results(SimpleNamespace):
     out = None
     model = None
     errorstate = 0
 
-def unify_tables(piece):
-    if len(piece) > 0:
-        dom_n = [i.name for i in piece]
-        un, n = np.unique(dom_n, return_index=True)
-        dom = np.full((max(n)+1), None, dtype=object)
-        for i in n:
-            dom[i] = piece[i] 
-        odom = [i for i in dom if i != None]        
-        return odom
-    else:
-        return None
+def sort_domain(domain):
+    dom = [domain.metas, domain.attributes, domain.class_vars]
+    sorted_dom_lst = []
+    for i in dom:
+        cvs = [[i, j, j.name] for i, j in enumerate(i)]
+        rcvs_idx = []
+        rcvs = []
+        for j, k in enumerate(cvs):
+            try:    
+                cvs[j][-1] = float(k[-1])
+            except:
+                rcvs.append(k[1])
+                rcvs_idx.append(j)
+        for j in reversed(rcvs_idx):
+            cvs.pop(j)
+        cvs_arr = np.array(cvs)
+        if cvs_arr.shape[0] > 0:
+            cvs_arr_sorted = cvs_arr[cvs_arr[:,2].argsort()]
+            odom_cv = [i[1] for i in cvs_arr_sorted]
+            odom = rcvs + odom_cv
+        else:
+            odom = rcvs
+        sorted_dom_lst.append(tuple(odom))
+    out = Domain(sorted_dom_lst[1], class_vars=sorted_dom_lst[2], metas=sorted_dom_lst[0])
+    return out    
     
 def combine_visimg(data, polangles):
     atts = []
@@ -76,7 +78,7 @@ def combine_visimg(data, polangles):
     attsdict = {'visible_images': atts}
     return attsdict
 
-def run0(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: TaskState):
+def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: TaskState):
 
     results = Results()
         
@@ -131,107 +133,7 @@ def run0(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Ta
     results.out.attributes = attsdict 
     results.model.attributes = attsdict
     return results
- 
-# def run1(data, feature, map_x, map_y, invert_angles, state: TaskState):
-#     results = Results()
-#     if data is not None:
-#         fncol = data[:, "Filename"].metas.reshape(-1)
-#         unique_fns = np.unique(fncol)
-
-#         # split images into separate tables
-#         images = []
-#         for fn in unique_fns:
-#             images.append(data[fn == fncol])
-
-#         try:
-#             output, spectra, origmetas = process_polar_stokes(images, feature, map_x, map_y, invert_angles, state)
-            
-#             tempoutaddmetas = [[ContinuousVariable.make('Azimuth Angle (' + i.name + ')'),
-#                             ContinuousVariable.make('Amplitude (' + i.name + ')'),
-#                             ContinuousVariable.make('Intensity (' + i.name + ')'),] for i in feature]
-#             outaddmetas = []
-#             for i in tempoutaddmetas:
-#                 outaddmetas = outaddmetas + i
-
-#             PolAng = DiscreteVariable.make('Polarisation Angle', values=('0 Degrees','45 Degrees','90 Degrees','135/-45 Degrees'))
-
-#             ometadom = data.domain.metas
-#             outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
-#             ofeatdom = data.domain.attributes
-#             datadomain = Domain(ofeatdom, metas = outmetadom)
-
-#             output = np.vstack((output, output, output, output))
-
-#             outmetas = np.hstack((origmetas, output))
-
-#             out = Table.from_numpy(datadomain, X=spectra, Y=None, metas=outmetas)
-
-#             results.out = out
-#             results.out.attributes = data.attributes
-#             return results
-#         except:
-#             OWPolar.Warning.wrongdata()
-    
-    # elif deg0 and deg45 and deg90 and deg135 is not None:
-        
-    #     for i in feature:
-    #         featname = i.name
-    #         try:
-    #             deg0.domain[featname]
-    #             deg45.domain[featname]
-    #             deg90.domain[featname]
-    #             deg135.domain[featname]
-    #         except:
-    #             OWPolar.Warning.missingfeat()
-    #             return results
-
-    #     images = [deg0, deg45, deg90, deg135]
-
-    #     metas = []
-    #     attrs = []
-    #     class_vars = []
-    #     for i in images:
-    #         metas = metas+[j for j in i.domain.metas]
-    #         attrs = attrs+[j for j in i.domain.attributes]
-    #         class_vars = class_vars+[j for j in i.domain.class_vars]
-
-    #     attrs = unify_tables(attrs)
-    #     metas = unify_tables(metas)
-    #     class_vars = unify_tables(class_vars)
-
-    #     dom = Domain(attrs, metas = metas)
-
-    #     for i, j in enumerate(images):
-    #         images[i] = j.transform(dom)
-
-    #     try:
-    #         output, spectra, origmetas = process_polar_stokes(images, feature, map_x, map_y, invert_angles, state)
-
-    #         tempoutaddmetas = [[ContinuousVariable.make('Azimuth Angle (' + i.name + ')'),
-    #                         ContinuousVariable.make('Amplitude (' + i.name + ')'),
-    #                         ContinuousVariable.make('Intensity (' + i.name + ')'),] for i in feature]
-    #         outaddmetas = []
-    #         for i in tempoutaddmetas:
-    #             outaddmetas = outaddmetas + i
-
-    #         PolAng = DiscreteVariable.make('Polarisation Angle', values=('0 Degrees','45 Degrees','90 Degrees','135/-45 Degrees'))
-    #         #TODO: ensure all inputs have same domain variables/concatenate all domain vars
-    #         ometadom = images[0].domain.metas
-    #         outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
-    #         ofeatdom = images[0].domain.attributes
-    #         datadomain = Domain(ofeatdom, metas = outmetadom)
-
-    #         output = np.vstack((output, output, output, output))
-
-    #         outmetas = np.hstack((origmetas, output))
-
-    #         out = Table.from_numpy(datadomain, X=spectra, Y=None, metas=outmetas)
-
-    #         results.out = out
-    #         results.out.attributes = deg0.attributes
-    #         return results
-    #     except:
-    #         OWPolar.Warning.wrongdata()       
+      
 
 def get_hypercubes(images, xy):
     output = []
@@ -240,6 +142,7 @@ def get_hypercubes(images, xy):
         hypercube, lsx, lsy = get_hypercube(im, im.domain[xy[0]], im.domain[xy[1]])
         output.append(hypercube)
     return output, lsx, lsy
+
 #Calculate by fitting to function
 def Azimuth(x,a0,a1,a2):
     return a0*np.sin(2*np.radians(x))+a1*np.cos(2*np.radians(x))+a2
@@ -261,7 +164,7 @@ def OrFunc(alpha,a0,a1,a2):
         Dmin = (2*a2-2*math.sqrt(a0**2+a1**2))/(2*a2+2*math.sqrt(a0**2+a1**2))
         return ((Dmin-1)/(Dmin+2)*(2/(3*np.cos(np.radians(alpha))**2-1)))
 
-def compute(xys, yidx, shapes, dtypes, polangles):
+def compute(xys, yidx, shapes, dtypes, polangles, pidx):
 
     tcvs = shared_memory.SharedMemory(name='cvs', create=False)
     cvs = np.ndarray(shapes[0], dtype=dtypes[0], buffer=tcvs.buf)
@@ -281,15 +184,15 @@ def compute(xys, yidx, shapes, dtypes, polangles):
             break
         for j, k in enumerate(xys[0]):#x-values(cols)
             for l in range(cvs.shape[2]):
-                if np.isnan(cvs[i,j,l,:].any(axis=0)):
+                if np.any(np.isnan(cvs[i,j,l,:]), axis=0):
                     continue
                 out[i,j,l,0] = coords[i,j,1]#x-map
                 mod[i,j,l,0] = coords[i,j,1]
                 out[i,j,l,1] = coords[i,j,0]#y-map
                 mod[i,j,l,1] = coords[i,j,0]
                 
-                temp = [i for i in cvs[i,j,l,:]]# cvs[i,j,l,0],cvs[i,j,l,1],cvs[i,j,l,2],cvs[i,j,l,3]                
-
+                temp = [m for m in cvs[i,j,l,:]]               
+ 
                 params, cov = curve_fit(Azimuth, x, temp)
 
                 residuals = temp - Azimuth(x, *params)
@@ -338,9 +241,8 @@ def compute(xys, yidx, shapes, dtypes, polangles):
     tvars.close()
 
 def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, state):
-    start = time.time()
-
     state.set_status("Preparing...")
+    
     featnames = [i.name for i in feature]
     lsxs = np.empty(0)
     lsys = np.empty(0)
@@ -353,6 +255,11 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
 
     ulsxs = np.unique(lsxs)
     ulsys = np.unique(lsys)
+    # TODO: cannot handle single point measurements (likely also line measurements), dx and dy div by 0
+    dx = np.sum(np.diff(ulsxs))/(len(ulsxs)-1)
+    minx = np.min(ulsxs)
+    dy = np.sum(np.diff(ulsys))/(len(ulsys)-1)
+    miny = np.min(ulsys)
 
     cvs = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), len(images)), np.nan)
     spec = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], images[0].X.shape[1], len(images)), np.nan, dtype=object)
@@ -363,25 +270,16 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
     vars = np.asarray([alpha, 0])
     fill = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0]), np.nan)
     for i in range(len(images)): 
-        cv = [images[i].domain[j] for j in featnames] #when feature is not meta type, have to recreate ContinuousVariable using name of original CV for some reason, otherwise returns NaNs for all except last image      
+        cv = [images[i].domain[j] for j in featnames]
         doms = [map_x, map_y] + cv
-        tempdata = images[i].transform(Domain(doms))      
-        computevalue = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-        attributes = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-        meta = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-        #####################################################
-        #this is a time consuming loop (~2.27s for 36,864 spectra) i.e. with 4 loops(images/angles), ~82% of time to prepare data for calculations!!!
-        for j, k in enumerate(tempdata):
-            computevalue.at[k[1], k[0]] = k.x[2:]
-            attributes.at[k[1], k[0]] = images[i].X[j]
-            meta.at[k[1], k[0]] = images[i].metas[j]
-        #####################################################
-        # cvs[:,:,i] = computevalue.to_numpy(copy=True)
-        for l, m in enumerate(attributes.columns):
-            for n, o in enumerate(attributes.index):                
-                cvs[n,l,:,i] = computevalue.at[o,m]
-                spec[n,l,:,i] = attributes.at[o,m]
-                metas[n,l,:,i] = meta.at[o,m]
+        tempdata: Table = images[i].transform(Domain(doms))
+        temp_xy = tempdata.X[:,0:2].copy()
+        temp_xy[:,0] = np.rint(((temp_xy[:,0]-minx)/dx))
+        temp_xy[:,1] = np.rint(((temp_xy[:,1]-miny)/dy))
+        temp_xy = np.array(temp_xy, dtype=np.int_)
+        cvs[temp_xy[:,1],temp_xy[:,0],:,i] = tempdata[:,2:]
+        spec[temp_xy[:,1],temp_xy[:,0],:,i] = images[i].X
+        metas[temp_xy[:,1],temp_xy[:,0],:,i] = images[i].metas
     xys = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
     for k, i in enumerate(xys.index):
         for l, j in enumerate(xys.columns):
@@ -407,8 +305,11 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
     shapes = [cvs.shape, spec.shape, metas.shape, out.shape, mod.shape, coords.shape, vars.shape]
     dtypes = [cvs.dtype, spec.dtype, metas.dtype, out.dtype, mod.dtype, coords.dtype, vars.dtype]
 
-    ncpu = os.cpu_count()   
-    # ncpu = 1
+    start = time.time()
+    # single core processing is faster for small data sets and small number of selected features
+    # if <data size> > x:
+    ncpu = os.cpu_count()  
+    # ncpu = 6
     tulsys = np.array_split(ulsys, ncpu)
     state.set_status("Calculating...")
     threads=[]
@@ -417,14 +318,27 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
         tlsxys = [ulsxs,tulsys[i]]
         yidx = [cumu, cumu+len(tulsys[i])]
         cumu += len(tulsys[i])
-        # compute(tlsxys, yidx, shapes, dtypes, polangles)
-        t = multiprocessing.Process(target=compute, args=(tlsxys, yidx, shapes, dtypes, polangles))
+        # compute(tlsxys, yidx, shapes, dtypes, polangles, i)
+        t = multiprocessing.Process(target=compute, args=(tlsxys, yidx, shapes, dtypes, polangles, i))
         threads.append(t)
         t.start()
-
+    
     for t in threads:
         t.join()
 
+    # else:
+        # ncpu = 1 
+        # tulsys = np.array_split(ulsys, ncpu)
+        # state.set_status("Calculating...")
+        # threads=[]
+        # cumu = 0
+        # for i in range(ncpu):
+        #     tlsxys = [ulsxs,tulsys[i]]
+        #     yidx = [cumu, cumu+len(tulsys[i])]
+        #     cumu += len(tulsys[i])
+            # compute(tlsxys, yidx, shapes, dtypes, polangles, i)
+    print(time.time()-start)
+    
     state.set_status("Finishing...")
     if invert == True:
         sout[:,:,:,2] = sout[:,:,:,2]*-1 
@@ -453,170 +367,8 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
     tmod.unlink()
     tcoords.unlink()
     tvars.unlink()
-    
+
     return outputs, model, spectra, meta, vars[1]
-
-#calculate by "Stoke's Method"
-# def compute_stokes(xys, yidx, shapes, dtypes):
-
-#     tcvs = shared_memory.SharedMemory(name='cvs', create=False)
-#     cvs = np.ndarray(shapes[0], dtype=dtypes[0], buffer=tcvs.buf)
-#     tout = shared_memory.SharedMemory(name='out', create=False)
-#     out = np.ndarray(shapes[3], dtype=dtypes[3], buffer=tout.buf)  
-#     tcoords = shared_memory.SharedMemory(name='coords', create=False)
-#     coords = np.ndarray(shapes[4], dtype=dtypes[4], buffer=tcoords.buf)
-
-#     for i in range(yidx[0], yidx[1]):#y-values(rows)
-#         for j, k in enumerate(xys[0]):#x-values(cols)
-#             for l in range(cvs.shape[2]):
-#                 if np.isnan(cvs[i,j,l,0]) == True or np.isnan(cvs[i,j,l,1]) == True or np.isnan(cvs[i,j,l,2]) == True or np.isnan(cvs[i,j,l,3]) == True:
-#                     continue
-#                 out[i,j,l,0] = coords[i,j,1]#x-map
-#                 out[i,j,l,1] = coords[i,j,0]#y-map
-
-#                 temp = [cvs[i,j,l,0],cvs[i,j,l,1],cvs[i,j,l,2],cvs[i,j,l,3]]
-
-#                 out[i,j,l,2] = compute_theta(temp)
-#                 out[i,j,l,3] = compute_amp(temp)
-#                 out[i,j,l,4] = compute_intensity(temp)
-
-#     tcvs.close()
-#     tout.close()
-#     tcoords.close()
-
-# #Does not agree with other algorithm/published/reference data unless angles inverted
-# def compute_theta(images):
-#     return 0.5 * np.arctan2(images[1] - images[3], images[0] - images[2])
-
-
-# def compute_intensity(images):
-#     S0 = (images[0] + images[1] + images[2] + images[3]) * 0.5
-#     return S0
-
-
-# def compute_amp(images):
-#     return np.sqrt((images[3] - images[1])**2 + (images[2] - images[0])**2) / compute_intensity(images)
-
-
-# def process_polar_stokes(images, feature, map_x, map_y, invert, state):
-
-#     state.set_status("Preparing...")
-#     featnames = [i.name for i in feature]
-#     lsxs = np.empty(0)
-#     lsys = np.empty(0)
-#     for i in range(len(images)): 
-#         tempdata = images[i].transform(Domain([map_x, map_y]))
-#         lsx = np.unique(tempdata.X[:,0])
-#         lsy = np.unique(tempdata.X[:,1])
-#         lsxs = np.append(lsxs, lsx)
-#         lsys = np.append(lsys, lsy)
-
-#     ulsxs = np.unique(lsxs)
-#     ulsys = np.unique(lsys)
-
-#     cvs = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), len(images)), np.nan)
-#     spec = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], images[0].X.shape[1], len(images)), np.nan)
-#     metas = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], images[0].metas.shape[1], len(images)), np.nan)
-#     out = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), 5), np.nan)
-#     coords = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], 2), np.nan)
-#     fill = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0]), np.nan)
-#     for i in range(len(images)): 
-#         cv = [images[i].domain[j] for j in featnames] #when feature is not meta type, have to recreate ContinuousVariable using name of original CV for some reason, otherwise returns NaNs for all except last image      
-#         doms = [map_x, map_y] + cv
-#         tempdata = images[i].transform(Domain(doms))      
-#         computevalue = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-#         attributes = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-#         meta = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-#         #####################################################
-#         #this is a time consuming loop (~2.27s for 36,864 spectra) i.e. with 4 loops(images/angles), ~82% of time to prepare data for calculations!!!
-#         for j, k in enumerate(tempdata):
-#             computevalue.at[k[1], k[0]] = k.x[2:]
-#             attributes.at[k[1], k[0]] = images[i].X[j]
-#             meta.at[k[1], k[0]] = images[i].metas[j]
-#         #####################################################
-
-#         # cvs[:,:,i] = computevalue.to_numpy(copy=True)
-#         for l, m in enumerate(attributes.columns):
-#             for n, o in enumerate(attributes.index):
-#                 cvs[n,l,:,i] = computevalue.at[o,m]
-#                 spec[n,l,:,i] = attributes.at[o,m]
-#                 metas[n,l,:,i] = meta.at[o,m]
-#     xys = pd.DataFrame(fill, index=ulsys, columns=ulsxs, dtype=object)
-#     for k, i in enumerate(xys.index):
-#         for l, j in enumerate(xys.columns):
-#             coords[k,l,0] = i
-#             coords[k,l,1] = j
-
-#     tcvs = shared_memory.SharedMemory(name='cvs', create=True, size=cvs.nbytes)
-#     scvs = np.ndarray(cvs.shape, dtype=cvs.dtype, buffer=tcvs.buf)
-#     scvs[:,:,:] = cvs[:,:,:]
-#     tout = shared_memory.SharedMemory(name='out', create=True, size=out.nbytes)
-#     sout = np.ndarray(out.shape, dtype=out.dtype, buffer=tout.buf)
-#     sout[:,:,:,:] = out[:,:,:,:]
-#     tcoords = shared_memory.SharedMemory(name='coords', create=True, size=coords.nbytes)
-#     scoords = np.ndarray(coords.shape, dtype=coords.dtype, buffer=tcoords.buf)
-#     scoords[:,:,:] = coords[:,:,:]
-
-
-#     shapes = [cvs.shape, spec.shape, metas.shape, out.shape, coords.shape]
-#     dtypes = [cvs.dtype, spec.dtype, metas.dtype, out.dtype, coords.dtype]
-
-#     ncpu = os.cpu_count()     
-#     tulsys = np.array_split(ulsys, ncpu)
-#     state.set_status("Calculating...")
-#     threads=[]
-#     cumu = 0
-
-#     for i in range(ncpu):
-#         tlsxys = [ulsxs,tulsys[i]]
-#         yidx = [cumu, cumu+len(tulsys[i])]
-#         cumu += len(tulsys[i])
-#         t = multiprocessing.Process(target=compute_stokes, args=(tlsxys, yidx, shapes, dtypes))
-#         threads.append(t)
-#         t.start()
-
-#     for t in threads:
-#         t.join()
-
-#     state.set_status("Finishing...")
-#     if invert == True:
-#         sout[:,:,:,2] = sout[:,:,:,2]*-1 
-#     outputs = np.reshape(sout[:,:,:,2:], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], 3*len(featnames)))
-
-#     spectra0 = np.reshape(spec[:,:,:,0], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
-#     spectra45 = np.reshape(spec[:,:,:,1], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
-#     spectra90 = np.reshape(spec[:,:,:,2], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
-#     spectra135 = np.reshape(spec[:,:,:,3], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
-    
-#     meta0 = np.reshape(metas[:,:,:,0], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
-#     meta45 = np.reshape(metas[:,:,:,1], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
-#     meta90 = np.reshape(metas[:,:,:,2], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
-#     meta135 = np.reshape(metas[:,:,:,3], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
-
-       
-#     spectra0 = spectra0[~np.isnan(outputs).any(axis=1)]
-#     spectra45 = spectra45[~np.isnan(outputs).any(axis=1)]
-#     spectra90 = spectra90[~np.isnan(outputs).any(axis=1)]
-#     spectra135 = spectra135[~np.isnan(outputs).any(axis=1)]
-#     meta0 = meta0[~np.isnan(outputs).any(axis=1)]
-#     meta0 = np.append(meta0, np.full((np.shape(meta0)[0],1), 0), axis=1)
-#     meta45 = meta45[~np.isnan(outputs).any(axis=1)]
-#     meta45 = np.append(meta45, np.full((np.shape(meta45)[0],1), 1), axis=1)
-#     meta90 = meta90[~np.isnan(outputs).any(axis=1)]
-#     meta90 = np.append(meta90, np.full((np.shape(meta90)[0],1), 2), axis=1)
-#     meta135 = meta135[~np.isnan(outputs).any(axis=1)]
-#     meta135 = np.append(meta135, np.full((np.shape(meta135)[0],1), 3), axis=1)
-#     outputs = outputs[~np.isnan(outputs).any(axis=1)] 
-
-#     spectra = np.concatenate((spectra0, spectra45, spectra90, spectra135), axis=0) 
-#     meta = np.concatenate((meta0, meta45, meta90, meta135), axis=0)
-
-#     tcvs.unlink()
-#     tout.unlink()
-#     tcoords.unlink()
-
-#     return outputs, spectra, meta
-
 
 def hypercube_to_table(hc, wns, lsx, lsy):
     table = build_spec_table(*_spectra_from_image(hc,
@@ -628,22 +380,23 @@ def hypercube_to_table(hc, wns, lsx, lsy):
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
     
     # Widget's name as displayed in the canvas
-    name = "4-Angle Polarisation"
+    name = "4+ Angle Polarisation"
     
     # Short widget description
     description = (
-        "4-Angle Polarisation implimentation")
+        "Calculate Azimuth Angle, Orientation function, Amplitude and Intensity of "
+        "vibrational mode(s) using polarised data measured at 4 or more polarisation angles.")
 
     icon = "icons/unknown.svg"    
     
     # Define inputs and outputs
     class Inputs:
-        data = MultiInput("Data", Orange.data.Table, default=True)        
+        data = MultiInput("Data", Orange.data.Table, default=True)  
 
     class Outputs:
         polar = Output("Polar Data", Orange.data.Table, default=True)
-        model = Output("Curve Fit model data",Orange.data.Table)
-
+        model = Output("Curve Fit model data", Orange.data.Table)
+        
     autocommit = settings.Setting(False)
 
     settingsHandler = DomainContextHandler()
@@ -655,7 +408,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     feature = ContextSetting(None)
     map_x = ContextSetting(None)
     map_y = ContextSetting(None)
-    # method = Setting(0)
     invert_angles = Setting(False)
     
     angles = None
@@ -671,8 +423,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     feats: List[Variable] = Setting([])
 
-    # method_names = ('Curve Fitting Method','Stokes Method')
-
     class Warning(OWWidget.Warning):
         nodata = Msg("No useful data on input!")
         noang = Msg("Must receive 4 angles at specified polarisation")
@@ -683,11 +433,17 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         wrongdata = Msg("Model returns inf. Inappropriate data")
         tomany = Msg("Widget must receive data at data input or discrete angles only")
         missingfeat = Msg("All inputs must have the selected feature")
+        renamed_variables = Msg("Variables with duplicated names have been renamed.")
+        XYfeat = Msg("Selected feature(s) cannot be the same as XY selection")
 
     def __init__(self):
         super().__init__()
         ConcurrentWidgetMixin.__init__(self)
         gui.OWComponent.__init__(self)
+        
+        self._dumb_tables = owconcatenate.OWConcatenate._dumb_tables
+        self._get_part = owconcatenate.OWConcatenate._get_part
+        self.merge_domains = owconcatenate.OWConcatenate.merge_domains
         
         self._data_inputs: List[Optional[Table]] = []
         self.feats = None
@@ -702,6 +458,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.anglemetas = DomainModel(DomainModel.METAS, valid_types=DiscreteVariable)
         self.anglesel = gui.comboBox(self.multifile, self, 'angles', searchable=True, label='Select Angles by:', callback=self._change_angles, model=self.anglemetas)
         self.anglesel.setDisabled(True)
+        
         
         self.multiin = gui.widgetBox(self.vbox2, "Multiple Inputs (1 angle per input)")   
                 
@@ -720,22 +477,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         #col 3
         vbox = gui.vBox(hbox, "Parameters")
 
-        # mbox = gui.widgetBox(vbox, "Calculation method")
-
-        # buttons = gui.radioButtons(
-        #     mbox, self, "method",
-        #     callback=self._change_input)
-
-        # for opts in self.method_names:
-        #     gui.appendRadioButton(buttons, self.tr(opts))
-
         form = QWidget()
         formlayout = QFormLayout()
-        form.setLayout(formlayout)
-        # mbox.layout().addWidget(form)
-
-        # splitter = QSplitter(self)
-        # splitter.setOrientation(Qt.Horizontal)        
+        form.setLayout(formlayout)       
 
         xybox = gui.widgetBox(vbox, "Data XY Selection")
 
@@ -758,6 +502,10 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self._change_input()
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
         self.resize(640, 300)
+        
+        
+        self.widgets_scheme: WidgetsScheme = self.signalManager.workflow()#
+        self.widget_node = self.widgets_scheme.node_for_widget(self)
 
 
     def _feat_changed(self):
@@ -765,7 +513,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         values = self.feat_view.model()[:]
         self.feats = [values[row.row()] for row in sorted(rows)]
         self.commit.deferred()
-        # self.commit.now()
 
     def init_attr_values(self, data):
         domain = data.domain if data is not None else None
@@ -777,11 +524,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.group_y = None
 
     def _change_input(self):
-        # if self.method == 0:
-        #     self.alphavalue.setDisabled(False)
-        # elif self.method == 1:
-        #     self.alphavalue.setDisabled(True)
-        # self.commit.now()
         self.commit.deferred()
     
     def _change_angles(self):
@@ -804,7 +546,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                     i.setDisabled(False)
                 for i in self.lines:
                     i.setDisabled(False) 
-                # self.commit.now() 
                 self.commit.deferred() 
                               
     def add_angles(self, anglst, lab, labels, lines, widget, i, place, callback): #to be used in a loop   
@@ -836,7 +577,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             for i in self.polangles:
                 pol.append(float(i))
             self.polangles = pol
-            # self.commit.now()
             self.commit.deferred()
         except:
             pass
@@ -850,7 +590,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             for i in self.polangles:
                 pol.append(float(i))
             self.polangles = pol
-            # self.commit.now()
             self.commit.deferred()
         except:
             pass
@@ -883,17 +622,17 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.Outputs.polar.send(None)
         self.Outputs.model.send(None)
         self.data = self.more_data
+        
         self.clear_angles(self.anglst, self.lines, self.labels, self.multifile)
         self.clear_angles(self.multiin_anglst, self.multiin_lines, self.multiin_labels, self.multiin)
-        
-        node = self.signalManager.active_nodes()[0]
-        inputlinks = self.signalManager.workflow().input_links(node)
-        names = [name.source_node.title for name in inputlinks] 
+                
+        self.inputlinks = self.signalManager.workflow().input_links(self.widget_node)
+        self.names = [name.source_node.title for name in self.inputlinks] 
                       
-        tempangles = np.linspace(0, 180, len(self.data)+1) 
+        self.tempangles = np.linspace(0, 180, len(self.data)+1) 
         for i in range(len(self.data)):            
-            self.add_angles(self.multiin_anglst, names[i], self.multiin_labels, self.multiin_lines, 
-                            self.multiin, i, tempangles[i], self._send_ind_angles)
+            self.add_angles(self.multiin_anglst, self.names[i], self.multiin_labels, self.multiin_lines, 
+                            self.multiin, i, self.tempangles[i], self._send_ind_angles)
             
         if len(self.data) == 0 or 1 < len(self.data) < 4:
             self.anglesel.setDisabled(True)
@@ -927,30 +666,22 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.contextAboutToBeOpened.emit([Table.from_domain(Domain(()))])
             return        
         else:
-            self.sorted_data = self.data            
-            metas = []
-            attrs = []
-            class_vars = []
-            for i in self.sorted_data:
-                metas = metas+[j for j in i.domain.metas]
-                attrs = attrs+[j for j in i.domain.attributes]
-                class_vars = class_vars+[j for j in i.domain.class_vars]
+            tables = self._dumb_tables(self)
+            domains = [table.domain for table in tables]
+            self._get_part = self._get_part
+            self.merge_type = 0 
+            domain1 = self.merge_domains(self, domains) 
+            domain1 = sort_domain(domain1)
+            self.merge_type = 1 
+            domain2 = self.merge_domains(self, domains)
 
-            attrs = unify_tables(attrs)
-            metas = unify_tables(metas)
-            class_vars = unify_tables(class_vars)
-
-            dom = Domain(attrs, metas = metas)
-
-            for i, j in enumerate(self.sorted_data):
-                self.sorted_data[i] = j.transform(dom)
-            self.openContext(self.sorted_data[0])
+            self.sorted_data = [table.transform(domain1) for table in tables]
+            self.openContext(Table.from_domain(domain2))
             
-        # self.commit.now()
         self.commit.deferred()
 
     @gui.deferred
-    def commit(self):           
+    def commit(self):          
         self.Warning.nofeat.clear()
         if self.feats is None or len(self.feats) == 0:
             self.Warning.nofeat()
@@ -966,6 +697,11 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         for i in self.polangles:
             if type(i) is not float:
                 self.Warning.pol()
+                return
+        self.Warning.XYfeat.clear()
+        for i in self.feats:
+            if i == self.map_x or i == self.map_y:
+                self.Warning.XYfeat()
                 return
         self.Warning.wrongdata.clear()
         
@@ -984,14 +720,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.Outputs.model.send(None) 
             return
         else:
-            sorted_data = self.sorted_data       
-        
-        
-        
-        # if self.method == 0:
-        self.start(run0, sorted_data, self.feats, self.alpha, self.map_x, self.map_y, self.invert_angles, self.polangles) #, self.anglst, self.angles
-        # elif self.method == 1:
-        #     self.start(run1, sorted_data, self.feats, self.map_x, self.map_y, self.invert_angles)
+            sorted_data = self.sorted_data   
+                   
+        self.start(run, sorted_data, self.feats, self.alpha, self.map_x, self.map_y, self.invert_angles, self.polangles)
            
     def on_done(self, result: Results):
         if result is None:
@@ -1003,6 +734,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         else:
             self.Outputs.polar.send(result.out)
             self.Outputs.model.send(result.model)
+            # self.Outputs.polar.
 
     def onDeleteWidget(self):
         self.shutdown()
