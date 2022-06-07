@@ -387,7 +387,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         "Calculate Azimuth Angle, Orientation function, Amplitude and Intensity of "
         "vibrational mode(s) using polarised data measured at 4 or more polarisation angles.")
 
-    icon = "icons/unknown.svg"    
+    icon = "icons/polar.svg"    
     
     # Define inputs and outputs
     class Inputs:
