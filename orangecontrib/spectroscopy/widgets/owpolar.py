@@ -2,9 +2,6 @@ import os
 import multiprocessing
 from multiprocessing import shared_memory
 from typing import List, Optional, Sequence
-import copy
-import time
-from xmlrpc.server import DocXMLRPCRequestHandler
 
 import numpy as np
 import pandas as pd
@@ -22,10 +19,9 @@ from Orange.widgets.settings import \
     Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
-# from Orange.widgets.data.owconcatenate import OWConcatenate
 from Orange.widgets.data import owconcatenate
 from orangewidget.utils.listview import ListViewSearch
-from orangewidget.workflow.widgetsscheme import WidgetsScheme, WidgetsSignalManager
+from orangewidget.workflow.widgetsscheme import WidgetsScheme
 
 from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
 
@@ -84,7 +80,7 @@ def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Tas
         
     alpha = alpha
     
-    output, model, spectra, origmetas, errorstate = process_polar_abs(data, alpha, feature, map_x, map_y, invert_angles, polangles, state)    
+    output, model, spectra, origmetas, errorstate = process_polar_abs(data, alpha, feature, map_x, map_y, invert_angles, polangles, state)
     
     
     tempoutaddmetas = [[ContinuousVariable.make('Azimuth Angle (' + i.name + ')'),
@@ -104,7 +100,7 @@ def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Tas
     for i in tempmodaddmetas:
         modaddmetas = modaddmetas + i
     values = tuple([f'{i} Degrees' for i in polangles])
-    PolAng = DiscreteVariable.make('Polarisation Angle', values=values)      
+    PolAng = DiscreteVariable.make('Polarisation Angle', values=values)
     
     ometadom = data[0].domain.metas
     outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
@@ -191,7 +187,7 @@ def compute(xys, yidx, shapes, dtypes, polangles, pidx):
                 out[i,j,l,1] = coords[i,j,0]#y-map
                 mod[i,j,l,1] = coords[i,j,0]
                 
-                temp = [m for m in cvs[i,j,l,:]]               
+                temp = [m for m in cvs[i,j,l,:]]
  
                 params, cov = curve_fit(Azimuth, x, temp)
 
@@ -213,7 +209,7 @@ def compute(xys, yidx, shapes, dtypes, polangles, pidx):
                 if vars[0] < 54.73:
                     if Abs0 > Abs1:
                         out[i,j,l,2] = Az0
-                    elif Abs1 > Abs0:                        
+                    elif Abs1 > Abs0:
                         if Az1 < 90:
                             out[i,j,l,2] = Az1
                         elif Az1 > 90:
@@ -221,7 +217,7 @@ def compute(xys, yidx, shapes, dtypes, polangles, pidx):
                 elif vars[0] >= 54.73:
                     if Abs0 < Abs1:
                         out[i,j,l,2] = Az0
-                    elif Abs1 < Abs0:                        
+                    elif Abs1 < Abs0:
                         if Az1 < 90:
                             out[i,j,l,2] = Az1
                         elif Az1 > 90:
@@ -229,7 +225,7 @@ def compute(xys, yidx, shapes, dtypes, polangles, pidx):
 
                 out[i,j,l,3] = OrFunc(vars[0], *params)
                 out[i,j,l,4]  = ampl1(*params)
-                out[i,j,l,5]  = ampl2(params[0],params[1])            
+                out[i,j,l,5]  = ampl2(params[0],params[1])
                 mod[i,j,l,3]  = params[0]
                 mod[i,j,l,4]  = params[1]
                 mod[i,j,l,5]  = params[2]
@@ -255,10 +251,14 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
 
     ulsxs = np.unique(lsxs)
     ulsys = np.unique(lsys)
-    # TODO: cannot handle single point measurements (likely also line measurements), dx and dy div by 0
-    dx = np.sum(np.diff(ulsxs))/(len(ulsxs)-1)
+    if len(ulsxs) > 1:
+        dx = np.sum(np.diff(ulsxs))/(len(ulsxs)-1)
+    else:
+        dx = 1
+    if len(ulsys) > 1:
+        dy = np.sum(np.diff(ulsys))/(len(ulsys)-1)
+    else: dy = 1
     minx = np.min(ulsxs)
-    dy = np.sum(np.diff(ulsys))/(len(ulsys)-1)
     miny = np.min(ulsys)
 
     cvs = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), len(images)), np.nan)
@@ -305,7 +305,6 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
     shapes = [cvs.shape, spec.shape, metas.shape, out.shape, mod.shape, coords.shape, vars.shape]
     dtypes = [cvs.dtype, spec.dtype, metas.dtype, out.dtype, mod.dtype, coords.dtype, vars.dtype]
 
-    start = time.time()
     # single core processing is faster for small data sets and small number of selected features
     # if <data size> > x:
     ncpu = os.cpu_count()  
@@ -337,7 +336,6 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
         #     yidx = [cumu, cumu+len(tulsys[i])]
         #     cumu += len(tulsys[i])
             # compute(tlsxys, yidx, shapes, dtypes, polangles, i)
-    print(time.time()-start)
     
     state.set_status("Finishing...")
     if invert == True:
@@ -356,7 +354,7 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
         metatemp = np.append(metatemp, np.full((np.shape(metatemp)[0],1), i), axis=1)
         met.append(metatemp)
 
-    outputs = outputs[~np.isnan(model).any(axis=1)]    
+    outputs = outputs[~np.isnan(model).any(axis=1)]
     model = model[~np.isnan(model).any(axis=1)]
 
     spectra = np.concatenate((spectra), axis=0) 
@@ -387,11 +385,11 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         "Calculate Azimuth Angle, Orientation function, Amplitude and Intensity of "
         "vibrational mode(s) using polarised data measured at 4 or more polarisation angles.")
 
-    icon = "icons/polar.svg"    
+    icon = "icons/polar.svg"
     
     # Define inputs and outputs
     class Inputs:
-        data = MultiInput("Data", Orange.data.Table, default=True)  
+        data = MultiInput("Data", Orange.data.Table, default=True)
 
     class Outputs:
         polar = Output("Polar Data", Orange.data.Table, default=True)
@@ -436,7 +434,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         renamed_variables = Msg("Variables with duplicated names have been renamed.")
         XYfeat = Msg("Selected feature(s) cannot be the same as XY selection")
 
-    def __init__(self):
+    def __init__(self):        
         super().__init__()
         ConcurrentWidgetMixin.__init__(self)
         gui.OWComponent.__init__(self)
@@ -448,40 +446,45 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self._data_inputs: List[Optional[Table]] = []
         self.feats = None
 
-        hbox = gui.hBox(self.controlArea, "4-Angle Polarisation")
+        hbox = gui.hBox(self.controlArea)
         #col 1
                     
-        self.vbox2 = gui.vBox(hbox, "Inputs")
+        vbox2 = gui.vBox(hbox, "Inputs")
         
-        self.multifile = gui.widgetBox(self.vbox2, "Multifile Input (all angles in 1 table)")
+        form2 = QWidget()
+        formlayout2 = QFormLayout()
+        form2.setLayout(formlayout2) 
+        
+        self.multifile = gui.widgetBox(vbox2, "Multifile Input (all angles in 1 table)", sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
         
         self.anglemetas = DomainModel(DomainModel.METAS, valid_types=DiscreteVariable)
         self.anglesel = gui.comboBox(self.multifile, self, 'angles', searchable=True, label='Select Angles by:', callback=self._change_angles, model=self.anglemetas)
         self.anglesel.setDisabled(True)
         
         
-        self.multiin = gui.widgetBox(self.vbox2, "Multiple Inputs (1 angle per input)")   
-                
+        self.multiin = gui.widgetBox(vbox2, "Multiple Inputs (1 angle per input)", sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        
+        vbox2.layout().addWidget(form2)
+        
         #col 2
-        self.vbox1 = gui.vBox(hbox, "Features")
-        # vbox1.setFixedSize()
+        vbox1 = gui.vBox(hbox, "Features")
 
         self.featureselect = DomainModel(DomainModel.SEPARATED,
             valid_types=ContinuousVariable)
         self.feat_view = ListViewSearch(selectionMode=QListView.ExtendedSelection)
         self.feat_view.setModel(self.featureselect)
         self.feat_view.selectionModel().selectionChanged.connect(self._feat_changed)
-        self.vbox1.layout().addWidget(self.feat_view)
-        self.vbox1.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
+        vbox1.layout().addWidget(self.feat_view)
+        vbox1.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum))
         
         #col 3
         vbox = gui.vBox(hbox, "Parameters")
 
         form = QWidget()
         formlayout = QFormLayout()
-        form.setLayout(formlayout)       
+        form.setLayout(formlayout)
 
-        xybox = gui.widgetBox(vbox, "Data XY Selection")
+        xybox = gui.widgetBox(vbox, "Data XY Selection", sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         self.x_axis = DomainModel(DomainModel.METAS, valid_types=DomainModel.PRIMITIVE)
         self.y_axis = DomainModel(DomainModel.METAS, valid_types=DomainModel.PRIMITIVE)
@@ -492,16 +495,15 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             callback=self._change_input, model=self.y_axis)
 
         vbox.layout().addWidget(form)
-        gui.rubber(self.controlArea)
+        
+        pbox = gui.widgetBox(vbox, sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.alphavalue = gui.lineEdit(pbox, self, "alpha", "Alpha value", callback=self._change_input, valueType=int)
 
-        self.alphavalue = gui.lineEdit(vbox, self, "alpha", "Alpha value", callback=self._change_input, valueType=int)
-
-        gui.checkBox(vbox, self, 'invert_angles', label="Invert Angles", callback=self._change_input)#callback?
+        gui.checkBox(pbox, self, 'invert_angles', label="Invert Angles", callback=self._change_input)
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply", commit=self.commit)
         self._change_input()
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
-        self.resize(640, 300)
         
         
         self.widgets_scheme: WidgetsScheme = self.signalManager.workflow()#
@@ -548,25 +550,25 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                     i.setDisabled(False) 
                 self.commit.deferred() 
                               
-    def add_angles(self, anglst, lab, labels, lines, widget, i, place, callback): #to be used in a loop   
+    def add_angles(self, anglst, lab, labels, lines, widget, i, place, callback): #to be used in a loop
         anglst.append(lab)
         ledit = gui.lineEdit(widget, self, None, label = lab, callback = callback)
         ledit.setText(str(place))
         lines.append(ledit)
         for j in ledit.parent().children():
             if type(j) is QLabel:
-                labels.append(j)                        
+                labels.append(j)
     
-    def clear_angles(self, anglst, lines, labels, widget):        
-        for i in reversed(range(self.multiin.layout().count())): 
+    def clear_angles(self, anglst, lines, labels, widget):
+        for i in reversed(range(self.multiin.layout().count())):
             self.multiin.layout().itemAt(i).widget().setParent(None)
         for i in reversed(range(self.multifile.layout().count())):
             if i != 0:
                 self.multifile.layout().itemAt(i).widget().setParent(None)
         anglst.clear()
         lines.clear()
-        labels.clear()   
-        self.polangles.clear()    
+        labels.clear()
+        self.polangles.clear()
 
     def _send_ind_angles(self):
         self.polangles.clear()
@@ -595,7 +597,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             pass
     
     @Inputs.data
-    def set_data(self, index: int, dataset: Table):        
+    def set_data(self, index: int, dataset: Table):
         self._data_inputs[index] = dataset
     
     @Inputs.data.insert
@@ -616,7 +618,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     
     def handleNewSignals(self):
         self.data = None 
-        self.feats = None       
+        self.feats = None
         self.closeContext()
         self.Warning.clear()
         self.Outputs.polar.send(None)
@@ -639,7 +641,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             for i in self.multiin_labels:
                 i.setDisabled(True)
             for i in self.multiin_lines:
-                i.setDisabled(True)            
+                i.setDisabled(True)
         elif len(self.data) == 1:
             self.anglesel.setDisabled(False)
             for i in self.multiin_labels:
@@ -681,7 +683,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.commit.deferred()
 
     @gui.deferred
-    def commit(self):          
+    def commit(self):
         self.Warning.nofeat.clear()
         if self.feats is None or len(self.feats) == 0:
             self.Warning.nofeat()
@@ -734,11 +736,11 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         else:
             self.Outputs.polar.send(result.out)
             self.Outputs.model.send(result.model)
-            # self.Outputs.polar.
 
     def onDeleteWidget(self):
         self.shutdown()
         super().onDeleteWidget()
+
 
 
         
