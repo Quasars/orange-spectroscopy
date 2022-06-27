@@ -25,9 +25,6 @@ from orangewidget.workflow.widgetsscheme import WidgetsScheme
 
 from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
 
-from orangecontrib.spectroscopy.data import _spectra_from_image, build_spec_table
-from orangecontrib.spectroscopy.utils import get_hypercube
-
 class Results(SimpleNamespace):
     out = None
     model = None
@@ -129,15 +126,6 @@ def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Tas
     results.out.attributes = attsdict 
     results.model.attributes = attsdict
     return results
-      
-
-def get_hypercubes(images, xy):
-    output = []
-    lsx, lsy = None, None
-    for im in images:
-        hypercube, lsx, lsy = get_hypercube(im, im.domain[xy[0]], im.domain[xy[1]])
-        output.append(hypercube)
-    return output, lsx, lsy
 
 #Calculate by fitting to function
 def Azimuth(x,a0,a1,a2):
@@ -367,13 +355,6 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
     tvars.unlink()
 
     return outputs, model, spectra, meta, vars[1]
-
-def hypercube_to_table(hc, wns, lsx, lsy):
-    table = build_spec_table(*_spectra_from_image(hc,
-                             wns,
-                             np.linspace(*lsx),
-                             np.linspace(*lsy)))
-    return table
 
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
     
