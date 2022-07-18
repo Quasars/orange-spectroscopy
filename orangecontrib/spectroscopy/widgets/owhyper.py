@@ -43,7 +43,6 @@ from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimal
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
-from pyqtgraph.functions import mkBrush
 
 IMAGE_TOO_BIG = 1024*1024*100
 
@@ -246,7 +245,7 @@ vector_colour = [
     ("Blue", {0: (0,0,255)}),
     ("Cyan", {0: (0,255,255)}),
     ("Magenta", {0: (255,0,255)}),
-    ("Yellow", {0: (255,255,0)}),    
+    ("Yellow", {0: (255,255,0)}),
 ]
 
 def palette_gradient(colors):
@@ -596,7 +595,7 @@ class ImageColorLegend(GraphicsWidget):
 
 
 class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
-                ImageColorSettingMixin, ImageRGBSettingMixin, 
+                ImageColorSettingMixin, ImageRGBSettingMixin,
                 ImageZoomMixin, ConcurrentMixin):
 
     attr_x = ContextSetting(None)
@@ -875,7 +874,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     def set_vector_co(self, pen):
         self.c.setPen(pen)
-    
+
     def set_vector_scale(self, scale):
         th = self.v[:,0]
         v_mag = self.v[:,1]
@@ -892,11 +891,12 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
         connect = np.ones((dispx.shape[0]*2))
         connect[1::2] = 0
-        self.c.setData(x=xcurve, y=ycurve, connect=connect) 
+        self.c.setData(x=xcurve, y=ycurve, connect=connect)
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      vector_values, image_values, image_values_fixed_levels, choose, state: TaskState):
+                      vector_values, image_values, image_values_fixed_levels, choose,
+                      state: TaskState):
 
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
@@ -936,7 +936,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             progress_interrupt(0)
         d = np.concatenate(parts)
 
-        if vector_values != None:
+        if vector_values is not None:
             vectors = []
             for slice in split_to_size(len(data), 10000):
                 vectordata = vector_values(data[slice]).X
@@ -1004,7 +1004,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         res.vc, res.vs = self.parent.vector_view()
         pen = res.vc
 
-        if self.data and v is not None:            
+        if self.data and v is not None:
             th = v[:,0]
             v_mag = v[:,1]
             amp = v_mag / max(v_mag) * (res.vs/100)# TODO, new setting: range
@@ -1022,7 +1022,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             connect[1::2] = 0
             self.c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect, pen=pen)
             self.p_markings.append(self.c)
-            self.plot.addItem(self.c)                     
+            self.plot.addItem(self.c)
 
         self.v = v
         self.shifty = shifty
@@ -1202,7 +1202,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         # only save its name)
         self.visible_image = None
         self.setup_visible_image_controls()
-        
+
         self.curveplot = CurvePlotHyper(self, select=SELECTONE)
         self.curveplot.selection_changed.connect(self.redraw_integral_info)
         self.curveplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
@@ -1235,7 +1235,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def setup_vector_plot_controls(self):
         self.vectorbox = gui.widgetBox(self.controlArea, True, "Vector Overlays")
 
-        gui.checkBox(self.vectorbox, self, 'show_vector_plot', label='Plot vector overlay', callback=self._update_vector)
+        gui.checkBox(self.vectorbox, self, 'show_vector_plot',
+                     label='Plot vector overlay', callback=self._update_vector)
 
         self.vector_opts = DomainModel(DomainModel.SEPARATED, valid_types=DomainModel.PRIMITIVE)
         self.vector_angle = None
@@ -1244,48 +1245,64 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.colour_opts = Vcolours
         self.vector_colour_index = min(self.vector_colour_index, len(Vcolours) - 1)
 
-        self.VAngleSelect = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True, label="Vector Angle", model=self.vector_opts, callback=self._update_vector)
+        self.v_angle_select = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True,
+                                         label="Vector Angle", model=self.vector_opts,
+                                         callback=self._update_vector)
 
-        self.VMagSelect = gui.comboBox(self.vectorbox, self, 'vector_magnitude', searchable=True, label="Vector Magnitude", model=self.vector_opts, callback=self._update_vector)
-        
-        self.VColourSelect = gui.comboBox(self.vectorbox, self, 'vector_colour_index', label="Vector Colour", callback=self.update_vector_co)
+        self.v_mag_select = gui.comboBox(self.vectorbox, self, 'vector_magnitude', searchable=True,
+                                       label="Vector Magnitude", model=self.vector_opts,
+                                       callback=self._update_vector)
+
+        self.v_colour_select = gui.comboBox(self.vectorbox, self, 'vector_colour_index',
+                                          label="Vector Colour", callback=self.update_vector_co)
         model = vector_colour_model(Vcolours)
         model.setParent(self)
-        self.VColourSelect.setModel(model)
+        self.v_colour_select.setModel(model)
 
-        self.VScaleSlider = gui.hSlider(self.vectorbox, self, 'vector_scale', label="Scale", minValue=0, maxValue=1000, step=10, createLabel=False, callback=self.update_vector_scale)
+        self.v_scale_slider = gui.hSlider(self.vectorbox, self, 'vector_scale', label="Scale",
+                                        minValue=0, maxValue=1000, step=10, createLabel=False,
+                                        callback=self.update_vector_scale)
 
-        self.VOpacitySlider = gui.hSlider(self.vectorbox, self, 'vector_opacity', label="Opacity", minValue=0, maxValue=255, step=5, createLabel=False, callback=self.update_vector_co)
-        
+        self.v_opacity_slider = gui.hSlider(self.vectorbox, self, 'vector_opacity', label="Opacity",
+                                          minValue=0, maxValue=255, step=5, createLabel=False,
+                                          callback=self.update_vector_co)
+
         self._update_vector()
-        
+
 
     def update_vector_plot_interface(self):
-        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index', 'vector_scale', 'vector_opacity']
+        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
+                         'vector_scale', 'vector_opacity']
         for i in vector_params:
             getattr(self.controls, i).setEnabled(self.show_vector_plot)
-    
-    def _update_vector(self):        
+
+    def _update_vector(self):
         self.update_vector_plot_interface()
         self.imageplot.update_view()
 
     def vectors(self):
-        if self.vector_angle and self.vector_magnitude is not None and self.show_vector_plot == True:
+        if self.vector_angle and self.vector_magnitude is not None and self.show_vector_plot is True:
             v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
             v_mags = ContinuousVariable("Magnitude", compute_value=Identity(self.vector_magnitude))
             return lambda vectordata: \
                 vectordata.transform(Domain([v_angs, v_mags]))
-        elif self.show_vector_plot == False:
+        elif self.show_vector_plot is False:
             self.imageplot.delvectors()
+            return None
+        else:
             return None
 
     def vector_view(self):
-        vc = (vector_colour[self.vector_colour_index][1][0][0], vector_colour[self.vector_colour_index][1][0][1], vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
+        vc = (vector_colour[self.vector_colour_index][1][0][0],
+              vector_colour[self.vector_colour_index][1][0][1],
+              vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
         vs = self.vector_scale
         return vc, vs
 
     def update_vector_co(self):
-        vc = (vector_colour[self.vector_colour_index][1][0][0], vector_colour[self.vector_colour_index][1][0][1], vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
+        vc = (vector_colour[self.vector_colour_index][1][0][0],
+              vector_colour[self.vector_colour_index][1][0][1],
+              vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
         self.imageplot.set_vector_co(vc)
 
     def update_vector_scale(self):
@@ -1346,7 +1363,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_interface_data(self, data):
         self.init_attr_values(data)
         self.init_visible_images(data)
-        self.init_vector_plot(data)        
+        self.init_vector_plot(data)
 
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
