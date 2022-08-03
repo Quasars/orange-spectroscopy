@@ -743,7 +743,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.sorted_data = [table.transform(domain1) for table in tables]
             self.openContext(Table.from_domain(domain2))
 
-        self.commit.deferred()
+        self.commit.now()
 
     @gui.deferred
     def commit(self):
