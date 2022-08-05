@@ -24,7 +24,6 @@ from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.data import owconcatenate
 from Orange.widgets.data.oweditdomain import disconnected
 from orangewidget.utils.listview import ListViewSearch
-from orangewidget.workflow.widgetsscheme import WidgetsScheme
 from orangewidget.gui import LineEditWFocusOut
 
 from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
@@ -550,10 +549,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
 
 
-        widgets_scheme: WidgetsScheme = self.signalManager.workflow()
-        self.widget_node = widgets_scheme.node_for_widget(self)
-
-
     def _feat_changed(self):
         rows = self.feat_view.selectionModel().selectedRows()
         values = self.feat_view.model()[:]
@@ -716,8 +711,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.clear_angles(self.multiin_anglst, self.multiin_lines,
                           self.multiin_labels, self.multiin)
 
-        inputlinks = self.signalManager.workflow().input_links(self.widget_node)
-        names = [name.source_node.title for name in inputlinks]
+        names = [i.name for i in self.data]
 
         tempangles = np.linspace(0, 180, len(self.data)+1)
         for i in range(len(self.data)):
