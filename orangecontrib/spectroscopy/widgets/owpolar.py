@@ -150,7 +150,15 @@ def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Tas
 
 #Calculate by fitting to function
 def azimuth(x,a0,a1,a2):
-    return a0*np.sin(2*np.radians(x))+a1*np.cos(2*np.radians(x))+a2
+    t = 2*np.radians(x)
+    return a0*np.sin(t)+a1*np.cos(t)+a2
+
+def azimuth_jac(x, a0, a1, a2):
+    t = 2*np.radians(x).reshape(-1, 1)
+    da0 = np.sin(t)
+    da1 = np.cos(t)
+    da2 = np.ones(t.shape)
+    return np.hstack((da0, da1, da2))
 
 def calc_angles(a0,a1):
     return np.degrees(0.5*np.arctan(a0/a1))
@@ -224,7 +232,7 @@ def compute(xys, yidx, names, shapes, dtypes, polangles):
 
                 temp = list(cvs[i,j[0],l,:])
 
-                params = curve_fit(azimuth, x, temp)[0]
+                params = curve_fit(azimuth, x, temp, jac=azimuth_jac)[0]
 
                 residuals = temp - azimuth(x, *params)
                 ss_res = np.sum(residuals**2)
