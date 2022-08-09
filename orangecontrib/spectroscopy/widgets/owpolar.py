@@ -440,15 +440,13 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     invert_angles = Setting(False, schema_only=True)
 
     angles = None
-    anglst = Setting([], packable=False)
-    lines = Setting([], packable=False)
-    labels = Setting([], packable=False)
-    multiin_anglst = Setting([], packable=False)
-    multiin_lines: List[LineEditWFocusOut]
-    multiin_lines = Setting([], packable=False)
-    multiin_labels: List[QLabel]
-    multiin_labels = Setting([], packable=False)
-    polangles = Setting([], packable=False)
+    anglst = []
+    lines = []
+    labels = []
+    multiin_anglst = []
+    multiin_lines = []
+    multiin_labels = []
+    polangles = []
     n_inputs = 0
 
     feats: List[Variable] = ContextSetting([])
