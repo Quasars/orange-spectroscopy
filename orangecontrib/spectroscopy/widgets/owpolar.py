@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, QItemSelectionRange
+from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
 from scipy.optimize import curve_fit
 
 
@@ -18,15 +19,12 @@ from Orange.widgets.widget import OWWidget, Msg, Output, MultiInput
 from Orange.widgets import gui, settings
 
 from Orange.widgets.settings import \
-    Setting, ContextSetting, DomainContextHandler
+    Setting, ContextSetting, PerfectDomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.data import owconcatenate
 from Orange.widgets.data.oweditdomain import disconnected
 from orangewidget.utils.listview import ListViewSearch
-from orangewidget.gui import LineEditWFocusOut
-
-from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
 
 
 def _restore_selected_items(model, view, setting, connector):
@@ -429,7 +427,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     autocommit = settings.Setting(False)
 
-    settingsHandler = DomainContextHandler()
+    settingsHandler = PerfectDomainContextHandler(
+        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
+    )
 
     want_main_area = False
     resizing_enabled = True
@@ -438,8 +438,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     map_x = ContextSetting(None)
     map_y = ContextSetting(None)
     invert_angles = Setting(False, schema_only=True)
+    angles = ContextSetting(None)
 
-    angles = None
     anglst = []
     lines = []
     labels = []
@@ -596,11 +596,13 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                 labels.append(j)
 
     def clear_angles(self, anglst, lines, labels, widget):
-        for i in reversed(range(self.multiin.layout().count())):
-            self.multiin.layout().itemAt(i).widget().setParent(None)
-        for i in reversed(range(self.multifile.layout().count())):
-            if i != 0:
-                self.multifile.layout().itemAt(i).widget().setParent(None)
+        if widget is self.multiin:
+            for i in reversed(range(self.multiin.layout().count())):
+                self.multiin.layout().itemAt(i).widget().setParent(None)
+        if widget is self.multifile:
+            for i in reversed(range(self.multifile.layout().count())):
+                if i != 0:
+                    self.multifile.layout().itemAt(i).widget().setParent(None)
         anglst.clear()
         lines.clear()
         labels.clear()
@@ -698,8 +700,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         return [t for t in self._data_inputs if t is not None]
 
     def handleNewSignals(self):
-        self.data = None
         self.closeContext()
+        self.data = None
         self.Warning.clear()
         self.Outputs.polar.send(None)
         self.Outputs.model.send(None)
@@ -727,6 +729,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
         if len(self.data) == 1:
             self.openContext(self.data[0])
+            self._change_angles()
         elif 1 < len(self.data) < 4 or len(self.data) == 0:
             self.Warning.notenough()
             self.contextAboutToBeOpened.emit([Table.from_domain(Domain(()))])
@@ -795,4 +798,4 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    WidgetPreview(OWPolar).run(Orange.data.Table("ftir-4pol.pkl.gz"))
+    WidgetPreview(OWPolar).run(insert_data=[(0, Orange.data.Table("polar\\4-angle-ftir_multifile.tab"))])
