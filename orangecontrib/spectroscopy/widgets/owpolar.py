@@ -90,13 +90,13 @@ def combine_visimg(data, polangles):
     attsdict = {'visible_images': atts}
     return attsdict
 
-def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: TaskState):
+def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, average,
+        sep, state: TaskState):
 
     results = Results()
 
     output, model, spectra, origmetas, errorstate = process_polar_abs(data, alpha, feature, map_x,
-                                                    map_y, invert_angles, polangles, state)
-
+                                                    map_y, invert_angles, polangles, average, state)
 
     tempoutaddmetas = [[ContinuousVariable.make('Azimuth Angle (' + i.name + ')'),
                     ContinuousVariable.make('Hermans Orientation Function (' + i.name + ')'),
@@ -114,21 +114,30 @@ def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, state: Tas
     modaddmetas = []
     for i in tempmodaddmetas:
         modaddmetas = modaddmetas + i
-    values = tuple(f'{i} Degrees' for i in polangles)
-    PolAng = DiscreteVariable.make('Polarisation Angle', values=values)
-
     ometadom = data[0].domain.metas
-    outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
-    modmetadom = (ometadom + tuple([PolAng]) + tuple(modaddmetas))
+    if average is False:
+        values = tuple(f'{i} Degrees' for i in polangles)
+        PolAng = DiscreteVariable.make('Polarisation Angle', values=values)
+        outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
+        modmetadom = (ometadom + tuple([PolAng]) + tuple(modaddmetas))
+        output_stack = tuple(output for i in polangles)
+        model_stack = tuple(model for i in polangles)
+        output = np.vstack(output_stack)
+        model = np.vstack(model_stack)
+    elif average is True:
+        if sep is not None:
+            sep_idx = ometadom.index(sep)
+            try:
+                origmetas = np.c_[origmetas[:,0:sep_idx], origmetas[:,sep_idx+1:]]
+            except ValueError:
+                origmetas = np.r_[origmetas[:,0:sep_idx]]
+            ometadom = tuple(i for i in ometadom if i is not sep)
+        outmetadom = (ometadom + tuple(outaddmetas))
+        modmetadom = (ometadom + tuple(modaddmetas))
+
     ofeatdom = data[0].domain.attributes
     datadomain = Domain(ofeatdom, metas = outmetadom)
     moddomain = Domain(ofeatdom, metas = modmetadom)
-
-    output_stack = tuple(output for i in polangles)
-    model_stack = tuple(model for i in polangles)
-    output = np.vstack(output_stack)
-    model = np.vstack(model_stack)
-
     outmetas = np.hstack((origmetas, output))
     modmetas = np.hstack((origmetas, model))
 
@@ -302,7 +311,7 @@ def start_compute(ulsxs, ulsys, names, shapes, dtypes, polangles, state):
         #     compute(tlsxys, yidx, shapes, dtypes, polangles, i)
     return threads
 
-def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, state):
+def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, average, state):
     state.set_status("Preparing...")
 
     ulsxs, ulsys = unique_xys(images, map_x, map_y)
@@ -379,15 +388,26 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, s
 
     spectra = []
     met = []
-    for i in range(len(polangles)):
-        spectratemp = np.reshape(spec[:,:,:,i],
-                                 (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
+    if average is False:
+        for i in range(len(polangles)):
+            spectratemp = np.reshape(spec[:,:,:,i],
+                                    (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
+            spectratemp = spectratemp[~np.isnan(model).any(axis=1)]
+            spectra.append(spectratemp)
+            metatemp = np.reshape(metas[:,:,:,i],
+                                (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
+            metatemp = metatemp[~np.isnan(model).any(axis=1)]
+            metatemp = np.append(metatemp, np.full((np.shape(metatemp)[0],1), i), axis=1)
+            met.append(metatemp)
+    elif average is True:
+        average_spec = np.average(spec, axis=3)
+        spectratemp = np.reshape(average_spec,
+                                (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].X.shape[1]))
         spectratemp = spectratemp[~np.isnan(model).any(axis=1)]
         spectra.append(spectratemp)
-        metatemp = np.reshape(metas[:,:,:,i],
-                              (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
+        metatemp = np.reshape(metas[:,:,:,0],
+                            (np.shape(ulsys)[0]*np.shape(ulsxs)[0], images[0].metas.shape[1]))
         metatemp = metatemp[~np.isnan(model).any(axis=1)]
-        metatemp = np.append(metatemp, np.full((np.shape(metatemp)[0],1), i), axis=1)
         met.append(metatemp)
 
     outputs = outputs[~np.isnan(model).any(axis=1)]
@@ -438,6 +458,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     map_x = ContextSetting(None)
     map_y = ContextSetting(None)
     invert_angles = Setting(False, schema_only=True)
+    average = Setting(False, schema_only=True)
     angles = ContextSetting(None)
 
     anglst = []
@@ -525,8 +546,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         xybox = gui.widgetBox(vbox, "Data XY Selection",
                               sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
-        self.x_axis = DomainModel(DomainModel.METAS, valid_types=DomainModel.PRIMITIVE)
-        self.y_axis = DomainModel(DomainModel.METAS, valid_types=DomainModel.PRIMITIVE)
+        self.x_axis = DomainModel(DomainModel.METAS, valid_types=ContinuousVariable)
+        self.y_axis = DomainModel(DomainModel.METAS, valid_types=ContinuousVariable)
 
         gui.comboBox(xybox, self, 'map_x', searchable=True, label="X Axis",
             callback=self._change_input, model=self.x_axis)
@@ -540,6 +561,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                                        callback=self._change_input, valueType=int)
 
         gui.checkBox(pbox, self, 'invert_angles', label="Invert Angles",
+                     callback=self._change_input)
+
+        gui.checkBox(pbox, self, 'average', label='Average Spectra',
                      callback=self._change_input)
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply", commit=self.commit)
@@ -774,7 +798,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             sorted_data = self.sorted_data
 
         self.start(run, sorted_data, self.feats, self.alpha, self.map_x,
-                   self.map_y, self.invert_angles, self.polangles)
+                   self.map_y, self.invert_angles, self.polangles,
+                   self.average, self.angles)
 
     def on_done(self, result: Results):
         if result is None:
