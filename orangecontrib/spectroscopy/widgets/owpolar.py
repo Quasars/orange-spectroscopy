@@ -823,4 +823,5 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    WidgetPreview(OWPolar).run(insert_data=[(0, Orange.data.Table("polar\\4-angle-ftir_multifile.tab"))])
+    import orangecontrib.spectroscopy  # so that can be loaded
+    WidgetPreview(OWPolar).run(insert_data=[(0, Orange.data.Table("polar/4-angle-ftir_multifile.tab"))])
