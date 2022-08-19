@@ -1,6 +1,6 @@
 import os
 import multiprocessing
-from multiprocessing import shared_memory
+from multiprocessing.managers import SharedMemoryManager
 from typing import List, Optional, Sequence
 
 import math
@@ -209,17 +209,16 @@ def find_az(alpha, params):
                 Az = Az2
     return Az
 
-def compute(xys, yidx, names, shapes, dtypes, polangles):
-
-    tcvs = shared_memory.SharedMemory(name=names[0], create=False)
+def compute(xys, yidx, smms, shapes, dtypes, polangles):
+    tcvs = smms[0]
     cvs = np.ndarray(shapes[0], dtype=dtypes[0], buffer=tcvs.buf)
-    tout = shared_memory.SharedMemory(name=names[3], create=False)
+    tout = smms[3]
     out = np.ndarray(shapes[3], dtype=dtypes[3], buffer=tout.buf)
-    tmod = shared_memory.SharedMemory(name=names[4], create=False)
+    tmod = smms[4]
     mod = np.ndarray(shapes[4], dtype=dtypes[4], buffer=tmod.buf)
-    tcoords = shared_memory.SharedMemory(name=names[5], create=False)
+    tcoords = smms[5]
     coords = np.ndarray(shapes[5], dtype=dtypes[5], buffer=tcoords.buf)
-    tvars = shared_memory.SharedMemory(name=names[6], create=False)
+    tvars = smms[6]
     vars = np.ndarray(shapes[6], dtype=dtypes[6], buffer=tvars.buf)
 
     x = np.asarray(polangles)
@@ -256,11 +255,6 @@ def compute(xys, yidx, names, shapes, dtypes, polangles):
                 mod[i,j[0],l,4] = params[1]
                 mod[i,j[0],l,5] = params[2]
 
-    tcvs.close()
-    tout.close()
-    tmod.close()
-    tcoords.close()
-    tvars.close()
 
 def unique_xys(images, map_x, map_y):
     lsxs = np.empty(0)
@@ -355,36 +349,37 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, a
             coords[k,l,0] = i
             coords[k,l,1] = j
 
-    tcvs = shared_memory.SharedMemory(create=True, size=cvs.nbytes)
-    scvs = np.ndarray(cvs.shape, dtype=cvs.dtype, buffer=tcvs.buf)
-    scvs[:,:,:] = cvs[:,:,:]
-    tout = shared_memory.SharedMemory(create=True, size=out.nbytes)
-    sout = np.ndarray(out.shape, dtype=out.dtype, buffer=tout.buf)
-    sout[:,:,:,:] = out[:,:,:,:]
-    tmod = shared_memory.SharedMemory(create=True, size=mod.nbytes)
-    smod = np.ndarray(mod.shape, dtype=mod.dtype, buffer=tmod.buf)
-    smod[:,:,:,:] = mod[:,:,:,:]
-    tcoords = shared_memory.SharedMemory(create=True, size=coords.nbytes)
-    scoords = np.ndarray(coords.shape, dtype=coords.dtype, buffer=tcoords.buf)
-    scoords[:,:,:] = coords[:,:,:]
-    tvars = shared_memory.SharedMemory(create=True, size=vars.nbytes)
-    svars = np.ndarray(vars.shape, dtype=vars.dtype, buffer=tvars.buf)
-    svars[:] = vars[:]
+    with SharedMemoryManager() as smm:
+        tcvs = smm.SharedMemory(size=cvs.nbytes)
+        scvs = np.ndarray(cvs.shape, dtype=cvs.dtype, buffer=tcvs.buf)
+        scvs[:,:,:] = cvs[:,:,:]
+        tout = smm.SharedMemory(size=out.nbytes)
+        sout = np.ndarray(out.shape, dtype=out.dtype, buffer=tout.buf)
+        sout[:,:,:,:] = out[:,:,:,:]
+        tmod = smm.SharedMemory(size=mod.nbytes)
+        smod = np.ndarray(mod.shape, dtype=mod.dtype, buffer=tmod.buf)
+        smod[:,:,:,:] = mod[:,:,:,:]
+        tcoords = smm.SharedMemory(size=coords.nbytes)
+        scoords = np.ndarray(coords.shape, dtype=coords.dtype, buffer=tcoords.buf)
+        scoords[:,:,:] = coords[:,:,:]
+        tvars = smm.SharedMemory(size=vars.nbytes)
+        svars = np.ndarray(vars.shape, dtype=vars.dtype, buffer=tvars.buf)
+        svars[:] = vars[:]
 
-    names = [tcvs.name, None, None, tout.name, tmod.name, tcoords.name, tvars.name]
-    shapes = [cvs.shape, spec.shape, metas.shape, out.shape, mod.shape, coords.shape, vars.shape]
-    dtypes = [cvs.dtype, spec.dtype, metas.dtype, out.dtype, mod.dtype, coords.dtype, vars.dtype]
+        smms = [tcvs, None, None, tout, tmod, tcoords, tvars]
+        shapes = [cvs.shape, spec.shape, metas.shape, out.shape, mod.shape, coords.shape, vars.shape]
+        dtypes = [cvs.dtype, spec.dtype, metas.dtype, out.dtype, mod.dtype, coords.dtype, vars.dtype]
 
-    threads = start_compute(ulsxs, ulsys, names, shapes, dtypes, polangles, state)
+        threads = start_compute(ulsxs, ulsys, smms, shapes, dtypes, polangles, state)
 
-    for t in threads:
-        t.join()
+        for t in threads:
+            t.join()
 
-    state.set_status("Finishing...")
-    if invert is True:
-        sout[:,:,:,2] = sout[:,:,:,2]*-1
-    outputs = np.reshape(sout[:,:,:,2:], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], 5*len(featnames)))
-    model = np.reshape(smod[:,:,:,2:], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], 4*len(featnames)))
+        state.set_status("Finishing...")
+        if invert is True:
+            sout[:,:,:,2] = sout[:,:,:,2]*-1
+        outputs = np.reshape(sout[:,:,:,2:], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], 5*len(featnames)))
+        model = np.reshape(smod[:,:,:,2:], (np.shape(ulsys)[0]*np.shape(ulsxs)[0], 4*len(featnames)))
 
     spectra = []
     met = []
@@ -415,12 +410,6 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, a
 
     spectra = np.concatenate((spectra), axis=0)
     meta = np.concatenate((met), axis=0)
-
-    tcvs.unlink()
-    tout.unlink()
-    tmod.unlink()
-    tcoords.unlink()
-    tvars.unlink()
 
     return outputs, model, spectra, meta, vars[1]
 
