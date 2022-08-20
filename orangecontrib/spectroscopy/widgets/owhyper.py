@@ -873,25 +873,35 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.vis_img.setCompositionMode(comp_mode)
 
     def set_vector_co(self, pen):
-        self.c.setPen(pen)
+        if hasattr(self, 'c'):
+            self.c.setPen(pen)
 
     def set_vector_scale(self, scale):
-        th = self.v[:,0]
-        v_mag = self.v[:,1]
-        amp = v_mag / max(v_mag) * (scale/100)# TODO, new setting: range
-        wy = self.shifty*2
-        wx = self.shiftx*2
-        y = np.linspace(*self.lsy)[self.yindex[self.valid]]
-        x = np.linspace(*self.lsx)[self.xindex[self.valid]]
-        dispx = amp*wx/2*np.cos(np.radians(th))
-        dispy = amp*wy/2*np.sin(np.radians(th))
-        xcurve = np.empty((dispx.shape[0]*2))
-        ycurve = np.empty((dispy.shape[0]*2))
-        xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
-        ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
-        connect = np.ones((dispx.shape[0]*2))
-        connect[1::2] = 0
-        self.c.setData(x=xcurve, y=ycurve, connect=connect)
+        if self.v is not None:
+            if self.v.shape[1] > 1:
+                th = self.v[:,0]
+                v_mag = self.v[:,1]
+            elif self.v.shape[1] == 1:
+                if self.parent.vector_angle is None:
+                    th = np.zeros(self.v.shape[0])
+                    v_mag = self.v[:,0]
+                elif self.parent.vector_magnitude is None:
+                    th = self.v[:,0]
+                    v_mag = np.ones(self.v.shape[0])
+            amp = v_mag / max(v_mag) * (scale/100)# TODO, new setting: range
+            wy = self.shifty*2
+            wx = self.shiftx*2
+            y = np.linspace(*self.lsy)[self.yindex[self.valid]]
+            x = np.linspace(*self.lsx)[self.xindex[self.valid]]
+            dispx = amp*wx/2*np.cos(np.radians(th))
+            dispy = amp*wy/2*np.sin(np.radians(th))
+            xcurve = np.empty((dispx.shape[0]*2))
+            ycurve = np.empty((dispy.shape[0]*2))
+            xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+            ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+            connect = np.ones((dispx.shape[0]*2))
+            connect[1::2] = 0
+            self.c.setData(x=xcurve, y=ycurve, connect=connect)
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
@@ -1005,8 +1015,16 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         pen = res.vc
 
         if self.data and v is not None:
-            th = v[:,0]
-            v_mag = v[:,1]
+            if v.shape[1] > 1:
+                th = v[:,0]
+                v_mag = v[:,1]
+            elif v.shape[1] == 1:
+                if self.parent.vector_angle is None:
+                    th = np.zeros(v.shape[0])
+                    v_mag = v[:,0]
+                elif self.parent.vector_magnitude is None:
+                    th = v[:,0]
+                    v_mag = np.ones(v.shape[0])
             amp = v_mag / max(v_mag) * (res.vs/100)# TODO, new setting: range
             wy = shifty*2
             wx = shiftx*2
@@ -1088,7 +1106,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     show_vector_plot = Setting(False)
     vector_angle = ContextSetting(None)
     vector_magnitude = ContextSetting(None)
-    vector_colour_index = Setting(0)
+    vector_colour_index = ContextSetting(0)
     vector_scale = Setting(1)
     vector_opacity = Setting(255)
 
@@ -1238,12 +1256,12 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         gui.checkBox(self.vectorbox, self, 'show_vector_plot',
                      label='Plot vector overlay', callback=self._update_vector)
 
-        self.vector_opts = DomainModel(DomainModel.SEPARATED, valid_types=DomainModel.PRIMITIVE)
+        self.vector_opts = DomainModel(DomainModel.SEPARATED,
+                                       valid_types=DomainModel.PRIMITIVE, placeholder='None')
         self.vector_angle = None
         self.vector_magnitude = None
         Vcolours = vector_colour
         self.colour_opts = Vcolours
-        self.vector_colour_index = min(self.vector_colour_index, len(Vcolours) - 1)
 
         self.v_angle_select = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True,
                                          label="Vector Angle", model=self.vector_opts,
@@ -1281,15 +1299,26 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.imageplot.update_view()
 
     def vectors(self):
-        if self.vector_angle and self.vector_magnitude is not None and self.show_vector_plot is True:
+        if self.show_vector_plot is False:
+            self.imageplot.delvectors()
+            return None
+        elif self.vector_angle and self.vector_magnitude and self.show_vector_plot is True:
             v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
             v_mags = ContinuousVariable("Magnitude", compute_value=Identity(self.vector_magnitude))
             return lambda vectordata: \
                 vectordata.transform(Domain([v_angs, v_mags]))
-        elif self.show_vector_plot is False:
-            self.imageplot.delvectors()
-            return None
+        elif self.vector_angle or self.vector_magnitude and self.show_vector_plot is True:
+            if self.vector_angle:
+                v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
+                return lambda vectordata: \
+                    vectordata.transform(Domain([v_angs]))
+            elif self.vector_magnitude:
+                v_mags = ContinuousVariable("Magnitude",
+                                            compute_value=Identity(self.vector_magnitude))
+                return lambda vectordata: \
+                    vectordata.transform(Domain([v_mags]))
         else:
+            self.imageplot.delvectors()
             return None
 
     def vector_view(self):
