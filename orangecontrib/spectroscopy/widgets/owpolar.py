@@ -19,7 +19,7 @@ from Orange.widgets.widget import OWWidget, Msg, Output, MultiInput
 from Orange.widgets import gui, settings
 
 from Orange.widgets.settings import \
-    Setting, ContextSetting, PerfectDomainContextHandler
+    Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.data import owconcatenate
@@ -413,6 +413,58 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, a
 
     return outputs, model, spectra, meta, vars[1]
 
+class PolarDomainContextHandler(DomainContextHandler):
+
+    match_values = DomainContextHandler.MATCH_VALUES_ALL
+
+    def match(self, context, domain, attrs, metas):
+        try:
+            settings_names = [
+                context.values['angles'][0],
+                [i[0] for i in context.values['feats'][0]],
+                context.values['map_x'][0],
+                context.values['map_y'][0]]
+            settings_types = [
+                context.values['angles'][1],
+                [i[1] for i in context.values['feats'][0]],
+                context.values['map_x'][1],
+                context.values['map_y'][1]]
+        except IndexError:
+            settings_names = [
+                context.values['angles'][0],
+                [i[0] for i in context.values['feats']],
+                context.values['map_x'][0],
+                context.values['map_y'][0]]
+            settings_types = [
+                context.values['angles'][1],
+                [i[1] for i in context.values['feats']],
+                context.values['map_x'][1],
+                context.values['map_y'][1]]
+
+        if attrs == context.attributes and \
+            metas == context.metas:
+            for i, j in enumerate(settings_names):
+                if isinstance(j, str) and j in metas.keys():
+                    if settings_types[i] % 10 == metas[j]:
+                        continue
+                    return self.NO_MATCH
+                if isinstance(j, list):
+                    for k, l in enumerate(j):
+                        if l in attrs.keys():
+                            if settings_types[i][k] % 10 == attrs[l]:
+                                continue
+                            return self.NO_MATCH
+                        if l in metas.keys():
+                            if settings_types[i][k] % 10 == metas[l]:
+                                continue
+                            return self.NO_MATCH
+                        return self.NO_MATCH
+                else:
+                    return self.NO_MATCH
+        else:
+            return self.NO_MATCH
+
+        return self.PERFECT_MATCH
 
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
@@ -436,9 +488,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     autocommit = settings.Setting(False)
 
-    settingsHandler = PerfectDomainContextHandler(
-        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
-    )
+    settingsHandler = PolarDomainContextHandler()
 
     want_main_area = False
     resizing_enabled = True
