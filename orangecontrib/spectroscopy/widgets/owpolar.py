@@ -650,8 +650,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     def add_angles(self, anglst, lab, labels, lines, widget,
                    i, place, callback): #to be used in a loop
+        file = lab.split('/')[-1]
         anglst.append(lab)
-        ledit = gui.lineEdit(widget, self, None, label = lab, callback = callback)
+        ledit = gui.lineEdit(widget, self, None, label = file, callback = callback)
         ledit.setText(str(place))
         lines.append(ledit)
         for j in ledit.parent().children():
