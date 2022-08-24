@@ -872,7 +872,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
     def set_visible_image_comp_mode(self, comp_mode: QPainter.CompositionMode):
         self.vis_img.setCompositionMode(comp_mode)
 
-    def set_vector_co(self, pen):
+    def set_vector_colour(self, pen):
         if hasattr(self, 'c'):
             self.c.setPen(pen)
 
@@ -993,13 +993,13 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
 
-        res.vc, res.vs = self.parent.vector_view()
-        pen = res.vc
+        vector_scale = self.parent.vector_scale
+        vector_colour = self.parent.get_vector_colour()
 
         if self.data and v is not None:
             th = v[:,0]
             v_mag = v[:,1]
-            amp = v_mag / max(v_mag) * (res.vs/100)# TODO, new setting: range
+            amp = v_mag / max(v_mag) * (vector_scale/100)
             wy = shifty*2
             wx = shiftx*2
             y = np.linspace(*lsy)[yindex[valid]]
@@ -1012,7 +1012,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
             connect = np.ones((dispx.shape[0]*2))
             connect[1::2] = 0
-            self.c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect, pen=pen)
+            self.c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect, pen=vector_colour)
             self.p_markings.append(self.c)
             self.plot.addItem(self.c)
 
@@ -1243,7 +1243,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                                        callback=self._update_vector)
 
         self.v_colour_select = gui.comboBox(self.vectorbox, self, 'vector_colour_index',
-                                          label="Vector Colour", callback=self.update_vector_co)
+                                            label="Vector Colour", callback=self.update_vector_colour)
         model = vector_colour_model(vector_colour)
         model.setParent(self)
         self.v_colour_select.setModel(model)
@@ -1253,8 +1253,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                                         callback=self.update_vector_scale)
 
         self.v_opacity_slider = gui.hSlider(self.vectorbox, self, 'vector_opacity', label="Opacity",
-                                          minValue=0, maxValue=255, step=5, createLabel=False,
-                                          callback=self.update_vector_co)
+                                            minValue=0, maxValue=255, step=5, createLabel=False,
+                                            callback=self.update_vector_colour)
 
         self._update_vector()
 
@@ -1284,18 +1284,12 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         return lambda data: \
             data.transform(Domain([v_angs, v_mags]))
 
-    def vector_view(self):
-        vc = (vector_colour[self.vector_colour_index][1][0][0],
-              vector_colour[self.vector_colour_index][1][0][1],
-              vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
-        vs = self.vector_scale
-        return vc, vs
+    def get_vector_colour(self):
+        return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
 
-    def update_vector_co(self):
-        vc = (vector_colour[self.vector_colour_index][1][0][0],
-              vector_colour[self.vector_colour_index][1][0][1],
-              vector_colour[self.vector_colour_index][1][0][2], self.vector_opacity)
-        self.imageplot.set_vector_co(vc)
+    def update_vector_colour(self):
+        vc = self.get_vector_colour()
+        self.imageplot.set_vector_colour(vc)
 
     def update_vector_scale(self):
         self.imageplot.set_vector_scale(self.vector_scale)
