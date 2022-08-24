@@ -623,6 +623,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
+        self.vector_data = None
+        self.xindex = None
+        self.yindex = None
 
         self.plotview = pg.GraphicsLayoutWidget()
         self.plot = pg.PlotItem(background="w", viewBox=InteractiveViewBox(self))
@@ -845,6 +848,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
+        self.vector_data = None
+        self.xindex = None
+        self.yindex = None
 
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
@@ -872,19 +878,25 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
     def set_visible_image_comp_mode(self, comp_mode: QPainter.CompositionMode):
         self.vis_img.setCompositionMode(comp_mode)
 
-    def set_vector_colour(self, pen):
+    def update_vector_colour(self):
         if hasattr(self, 'c'):
+            pen = self.parent.get_vector_colour()
             self.c.setPen(pen)
 
-    def set_vector_scale(self, scale):
-        if self.v is not None:
-            th = self.v[:,0]
-            v_mag = self.v[:,1]
-            amp = v_mag / max(v_mag) * (scale/100)  # TODO, new setting: range
-            wy = self.shifty*2
-            wx = self.shiftx*2
-            y = np.linspace(*self.lsy)[self.yindex[self.valid]]
-            x = np.linspace(*self.lsx)[self.xindex[self.valid]]
+    def update_vectors(self):
+        v = self.vector_data
+        if v is not None:
+            valid = self.data_valid_positions
+            lsx, lsy = self.lsx, self.lsy
+            xindex, yindex = self.xindex, self.yindex
+            scale = self.parent.vector_scale
+            th = v[:,0]
+            v_mag = v[:,1]
+            amp = v_mag / max(v_mag) * (scale/100)
+            wy = _shift(lsx)*2
+            wx = _shift(lsx)*2
+            y = np.linspace(*lsy)[yindex[valid]]
+            x = np.linspace(*lsx)[xindex[valid]]
             dispx = amp*wx/2*np.cos(np.radians(th))
             dispy = amp*wy/2*np.sin(np.radians(th))
             xcurve = np.empty((dispx.shape[0]*2))
@@ -993,35 +1005,16 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
 
-        vector_scale = self.parent.vector_scale
-        vector_colour = self.parent.get_vector_colour()
-
-        if self.data and v is not None:
-            th = v[:,0]
-            v_mag = v[:,1]
-            amp = v_mag / max(v_mag) * (vector_scale/100)
-            wy = shifty*2
-            wx = shiftx*2
-            y = np.linspace(*lsy)[yindex[valid]]
-            x = np.linspace(*lsx)[xindex[valid]]
-            dispx = amp*wx/2*np.cos(np.radians(th))
-            dispy = amp*wy/2*np.sin(np.radians(th))
-            xcurve = np.empty((dispx.shape[0]*2))
-            ycurve = np.empty((dispy.shape[0]*2))
-            xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
-            ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
-            connect = np.ones((dispx.shape[0]*2))
-            connect[1::2] = 0
-            self.c = pg.PlotCurveItem(x=xcurve, y=ycurve, connect=connect, pen=vector_colour)
-            self.p_markings.append(self.c)
-            self.plot.addItem(self.c)
-
-        self.v = v
-        self.shifty = shifty
-        self.shiftx = shiftx
-        self.valid = valid
+        self.vector_data = v
         self.yindex = yindex
         self.xindex = xindex
+
+        if self.data and v is not None:
+            self.c = pg.PlotCurveItem()
+            self.update_vectors()
+            self.update_vector_colour()
+            self.p_markings.append(self.c)
+            self.plot.addItem(self.c)
 
         self.refresh_img_selection()
         self.image_updated.emit()
@@ -1288,11 +1281,10 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
 
     def update_vector_colour(self):
-        vc = self.get_vector_colour()
-        self.imageplot.set_vector_colour(vc)
+        self.imageplot.update_vector_colour()
 
     def update_vector_scale(self):
-        self.imageplot.set_vector_scale(self.vector_scale)
+        self.imageplot.update_vectors()
 
     def init_vector_plot(self, data):
         domain = data.domain if data is not None else None
