@@ -1232,8 +1232,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                                        valid_types=DomainModel.PRIMITIVE, placeholder='None')
         self.vector_angle = None
         self.vector_magnitude = None
-        Vcolours = vector_colour
-        self.colour_opts = Vcolours
+        self.colour_opts = vector_colour
 
         self.v_angle_select = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True,
                                          label="Vector Angle", model=self.vector_opts,
@@ -1245,7 +1244,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         self.v_colour_select = gui.comboBox(self.vectorbox, self, 'vector_colour_index',
                                           label="Vector Colour", callback=self.update_vector_co)
-        model = vector_colour_model(Vcolours)
+        model = vector_colour_model(vector_colour)
         model.setParent(self)
         self.v_colour_select.setModel(model)
 

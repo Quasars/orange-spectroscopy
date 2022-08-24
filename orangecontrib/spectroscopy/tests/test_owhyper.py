@@ -632,3 +632,40 @@ class TestVisibleImage(WidgetTest):
         self.assertEqual(settings, {"compat_no_group": True})
         self.widget = self.create_widget(OWHyper, stored_settings=settings)
         self.assertTrue(self.widget.compat_no_group)
+
+
+class TestVectorPlot(WidgetTest):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.whitelight = Orange.data.Table("whitelight.gsf")
+        cls.iris = Orange.data.Table("iris")
+
+    def setUp(self):
+        super().setUp()
+        self.widget = self.create_widget(OWHyper)  # type: OWHyper
+
+    def test_enable_disable(self):
+        w = self.widget
+        for data in [None, self.whitelight, self.iris]:
+            self.send_signal(w.Inputs.data, data)
+            self.assertFalse(w.show_vector_plot)
+            self.assertFalse(w.controls.vector_magnitude.isEnabled())
+            self.assertFalse(w.controls.vector_angle.isEnabled())
+            self.assertFalse(w.controls.vector_colour_index.isEnabled())
+            self.assertFalse(w.controls.vector_scale.isEnabled())
+            self.assertFalse(w.controls.vector_opacity.isEnabled())
+            w.controls.show_vector_plot.click()
+            self.assertTrue(w.show_vector_plot)
+            self.assertTrue(w.controls.vector_magnitude.isEnabled())
+            self.assertTrue(w.controls.vector_angle.isEnabled())
+            self.assertTrue(w.controls.vector_colour_index.isEnabled())
+            self.assertTrue(w.controls.vector_scale.isEnabled())
+            self.assertTrue(w.controls.vector_opacity.isEnabled())
+            w.controls.show_vector_plot.click()
+            self.assertFalse(w.controls.vector_magnitude.isEnabled())
+            self.assertFalse(w.controls.vector_angle.isEnabled())
+            self.assertFalse(w.controls.vector_colour_index.isEnabled())
+            self.assertFalse(w.controls.vector_scale.isEnabled())
+            self.assertFalse(w.controls.vector_opacity.isEnabled())
