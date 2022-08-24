@@ -448,7 +448,7 @@ class PolarDomainContextHandler(DomainContextHandler):
                     if settings_types[i] % 10 == metas[j]:
                         continue
                     return self.NO_MATCH
-                if isinstance(j, list):
+                elif isinstance(j, list):
                     for k, l in enumerate(j):
                         if l in attrs.keys():
                             if settings_types[i][k] % 10 == attrs[l]:
@@ -459,6 +459,8 @@ class PolarDomainContextHandler(DomainContextHandler):
                                 continue
                             return self.NO_MATCH
                         return self.NO_MATCH
+                elif j is None:
+                    continue
                 else:
                     return self.NO_MATCH
         else:
