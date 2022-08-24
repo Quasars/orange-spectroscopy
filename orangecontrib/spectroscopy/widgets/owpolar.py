@@ -698,6 +698,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             pass
 
     def input_select(self):
+        self.angles = None
         if len(self.data) == 0 or 1 < len(self.data) < 4:
             self.anglesel.setDisabled(True)
             for i in self.multiin_labels:
