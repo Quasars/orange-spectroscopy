@@ -948,18 +948,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         else:
             v = None
 
-        def closest(tablep, str):
-            if hasattr(tablep, str):
-                tablei = getattr(tablep, str)
-                return Integrate(methods=Integrate.PeakAt,
-                                 limits=[[choose, choose]])(tablei).X[:, 0]
-            else:
-                return None
-
         res.d = d
         res.v = v
-        res.p_th = closest(data, "th")
-        res.p_amp = closest(data, "amp")
         progress_interrupt(0)
 
         return res
@@ -1029,8 +1019,6 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.v = v
         self.shifty = shifty
         self.shiftx = shiftx
-        self.lsy = lsy
-        self.lsx = lsx
         self.valid = valid
         self.yindex = yindex
         self.xindex = xindex
