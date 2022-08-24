@@ -848,7 +848,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
-                       self.parent.vectors(),
+                       self.parent.image_vectors(),
                        self.parent.image_values(),
                        self.parent.image_values_fixed_levels(), self.parent.choose)
         else:
@@ -878,17 +878,9 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     def set_vector_scale(self, scale):
         if self.v is not None:
-            if self.v.shape[1] > 1:
-                th = self.v[:,0]
-                v_mag = self.v[:,1]
-            elif self.v.shape[1] == 1:
-                if self.parent.vector_angle is None:
-                    th = np.zeros(self.v.shape[0])
-                    v_mag = self.v[:,0]
-                elif self.parent.vector_magnitude is None:
-                    th = self.v[:,0]
-                    v_mag = np.ones(self.v.shape[0])
-            amp = v_mag / max(v_mag) * (scale/100)# TODO, new setting: range
+            th = self.v[:,0]
+            v_mag = self.v[:,1]
+            amp = v_mag / max(v_mag) * (scale/100)  # TODO, new setting: range
             wy = self.shifty*2
             wx = self.shiftx*2
             y = np.linspace(*self.lsy)[self.yindex[self.valid]]
@@ -1015,16 +1007,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         pen = res.vc
 
         if self.data and v is not None:
-            if v.shape[1] > 1:
-                th = v[:,0]
-                v_mag = v[:,1]
-            elif v.shape[1] == 1:
-                if self.parent.vector_angle is None:
-                    th = np.zeros(v.shape[0])
-                    v_mag = v[:,0]
-                elif self.parent.vector_magnitude is None:
-                    th = v[:,0]
-                    v_mag = np.ones(v.shape[0])
+            th = v[:,0]
+            v_mag = v[:,1]
             amp = v_mag / max(v_mag) * (res.vs/100)# TODO, new setting: range
             wy = shifty*2
             wx = shiftx*2
@@ -1298,28 +1282,20 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.update_vector_plot_interface()
         self.imageplot.update_view()
 
-    def vectors(self):
+    def image_vectors(self):
         if self.show_vector_plot is False:
-            self.imageplot.delvectors()
             return None
-        elif self.vector_angle and self.vector_magnitude and self.show_vector_plot is True:
-            v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
-            v_mags = ContinuousVariable("Magnitude", compute_value=Identity(self.vector_magnitude))
-            return lambda vectordata: \
-                vectordata.transform(Domain([v_angs, v_mags]))
-        elif self.vector_angle or self.vector_magnitude and self.show_vector_plot is True:
-            if self.vector_angle:
-                v_angs = ContinuousVariable("Azimuth", compute_value=Identity(self.vector_angle))
-                return lambda vectordata: \
-                    vectordata.transform(Domain([v_angs]))
-            elif self.vector_magnitude:
-                v_mags = ContinuousVariable("Magnitude",
-                                            compute_value=Identity(self.vector_magnitude))
-                return lambda vectordata: \
-                    vectordata.transform(Domain([v_mags]))
-        else:
-            self.imageplot.delvectors()
-            return None
+
+        ang = self.vector_angle
+        mag = self.vector_magnitude
+        v_angs = ContinuousVariable(
+            "Azimuth",
+            compute_value=Identity(ang) if ang else lambda d: np.full(len(d), 0))
+        v_mags = ContinuousVariable(
+            "Magnitude",
+            compute_value=Identity(mag) if mag else lambda d: np.full(len(d), 1))
+        return lambda data: \
+            data.transform(Domain([v_angs, v_mags]))
 
     def vector_view(self):
         vc = (vector_colour[self.vector_colour_index][1][0][0],
