@@ -764,7 +764,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     @gui.deferred
     def commit(self):
-
+        self.cancel()
         self.check_params()
         if len(self.Warning.active) > 0:
             return
@@ -786,8 +786,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         else:
             sorted_data = self.sorted_data
 
-        self.start(run, sorted_data, self.feats, self.alpha, self.map_x,
-                   self.map_y, self.invert_angles, self.polangles,
+        self.start(run, sorted_data, list(self.feats), self.alpha, self.map_x,
+                   self.map_y, self.invert_angles, list(self.polangles),
                    self.average, self.angles)
 
     def on_done(self, result: Results):
