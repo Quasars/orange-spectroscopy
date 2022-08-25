@@ -22,7 +22,7 @@ from PIL import Image
 
 import Orange.data
 from Orange.preprocess.transformation import Identity
-from Orange.data import Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Domain, DiscreteVariable, ContinuousVariable, Variable
 from Orange.widgets.widget import OWWidget, Msg, OWComponent, Input
 from Orange.widgets import gui
 from Orange.widgets.settings import \
@@ -1268,6 +1268,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_vector_plot(self, data):
         domain = data.domain if data is not None else None
         self.vector_opts.set_domain(domain)
+
+        # initialize values so that the combo boxes are not in invalid states
+        if self.vector_opts:
+            # TODO here we could instead set good default values if available
+            self.vector_magnitude = self.vector_angle = None
+        else:
+            self.vector_magnitude = self.vector_angle = None
 
     def setup_visible_image_controls(self):
         self.visbox = gui.widgetBox(self.controlArea, True)
