@@ -623,7 +623,6 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
-        self.vector_data = None
         self.xindex = None
         self.yindex = None
 
@@ -649,6 +648,10 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.vis_img.setOpts(axisOrder='row-major')
         self.plot.vb.setAspectLocked()
         self.plot.scene().sigMouseMoved.connect(self.plot.vb.mouseMovedEvent)
+
+        self.vector_plot = pg.PlotCurveItem()
+        self.vector_plot.hide()
+        self.plot.addItem(self.vector_plot)
 
         layout = QGridLayout()
         self.plotview.setLayout(layout)
@@ -722,8 +725,6 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         self.data = None
         self.data_ids = {}
-
-        self.p_markings = []
 
     def init_interface_data(self, data):
         self.init_attr_values(data)
@@ -838,9 +839,6 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.parent.Information.not_shown.clear()
         self.img.clear()
         self.img.setSelection(None)
-        for m in self.p_markings:
-            self.plot.removeItem(m)
-        self.p_markings = []
         self.legend.set_colors(None)
         self.lsx = None
         self.lsy = None
@@ -848,15 +846,14 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
-        self.vector_data = None
         self.xindex = None
         self.yindex = None
+        self.update_vectors()  # clears the vector plot
 
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
-                       self.parent.image_vectors(),
                        self.parent.image_values(),
-                       self.parent.image_values_fixed_levels(), self.parent.choose)
+                       self.parent.image_values_fixed_levels())
         else:
             self.image_updated.emit()
 
@@ -879,13 +876,16 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.vis_img.setCompositionMode(comp_mode)
 
     def update_vector_colour(self):
-        if hasattr(self, 'c'):
-            pen = self.parent.get_vector_colour()
-            self.c.setPen(pen)
+        pen = self.parent.get_vector_colour()
+        self.vector_plot.setPen(pen)
 
     def update_vectors(self):
-        v = self.vector_data
-        if v is not None:
+        v = self.parent.get_vector_data()
+        if self.lsx is None:  # image is not shown or is being computed
+            v = None
+        if v is None:
+            self.vector_plot.hide()
+        else:
             valid = self.data_valid_positions
             lsx, lsy = self.lsx, self.lsy
             xindex, yindex = self.xindex, self.yindex
@@ -905,11 +905,12 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
             connect = np.ones((dispx.shape[0]*2))
             connect[1::2] = 0
-            self.c.setData(x=xcurve, y=ycurve, connect=connect)
+            self.vector_plot.setData(x=xcurve, y=ycurve, connect=connect)
+            self.vector_plot.show()
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      vector_values, image_values, image_values_fixed_levels, choose,
+                      image_values, image_values_fixed_levels,
                       state: TaskState):
 
         def progress_interrupt(i: float):
@@ -950,18 +951,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             progress_interrupt(0)
         d = np.concatenate(parts)
 
-        if vector_values is not None:
-            vectors = []
-            for slice in split_to_size(len(data), 10000):
-                vectordata = vector_values(data[slice]).X
-                vectors.append(vectordata)
-                progress_interrupt(0)
-            v = np.concatenate(vectors)
-        else:
-            v = None
-
         res.d = d
-        res.v = v
         progress_interrupt(0)
 
         return res
@@ -972,7 +962,6 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         lsx, lsy = self.lsx, self.lsy
 
         d = res.d
-        v = res.v
 
         self.fixed_levels = res.image_values_fixed_levels
 
@@ -1005,22 +994,15 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         height = (lsy[1]-lsy[0]) + 2*shifty
         self.img.setRect(QRectF(left, bottom, width, height))
 
-        self.vector_data = v
+        # indices need to be saved to quickly draw vectors
         self.yindex = yindex
         self.xindex = xindex
 
-        if self.data and v is not None:
-            self.c = pg.PlotCurveItem()
-            self.update_vectors()
-            self.update_vector_colour()
-            self.p_markings.append(self.c)
-            self.plot.addItem(self.c)
+        self.update_vectors()
+        self.update_vector_colour()
 
         self.refresh_img_selection()
         self.image_updated.emit()
-
-    def delvectors(self):
-        pass
 
     def on_partial_result(self, result):
         pass
@@ -1260,22 +1242,19 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     def _update_vector(self):
         self.update_vector_plot_interface()
-        self.imageplot.update_view()
+        self.imageplot.update_vectors()
+        self.imageplot.update_vector_colour()
 
-    def image_vectors(self):
-        if self.show_vector_plot is False:
+    def get_vector_data(self):
+        if self.show_vector_plot is False or self.data is None:
             return None
 
         ang = self.vector_angle
         mag = self.vector_magnitude
-        v_angs = ContinuousVariable(
-            "Azimuth",
-            compute_value=Identity(ang) if ang else lambda d: np.full(len(d), 0))
-        v_mags = ContinuousVariable(
-            "Magnitude",
-            compute_value=Identity(mag) if mag else lambda d: np.full(len(d), 1))
-        return lambda data: \
-            data.transform(Domain([v_angs, v_mags]))
+        angs = self.data.get_column_view(ang)[0] if ang else np.full(len(self.data), 0)
+        mags = self.data.get_column_view(mag)[0] if mag else np.full(len(self.data), 1)
+
+        return np.vstack([angs, mags]).T
 
     def get_vector_colour(self):
         return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
