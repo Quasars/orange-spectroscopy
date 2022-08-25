@@ -252,6 +252,20 @@ class TestOWPolar(WidgetTest):
         self.send_signal("Data", self.in4, 3, widget=self.widget)
         self.assertFalse(self.widget.Warning.notenough.is_shown())
 
+    def test_disconnect(self):
+        self.send_signal("Data", self.multifile, 0, widget=self.widget)
+        self.widget.angles = self.widget.anglemetas[0]
+        self.widget.map_x = self.widget.x_axis[0]
+        self.widget.map_y = self.widget.y_axis[1]
+        self.widget.alpha = 0
+        self.widget.invert_angles = True
+        self.widget.autocommit = True
+        self.widget.feats = [self.widget.feat_view.model()[:][2],
+                            self.widget.feat_view.model()[:][3]]
+        self.widget.handleNewSignals()
+        self.wait_until_stop_blocking()
+        self.send_signal("Data", None, 0, widget=self.widget)
+
     # def test_clearangles(self):
     #     #test clearing angles
     #     pass
