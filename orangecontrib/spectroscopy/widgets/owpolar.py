@@ -786,16 +786,11 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         else:
             sorted_data = self.sorted_data
 
-        self.setInvalidated(True)
-        self.setReady(False)
-
         self.start(run, sorted_data, self.feats, self.alpha, self.map_x,
                    self.map_y, self.invert_angles, self.polangles,
                    self.average, self.angles)
 
     def on_done(self, result: Results):
-        self.setInvalidated(False)
-        self.setReady(True)
         if result is None:
             self.Outputs.polar.send(None)
             self.Outputs.model.send(None)
@@ -807,8 +802,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.Outputs.model.send(result.model)
 
     def on_partial_result(self, result):
-        self.setInvalidated(False)
-        self.setReady(True)
+        pass
 
     def onDeleteWidget(self):
         self.shutdown()
