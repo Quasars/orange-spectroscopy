@@ -1198,7 +1198,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
 
     def setup_vector_plot_controls(self):
-        self.vectorbox = gui.widgetBox(self.controlArea, True, "Vector Overlays")
+        self.vectorbox = gui.widgetBox(self.controlArea, box=True)
 
         gui.checkBox(self.vectorbox, self, 'show_vector_plot',
                      label='Plot vector overlay', callback=self._update_vector)
