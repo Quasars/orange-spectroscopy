@@ -447,16 +447,6 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     invert_angles = Setting(False, schema_only=True)
     average = Setting(False, schema_only=True)
     angles = ContextSetting(None)
-
-    anglst = []
-    lines = []
-    labels = []
-    multiin_anglst = []
-    multiin_lines = []
-    multiin_labels = []
-    polangles = []
-    n_inputs = 0
-
     feats: List[Variable] = ContextSetting([])
 
     class Warning(OWWidget.Warning):
@@ -476,6 +466,15 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         super().__init__()
         ConcurrentWidgetMixin.__init__(self)
         gui.OWComponent.__init__(self)
+
+        self.anglst = []
+        self.lines = []
+        self.labels = []
+        self.multiin_anglst = []
+        self.multiin_lines = []
+        self.multiin_labels = []
+        self.polangles = []
+        self.n_inputs = 0
 
         self._dumb_tables = owconcatenate.OWConcatenate._dumb_tables
         self._get_part = owconcatenate.OWConcatenate._get_part
