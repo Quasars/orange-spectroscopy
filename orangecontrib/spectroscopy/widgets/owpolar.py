@@ -491,7 +491,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         formlayout2 = QFormLayout()
         form2.setLayout(formlayout2)
 
-        self.multifile = gui.widgetBox(vbox2, "Multifile Input (all angles in 1 table)",
+        self.multifile = gui.widgetBox(vbox2, "All angles in a single input",
                                        sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         self.anglemetas = DomainModel(DomainModel.METAS, valid_types=DiscreteVariable)
@@ -501,7 +501,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.anglesel.setDisabled(True)
 
 
-        self.multiin = gui.widgetBox(vbox2, "Multiple Inputs (1 angle per input)",
+        self.multiin = gui.widgetBox(vbox2, "Single angle per input",
                                      sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         vbox2.layout().addWidget(form2)
