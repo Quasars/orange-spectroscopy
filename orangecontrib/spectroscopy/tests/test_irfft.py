@@ -7,7 +7,7 @@ from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
                                               find_zpd, PeakSearch, ApodFunc,
-                                              MultiIRFFT, apodize,
+                                              MultiIRFFT, apodize, ramp,
                                               )
 
 dx = 1.0 / 15797.337544 / 2.0
@@ -19,6 +19,14 @@ class TestIRFFT(unittest.TestCase):
         self.ifg_single = Orange.data.Table("IFG_single.dpt")
         self.ifg_seq_ref = Orange.data.Table("agilent/background_agg256.seq")
         self.sc_dat_ref = Orange.data.Table("agilent/background_agg256.dat")
+        self.ifgs = {
+            'even_sym': self.ifg_single.X[0],
+            'odd_sym': self.ifg_single.X[0][1:],
+            'even_asym': self.ifg_seq_ref.X[0][1:],
+            'odd_asym': self.ifg_seq_ref.X[0],
+            'even_asym_reverse': self.ifg_seq_ref.X[0][1:][::-1],
+            'odd_asym_reverse': self.ifg_seq_ref.X[0][::-1],
+        }
 
     def test_zero_fill(self):
         N = 1975
@@ -144,18 +152,19 @@ class TestIRFFT(unittest.TestCase):
         np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)
 
     def test_apodization(self):
-        ifgs = {
-            'even_sym': self.ifg_single.X[0],
-            'odd_sym': self.ifg_single.X[0][1:],
-            'even_asym': self.ifg_seq_ref.X[0][1:],
-            'odd_asym': self.ifg_seq_ref.X[0],
-            'even_asym_reverse': self.ifg_seq_ref.X[0][1:][::-1],
-            'odd_asym_reverse': self.ifg_seq_ref.X[0][::-1],
-        }
         for apod_func in ApodFunc:
-            for k, ifg in ifgs.items():
+            for k, ifg in self.ifgs.items():
                 with self.subTest(apod_func=apod_func.name, ifg=k):
                     zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
                     out = apodize(ifg, zpd, apod_func)
                     # Apodization should not change value at zpd
                     self.assertAlmostEqual(ifg[zpd], out[zpd])
+
+    def test_ramp(self):
+        ifg = self.ifgs['odd_asym']
+        zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
+        ramp_fwd = ramp(ifg, zpd)
+        ifg_rev = self.ifgs['odd_asym_reverse']
+        zpd_rev = find_zpd(ifg_rev, PeakSearch.ABSOLUTE)
+        ramp_rev = ramp(ifg_rev, zpd_rev)
+        np.testing.assert_array_equal(ramp_fwd, ramp_rev[::-1])

@@ -55,6 +55,12 @@ def find_zpd(ifg, peak_search):
     else:
         raise NotImplementedError
 
+def wing_size(ifg, zpd):
+    """Calculate negative and positive wing size (including zpd point)"""
+    wing_n = zpd + 1
+    wing_p = ifg.shape[-1] - zpd
+    return wing_n, wing_p
+
 def apodize(ifg, zpd, apod_func):
     """
     Perform apodization of asymmetric interferogram using selected apodization
@@ -80,8 +86,7 @@ def apodize(ifg, zpd, apod_func):
     # Calculate negative and positive wing size
     # correcting zpd from 0-based index
     ifg_N = ifg.shape[-1]
-    wing_n = zpd + 1
-    wing_p = ifg_N - zpd
+    wing_n, wing_p = wing_size(ifg, zpd)
     # Use larger wing to define apodization window width
     M = max(wing_n, wing_p)
 
@@ -131,6 +136,18 @@ def apodize(ifg, zpd, apod_func):
         raise ValueError("Apodization function size mismatch: %s" % e)
 
     return ifg_apod
+
+def ramp(ifg, zpd):
+    wing_n, wing_p = wing_size(ifg, zpd)
+    # Use smaller wing to define symmetric subset size
+    M = min(wing_n, wing_p)
+    ramp = np.linspace(0, 1, 2 * M - 1)
+    if wing_n < wing_p:
+        ifg[..., :ramp.shape[0]] *= ramp
+    else:
+        ifg[..., -ramp.shape[0]:] *= ramp[::-1]
+
+    return ifg
 
 def _zero_fill_size(ifg_N, zff):
     # Calculate desired array size
@@ -215,6 +232,7 @@ class IRFFT():
             # Note that L is now the zpd index
             Ixs = ifg[self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = ramp(ifg, self.zpd)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
             Nzff = ifg.shape[0]
@@ -300,6 +318,7 @@ class MultiIRFFT(IRFFT):
             # Note that L is now the zpd index
             Ixs = ifg[:, self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = ramp(ifg, self.zpd)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[:, self.zpd:], ifg[:, 0:self.zpd]))
             Nzff = ifg.shape[1]
