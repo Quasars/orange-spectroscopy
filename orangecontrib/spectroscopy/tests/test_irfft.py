@@ -111,8 +111,8 @@ class TestIRFFT(unittest.TestCase):
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
-        # NB 4 mAbs error
-        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, atol=0.004)
+        # NB 0.4 mAbs max error
+        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, rtol=2.5e-04)
 
     def test_multi(self):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
@@ -148,8 +148,8 @@ class TestIRFFT(unittest.TestCase):
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
-        # NB 4 mAbs error
-        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)
+        # NB 0.4 mAbs max error
+        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, rtol=2.5e-04)
 
     def test_apodization(self):
         for apod_func in ApodFunc:
