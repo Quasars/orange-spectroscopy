@@ -7,8 +7,8 @@ from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
                                               find_zpd, PeakSearch, ApodFunc,
-                                              MultiIRFFT,
-                                             )
+                                              MultiIRFFT, apodize,
+                                              )
 
 dx = 1.0 / 15797.337544 / 2.0
 
@@ -32,8 +32,15 @@ class TestIRFFT(unittest.TestCase):
             # Final array should be >= N * zff
             assert N_zf >= N * zff
 
-    def test_simple_fft(self):
+    def test_simple_fft_even(self):
+        """Even array, symmetric ifg"""
         data = self.ifg_single.X[0]
+        fft = IRFFT(dx=dx)
+        fft(data)
+
+    def test_simple_fft_odd(self):
+        """Odd array, asymmetric ifg"""
+        data = self.ifg_seq_ref.X[0]
         fft = IRFFT(dx=dx)
         fft(data)
 
@@ -135,3 +142,20 @@ class TestIRFFT(unittest.TestCase):
         # Compare to agilent absorbance
         # NB 4 mAbs error
         np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)
+
+    def test_apodization(self):
+        ifgs = {
+            'even_sym': self.ifg_single.X[0],
+            'odd_sym': self.ifg_single.X[0][1:],
+            'even_asym': self.ifg_seq_ref.X[0][1:],
+            'odd_asym': self.ifg_seq_ref.X[0],
+            'even_asym_reverse': self.ifg_seq_ref.X[0][1:][::-1],
+            'odd_asym_reverse': self.ifg_seq_ref.X[0][::-1],
+        }
+        for apod_func in ApodFunc:
+            for k, ifg in ifgs.items():
+                with self.subTest(apod_func=apod_func.name, ifg=k):
+                    zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
+                    out = apodize(ifg, zpd, apod_func)
+                    # Apodization should not change value at zpd
+                    self.assertAlmostEqual(ifg[zpd], out[zpd])
