@@ -128,6 +128,13 @@
     "icon": "../orangecontrib/spectroscopy/widgets/icons/stackalign.svg",
     "background": "light-blue",
     "keywords": []
+   },
+   {
+    "text": "4+ Angle Polarisation",
+    "doc": "widgets/polar.md",
+    "icon": "../orangecontrib/spectroscopy/widgets/icons/unknown.svg",
+    "background": "light-blue",
+    "keywords": []
    }
   ]
  ]
