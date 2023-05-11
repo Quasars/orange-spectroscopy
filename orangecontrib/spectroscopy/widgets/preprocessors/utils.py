@@ -15,6 +15,7 @@ class BaseEditor(BaseEditor):
     name = "Unnamed"
     qualname = None
     icon = None
+    categories = [""]
 
     def set_preview_data(self, data):
         """Handle the preview data (initialize parameters).

@@ -14,6 +14,7 @@ class SpikeRemovalEditor(BaseEditorOrange):
     """
     name = "Spike Removal"
     qualname = "preprocessors.spikeremoval"
+    categories = ["Correction"]
 
     THRESHOLD = 7
     CUTOFF = 100

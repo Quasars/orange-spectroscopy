@@ -17,6 +17,7 @@ class AtmCorrEditor(BaseEditorOrange):
        Default ranges are two H2O regions (corrected) and one CO2 region (removed)
     """
     name = "Atmospheric gas (CO2/H2O) correction"
+    categories = ["Correction"]
     qualname = "preprocessors.atm_corr"
 
     RANGES = [[1300, 2100, 1], [2190, 2480, 2],
