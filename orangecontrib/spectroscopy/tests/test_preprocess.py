@@ -504,6 +504,15 @@ class TestCommon(unittest.TestCase):
             with self.subTest(proc):
                 _ = proc(data)
 
+    def test_one_attribute(self):
+        """ Preprocessors should not crash when samples have one attribute. """
+        data = SMALL_COLLAGEN
+        data = data.transform(Orange.data.Domain([data.domain.attributes[0]],
+                                                 class_vars=data.domain.class_vars,
+                                                 metas=data.domain.metas))
+        for proc in PREPROCESSORS:
+            _ = proc(data)
+
     def test_all_nans(self):
         """ Preprocessors should not crash when there are all-nan samples. """
         for proc in PREPROCESSORS:
