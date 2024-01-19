@@ -5,6 +5,7 @@ from Orange.data.io import CSVReader
 
 from orangecontrib.spectroscopy.util import getx
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 
 class AsciiColReader(FileFormat, SpectralFileFormat):
@@ -57,7 +58,7 @@ class AsciiMapReader(FileFormat):
             domain = Orange.data.Domain([ContinuousVariable.make("%f" % f) for f in dom_vals], None)
             tbl = np.loadtxt(f, ndmin=2)
             data = Table.from_numpy(domain, X=tbl[:, 2:])
-            metas = [ContinuousVariable.make('map_x'), ContinuousVariable.make('map_y')]
+            metas = [ContinuousVariable.make(MAP_X_VAR), ContinuousVariable.make(MAP_Y_VAR)]
             domain = Orange.data.Domain(domain.attributes, None, metas=metas)
             data = data.transform(domain)
             with data.unlocked(data.metas):
@@ -68,8 +69,8 @@ class AsciiMapReader(FileFormat):
     @staticmethod
     def write_file(filename, data):
         wavelengths = getx(data)
-        map_x = data.domain["map_x"] if "map_x" in data.domain else ContinuousVariable("map_x")
-        map_y = data.domain["map_y"] if "map_y" in data.domain else ContinuousVariable("map_y")
+        map_x = data.domain[MAP_X_VAR] if MAP_X_VAR in data.domain else ContinuousVariable(MAP_X_VAR)
+        map_y = data.domain[MAP_Y_VAR] if MAP_Y_VAR in data.domain else ContinuousVariable(MAP_Y_VAR)
         ndom = Domain([map_x, map_y] + list(data.domain.attributes))
         data = data.transform(ndom)
         with open(filename, "wb") as f:

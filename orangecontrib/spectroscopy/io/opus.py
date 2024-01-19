@@ -5,6 +5,8 @@ import Orange
 import numpy as np
 from Orange.data import FileFormat, ContinuousVariable, StringVariable, TimeVariable
 
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
+
 
 class OPUSReader(FileFormat):
     """Reader for OPUS files"""
@@ -56,8 +58,8 @@ class OPUSReader(FileFormat):
         if type(data) == opusFC.MultiRegionDataReturn:
             y_data = []
             meta_data = []
-            metas.extend([ContinuousVariable.make('map_x'),
-                          ContinuousVariable.make('map_y'),
+            metas.extend([ContinuousVariable.make(MAP_X_VAR),
+                          ContinuousVariable.make(MAP_Y_VAR),
                           StringVariable.make('map_region'),
                           TimeVariable.make('start_time')])
             for region in data.regions:
@@ -75,8 +77,8 @@ class OPUSReader(FileFormat):
         elif type(data) == opusFC.MultiRegionTRCDataReturn:
             y_data = []
             meta_data = []
-            metas.extend([ContinuousVariable.make('map_x'),
-                          ContinuousVariable.make('map_y'),
+            metas.extend([ContinuousVariable.make(MAP_X_VAR),
+                          ContinuousVariable.make(MAP_Y_VAR),
                           StringVariable.make('map_region')])
             attrs = [ContinuousVariable.make(repr(data.labels[i]))
                      for i in range(len(data.labels))]
@@ -91,8 +93,8 @@ class OPUSReader(FileFormat):
             meta_data = np.vstack(meta_data)
 
         elif type(data) == opusFC.ImageDataReturn:
-            metas.extend([ContinuousVariable.make('map_x'),
-                          ContinuousVariable.make('map_y')])
+            metas.extend([ContinuousVariable.make(MAP_X_VAR),
+                          ContinuousVariable.make(MAP_Y_VAR)])
 
             data_3D = data.spectra
 
@@ -107,8 +109,8 @@ class OPUSReader(FileFormat):
                     meta_data = np.vstack((meta_data, coord))
 
         elif type(data) == opusFC.ImageTRCDataReturn:
-            metas.extend([ContinuousVariable.make('map_x'),
-                          ContinuousVariable.make('map_y')])
+            metas.extend([ContinuousVariable.make(MAP_X_VAR),
+                          ContinuousVariable.make(MAP_Y_VAR)])
 
             attrs = [ContinuousVariable.make(repr(data.labels[i]))
                      for i in range(len(data.labels))]

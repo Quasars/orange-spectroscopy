@@ -2,6 +2,7 @@ import Orange
 import numpy as np
 from Orange.data import FileFormat, ContinuousVariable, Domain
 
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 from orangecontrib.spectroscopy.utils.agilent import agilentImage, agilentImageIFG, agilentMosaic, agilentMosaicIFG, \
     agilentMosaicTiles
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image, TileFileFormat
@@ -190,8 +191,8 @@ class agilentMosaicTileReader(FileFormat, TileFileFormat):
 
         attrs = [Orange.data.ContinuousVariable.make("%f" % f) for f in features]
         domain = Orange.data.Domain(attrs, None,
-                                    metas=[Orange.data.ContinuousVariable.make("map_x"),
-                                           Orange.data.ContinuousVariable.make("map_y")]
+                                    metas=[Orange.data.ContinuousVariable.make(MAP_X_VAR),
+                                           Orange.data.ContinuousVariable.make(MAP_Y_VAR)]
                                     )
 
         try:

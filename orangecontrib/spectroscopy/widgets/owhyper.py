@@ -37,7 +37,7 @@ from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem, Axi
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from orangecontrib.spectroscopy.preprocess import Integrate
-from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan, split_to_size
+from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan, split_to_size, XYDomainModel
 
 from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, \
     MenuFocus, CurvePlot, SELECTONE, SELECTMANY, INDIVIDUAL, AVERAGE, \
@@ -728,8 +728,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         box = gui.vBox(self)
         box.setContentsMargins(10, 0, 10, 0)
         box.setFocusPolicy(Qt.TabFocus)
-        self.xy_model = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                    valid_types=DomainModel.PRIMITIVE)
+        self.xy_model = XYDomainModel()
         self.cb_attr_x = gui.comboBox(
             box, self, "attr_x", label="Axis x:", callback=self.update_attr,
             model=self.xy_model, **common_options)

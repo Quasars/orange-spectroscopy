@@ -1,6 +1,8 @@
 import numpy as np
 from Orange.data import Domain, ContinuousVariable, Table
 
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
+
 
 class SpectralFileFormat:
 
@@ -27,8 +29,8 @@ def _metatable_maplocs(x_locs, y_locs):
     metas = np.vstack((x_locs, y_locs)).T
 
     domain = Domain([], None,
-                    metas=[ContinuousVariable.make("map_x"),
-                           ContinuousVariable.make("map_y")]
+                    metas=[ContinuousVariable.make(MAP_X_VAR),
+                           ContinuousVariable.make(MAP_Y_VAR)]
                     )
     data = Table.from_numpy(domain, X=np.zeros((len(metas), 0)),
                             metas=np.asarray(metas, dtype=object))
