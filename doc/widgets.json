@@ -100,15 +100,6 @@
     "keywords": []
    },
    {
-    "text": "PLS",
-    "doc": null,
-    "icon": "../orangecontrib/spectroscopy/widgets/icons/PLS.svg",
-    "background": "light-blue",
-    "keywords": [
-     "partial least squares"
-    ]
-   },
-   {
     "text": "Reshape Map",
     "doc": "widgets/reshape-map.md",
     "icon": "../orangecontrib/spectroscopy/widgets/icons/reshape.svg",

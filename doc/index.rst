@@ -33,7 +33,6 @@ Widgets
    widgets/average
    widgets/interferogram-to-spectrum
    widgets/reshape-map
-   widgets/pls
    widgets/peakfit
    widgets/snr
 
