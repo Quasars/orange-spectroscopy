@@ -1,5 +1,5 @@
 import numpy as np
-from Orange.data import Domain, ContinuousVariable, Table
+from Orange.data import Domain, ContinuousVariable, Table, DiscreteVariable
 
 
 class SpectralFileFormat:
@@ -74,13 +74,14 @@ def build_spec_table(domvals, data, additional_table=None):
     """
     data = np.atleast_2d(data)
     features = [ContinuousVariable.make("%f" % f) for f in domvals]
+    # features = DiscreteVariable(values=tuple(domvals), is_primitive() )
     if additional_table is None:
         domain = Domain(features, None)
         return Table.from_numpy(domain, X=data)
     else:
         domain = Domain(features,
                         class_vars=additional_table.domain.class_vars,
-                        metas=additional_table.domain.metas)
+                        metas=additional_table.domain.metas)                      
         ret_data = Table.from_numpy(domain, X=data, Y=additional_table.Y,
                                     metas=additional_table.metas,
                                     attributes=additional_table.attributes)

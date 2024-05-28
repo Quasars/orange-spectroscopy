@@ -16,7 +16,7 @@ from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import (
     PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering,
     Absorbance, Transmittance,
-    CurveShift, SpSubtract
+    CurveShift, SpSubtract, PhaseUnwrap, AmplitudeFactor, MovingAverage, ManualTilt
 )
 from orangecontrib.spectroscopy.preprocess.transform import SpecTypes
 from orangecontrib.spectroscopy.widgets.gui import lineEditFloatRange, MovableVline, \
@@ -455,6 +455,83 @@ class SpectralTransformEditor(BaseEditorOrange):
             self.reference_curve.setData(x=x[xsind], y=X_ref[xsind])
             self.reference_curve.show()
 
+class PhaseUnwrapInterface(BaseEditorOrange):
+    """
+    Phase Unwrap interface. Toggle phase unwrap to a phase signal.
+    """
+    name = "Phase Unwrap"
+    qualname = "orangecontrib.infrared.phaseunwrap"  
+
+    UNWRAP_DEFAULT = True
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        self.controlArea.setLayout(QVBoxLayout())
+
+        self.unwrap = self.UNWRAP_DEFAULT
+        gui.checkBox(self.controlArea, self, "unwrap", "Unwrap", callback=self.edited.emit)
+
+    def setParameters(self, params):
+        self.unwrap = params.get("unwrap", self.UNWRAP_DEFAULT)
+
+    @classmethod
+    def createinstance(cls, params):
+        params = dict(params)
+        unwrap = params.get("unwrap", cls.UNWRAP_DEFAULT)
+        return PhaseUnwrap(unwrap=unwrap)
+
+class AmplitudeFactorInterface(BaseEditorOrange):
+    """
+    Amplitude Factor interface. Multiplies the signal by a constant factor.
+    """
+    name = "Amplitude Factor"
+    qualname = "orangecontrib.infrared.amplitudefactor"
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        self.factor = 1
+
+        form = QFormLayout()
+        factor = lineEditFloatRange(self, self, "factor", callback=self.edited.emit)
+        form.addRow("Factor", factor)
+        self.controlArea.setLayout(form)
+
+    def setParameters(self, params):
+        self.factor = params.get("factor", 1)
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        factor = float(params.get("factor", 1))
+        return AmplitudeFactor(factor=factor)
+
+class MovingAverageInterface(BaseEditorOrange):
+    """
+    Moving Average interface. Applies a moving average to the signals using scypy.convolve.
+    """
+    name = "Moving Average"
+    qualname = "orangecontrib.infrared.movingaverage"
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        self.kernelsize = 1
+
+        form = QFormLayout()
+        kernelsize = lineEditFloatRange(self, self, "kernelsize", callback=self.edited.emit)
+        form.addRow("Kernel Size", kernelsize)
+        self.controlArea.setLayout(form)
+
+    def setParameters(self, params):
+        self.kernelsize = params.get("kernelsize", 1)
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        inst_kernelsize = int(params.get("kernelsize", 1)) # todo assert int value
+        return MovingAverage(kernelsize=inst_kernelsize)
 
 
 preprocess_editors.register(CutEditor, 25)
@@ -464,3 +541,6 @@ preprocess_editors.register(PCADenoisingEditor, 200)
 preprocess_editors.register(SpectralTransformEditor, 225)
 preprocess_editors.register(CurveShiftEditor, 250)
 preprocess_editors.register(SpSubtractEditor, 275)
+preprocess_editors.register(PhaseUnwrapInterface, 1000)
+preprocess_editors.register(AmplitudeFactorInterface, 1025)
+preprocess_editors.register(MovingAverageInterface, 1050)

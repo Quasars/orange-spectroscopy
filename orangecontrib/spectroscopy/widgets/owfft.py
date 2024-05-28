@@ -69,6 +69,8 @@ class OWFFT(OWWidget):
     out_limit1 = settings.Setting(400)
     out_limit2 = settings.Setting(4000)
     autocommit = settings.Setting(False)
+    rescale_wavenumber = settings.Setting(False)
+    wavenumber_scaling_factor = settings.Setting(1.0)
 
     sweep_opts = ("Single",
                   "Forward-Backward",
@@ -110,6 +112,8 @@ class OWFFT(OWWidget):
         self.reader = None
         if self.dx_HeNe is True:
             self.dx = 1.0 / self.laser_wavenumber / 2.0
+        self.rescale_wavenumber = False
+        self.wavenumber_scaling_factor = 1.0
 
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -271,11 +275,26 @@ class OWFFT(OWWidget):
             )
         lb2 = gui.widgetLabel(self.outputBox, "-")
         lb3 = gui.widgetLabel(self.outputBox, "cm<sup>-1</sup>")
+        cb3 = gui.checkBox(
+            self.outputBox, self, "rescale_wavenumber",
+            label="Rescale wavenumbers:",
+            callback=self.rescale_wavenumber_changed,
+            )
+        lb4 = gui.widgetLabel(self.outputBox, "factor")
+        le4 = gui.lineEdit(
+            self.outputBox, self, "wavenumber_scaling_factor",
+            callback=self.setting_changed,
+            valueType=float,
+            disabled=not(self.rescale_wavenumber),
+            )
         grid.addWidget(cb2, 0, 0, 1, 6)
         grid.addWidget(le2, 1, 1)
         grid.addWidget(lb2, 1, 2)
         grid.addWidget(le3, 1, 3)
         grid.addWidget(lb3, 1, 4)
+        grid.addWidget(cb3, 2, 0)
+        grid.addWidget(lb4, 2, 1)
+        grid.addWidget(le4, 2, 2, 1, 2)
         self.outputBox.layout().addLayout(grid)
 
         gui.auto_commit(self.outputBox, self, "autocommit", "Calculate", box=False)
@@ -283,6 +302,7 @@ class OWFFT(OWWidget):
         # Disable the controls initially (no data)
         self.dataBox.setDisabled(True)
         self.optionsBox.setDisabled(True)
+        self.outputBox.setDisabled(True)
 
     @Inputs.data
     def set_data(self, dataset):
@@ -299,11 +319,13 @@ class OWFFT(OWWidget):
             self.check_metadata()
             self.dataBox.setDisabled(False)
             self.optionsBox.setDisabled(False)
+            self.outputBox.setDisabled(False)
         else:
             self.data = None
             self.spectra_table = None
             self.dataBox.setDisabled(True)
             self.optionsBox.setDisabled(True)
+            self.outputBox.setDisabled(True)
             self.infoa.setText("No data on input.")
             self.infob.setText("")
             self.Outputs.spectra.send(self.spectra_table)
@@ -342,6 +364,10 @@ class OWFFT(OWWidget):
         self.dx_edit.setDisabled(self.dx_HeNe)
         if self.dx_HeNe is True:
             self.dx = 1.0 / self.laser_wavenumber / 2.0
+        self.commit.deferred()
+
+    def rescale_wavenumber_changed(self):
+        self.controls.wavenumber_scaling_factor.setDisabled(not self.rescale_wavenumber)
         self.commit.deferred()
 
     def peak_search_changed(self):
@@ -434,10 +460,14 @@ class OWFFT(OWWidget):
 
             if self.limit_output is True:
                 wavenumbers, spectra = self.limit_range(wavenumbers, spectra)
+            # scale wavenumbers
+            if self.rescale_wavenumber:
+                wavenumbers = wavenumbers * self.wavenumber_scaling_factor
             self.spectra_table = build_spec_table(wavenumbers, spectra,
                                                   additional_table=self.data)
             self.Outputs.spectra.send(self.spectra_table)
             return
+
             
         for row in ifg_data:
             if self.sweeps in [2, 3]:
@@ -571,7 +601,7 @@ class OWFFT(OWWidget):
         if self.reader == 'NeaReaderGSF': # TODO Avoid the magic word
             self.dx_HeNe = False
             self.dx_HeNe_cb.setDisabled(True)
-            self.dx_edit.setDisabled(True)
+            self.dx_edit.setDisabled(False)
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
             self.controls.peak_search.setEnabled(True)
@@ -580,18 +610,35 @@ class OWFFT(OWWidget):
             self.controls.phase_corr.setDisabled(True)
             self.controls.phase_res_limit.setDisabled(True)
             self.controls.phase_resolution.setDisabled(True)
+            self.controls.wavenumber_scaling_factor.setDisabled(False)
+            self.controls.rescale_wavenumber.setDisabled(False)
 
             info = self.data.attributes
+            try:
+                self.wavenumber_scaling_factor = float(info['Wavenumber Scaling'])
+                self.rescale_wavenumber = True # Enable rescale wavenumber
+            except KeyError:
+                self.wavenumber_scaling_factor = 1.0            
             number_of_points = int(info['Pixel Area (X, Y, Z)'][3])
             scan_size = float(info['Interferometer Center/Distance'][2].replace(',', '')) #Microns
             scan_size = scan_size*1e-4 #Convert to cm
             step_size = (scan_size * 2) / (number_of_points - 1)
 
+            step_size_text = "Datapoint spacing (Δx) calculated from data attributes\n" \
+                "on Pixel Area and Interferometer Center/Distance.\n" 
+
+            if 'Wavenumber Scaling' in info:
+                wavenumber_scaling_factor = float(info['Wavenumber Scaling'])
+                # rescaling dx based on the provided frequency space scaling factor
+                step_size = step_size * (1/wavenumber_scaling_factor)
+                step_size_text += f"Wavenumber Scaling Factor:\t{wavenumber_scaling_factor:.8}\n"
+
             self.dx = step_size
             self.zff = 2 #Because is power of 2
 
-            self.infoc.setText(f"Using an automatic datapoint spacing (Δx).\nΔx:\t{self.dx:.8} cm\nApplying Complex Fourier Transform.")
+            self.infoc.setText(step_size_text+f"Calculated datapoint spacing (Δx).\nΔx:\t{self.dx:.8} cm\nApplying Complex Fourier Transform.")
             return
+        
 
         try:
             lwn = self.data.get_column("Effective Laser Wavenumber")

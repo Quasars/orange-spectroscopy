@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.qhull import ConvexHull, QhullError
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, convolve
 from sklearn.preprocessing import normalize as sknormalize
 
 from extranormal3 import normal_xas, extra_exafs
@@ -878,3 +878,173 @@ class SpSubtract(Preprocess):
                                     data.domain.metas)
         return data.from_table(domain, data)
 
+
+class _PhaseUnwrapCommon(CommonDomain):
+
+    def __init__(self, unwrap, domain):
+        super().__init__(domain)
+        self.unwrap = unwrap
+
+    def transformed(self, data):
+        return np.unwrap(data.X)
+
+
+class PhaseUnwrap(Preprocess):
+    """
+    Unwrap phase values using numpy.unwrap defaults or bypass the data.
+
+    Parameters
+    ----------
+    unwrap    : toggle unwrap/bypass (boolean)
+    """
+
+    def __init__(self, unwrap=True):
+        self.unwrap = unwrap
+
+    def __call__(self, data):
+        if self.unwrap:
+            common = _PhaseUnwrapCommon(self.unwrap, data.domain)
+            atts = [a.copy(compute_value=SelectColumn(i, common))
+                    for i, a in enumerate(data.domain.attributes)]
+            domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                        data.domain.metas)
+            return data.from_table(domain, data)
+        else: 
+            return data
+
+class _AmplitudeFactorCommon(CommonDomain):
+
+    def __init__(self, factor, domain):
+        super().__init__(domain)
+        self.factor = factor
+
+    def transformed(self, data):
+        return data.X * self.factor
+
+
+class AmplitudeFactor(Preprocess):
+    """
+    Amplitude Factor interface. Multiplies the signal by a constant factor.
+
+    Parameters
+    ----------
+    factor    : Constant factor that multiplies the signal. (float)
+    """
+
+    def __init__(self, factor=1):
+        self.factor = factor
+
+    def __call__(self, data):
+        common = _AmplitudeFactorCommon(self.factor, data.domain)
+        atts = [a.copy(compute_value=SelectColumn(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+class _MovingAverageCommon(CommonDomain):
+    def __init__(self, kernelsize, domain):
+        super().__init__(domain)
+        self.kernelsize = kernelsize
+
+    def transformed(self, data):
+        kernel = (1/self.kernelsize) * np.ones(self.kernelsize)
+        conv = lambda x: convolve(x, kernel, mode='same', method='auto')
+        return np.apply_along_axis(conv, 1, data.X)
+
+
+class MovingAverage(Preprocess):
+    """
+    Applies a moving average to the signals using scypy.convolve.
+
+    Parameters
+    ----------
+    kernelsize : Size of the averaging window in the 1d signal
+    """
+
+    def __init__(self, kernelsize=1):
+        self.kernelsize = kernelsize
+
+    def __call__(self, data):
+        common = _MovingAverageCommon(self.kernelsize, data.domain)
+        atts = [a.copy(compute_value=SelectColumn(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+# TODO remove this from preprocessors
+class _ManualTiltCommon(CommonDomain):
+
+    def __init__(self, highlim, lowlim, domain):
+        super().__init__(domain)
+        self.highlim = highlim
+        self.lowlim = lowlim
+
+    def transformed(self, data):
+        xax = getx(data)
+        sloperad = (self.highlim - self.lowlim) / (xax[-1] - xax[0]) 
+        # creating a line that passes through y = 0 and slope = self.ammount 
+        inclined_curve = (xax - xax[0]) * np.tan(sloperad) # (not ideal) should calcullate slope in the frontend so user can see it as the line moves and then pass it as argument np.tan(np.deg2rad(self.ammount))
+        return data.X - inclined_curve
+
+
+class ManualTilt(Preprocess): # changeThis so it receives x data and returns also the angle to be displayed?
+    """
+    Amplitude Factor interface. Multiplies the signal by a constant factor.
+
+    Parameters
+    ----------
+    factor    : Constant factor that multiplies the signal. (float)
+    """
+
+    def __init__(self, highlim, lowlim=0.):
+        self.highlim = highlim
+        self.lowlim = lowlim
+
+    def __call__(self, data):
+        common = _ManualTiltCommon(self.highlim, self.lowlim, data.domain)
+        atts = [a.copy(compute_value=SelectColumn(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+            
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+    
+
+class _DegTiltCommon(CommonDomain):
+
+    def __init__(self, slope, shift, domain):
+        super().__init__(domain)
+        self.slope = slope
+        self.shift = shift
+
+    def transformed(self, data):
+        xax = getx(data)
+        # creating a line that passes through the origin and has slope = self.slope 
+        inclined_line = (xax - xax[0]) * np.tan(np.radians(self.slope)) 
+        return data.X - inclined_line + self.shift
+
+
+class DegTilt(Preprocess): 
+    """
+    Tilt the spectra by a inclined line crossing the origin and sope defined by the user in degrees.
+    The tilt operation is basically a subtraction of the signal by the values of the line on each point of the domain.
+
+    Parameters
+    ----------
+    slope  (float)   : Slope of the line that crosses the origin and is used to tilt (subctract the signal by the values of the line). 
+    """
+
+    def __init__(self, slope=0., shift=0.):
+        self.slope = slope
+        self.shift = shift
+
+    def __call__(self, data):
+        common = _DegTiltCommon(self.slope, self.shift, data.domain)
+        atts = [a.copy(compute_value=SelectColumn(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+            
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)

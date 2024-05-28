@@ -21,7 +21,7 @@ from orangecontrib.spectroscopy.io.gsf import GSFReader
 from orangecontrib.spectroscopy.io.matlab import MatlabReader
 from orangecontrib.spectroscopy.io.maxiv import HDRReader_STXM
 from orangecontrib.spectroscopy.io.meta import DatMetaReader, HDRMetaReader
-from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF
+from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannelTXT
 from orangecontrib.spectroscopy.io.omnic import OmnicMapReader, SPCReader, SPAReader
 from orangecontrib.spectroscopy.io.opus import OPUSReader
 from orangecontrib.spectroscopy.io.ptir import PTIRFileReader

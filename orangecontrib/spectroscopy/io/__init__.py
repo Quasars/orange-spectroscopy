@@ -12,7 +12,7 @@ from .matlab import MatlabReader
 # Instrument-specific readers
 from .agilent import AgilentImageReader, AgilentImageIFGReader, agilentMosaicReader,\
     agilentMosaicIFGReader, agilentMosaicTileReader
-from .neaspec import NeaReader, NeaReaderGSF
+from .neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannelTXT
 from .omnic import OmnicMapReader, SPAReader, SPCReader
 from .opus import OPUSReader
 from .ptir import PTIRFileReader

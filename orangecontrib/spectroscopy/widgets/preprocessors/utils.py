@@ -29,7 +29,7 @@ class BaseEditor(BaseEditor):
         pass
 
 
-class BaseEditorOrange(BaseEditor, OWComponent, WidgetMessagesMixin):
+class BaseEditorOrange(BaseEditor, OWComponent, WidgetMessagesMixin): # and here?
     """
     Base widget for editing preprocessor's parameters that works with Orange settings.
     """

@@ -10,7 +10,7 @@ from Orange.data.io import FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
-from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF
+from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannelTXT
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
 from orangecontrib.spectroscopy.io import SPAReader
@@ -415,6 +415,67 @@ class TestNeaGSF(unittest.TestCase):
         self.assertEqual(n_ifg, len(data.domain.attributes))
         check_attributes(data)
 
+class TestNeaMultichannelTXT(unittest.TestCase):
+    def test_read(self):
+        fn = 'NeaReaderMultichannelTXT/NFS_Interferograms_TEST.txt'
+        absolute_filename = FileFormat.locate(fn, dataset_dirs)
+        data = NeaReaderMultiChannelTXT(absolute_filename).read()
+        self.assertEqual(len(data), 144)
+        # pies hidden in the source file
+        hidden_pies = [
+            {'row': 0, 'column': 0, 'run': 0, 'depth': 0, 'channel': 'O0A'},
+            {'row': 0, 'column': 1, 'run': 1, 'depth': 0, 'channel': 'O1A'},
+            {'row': 1, 'column': 0, 'run': 1, 'depth': 2, 'channel': 'O1P'},
+            {'row': 0, 'column': 1, 'run': 0, 'depth': 0, 'channel': 'O3A'},
+            {'row': 0, 'column': 1, 'run': 1, 'depth': 0, 'channel': 'O3P'},
+            {'row': 1, 'column': 1, 'run': 0, 'depth': 0, 'channel': 'O4P'},
+            {'row': 1, 'column': 1, 'run': 2, 'depth': 1, 'channel': 'O5P'}
+            ]
+
+        _, x, y, z = data.attributes['Pixel Area (X, Y, Z)']
+        self.assertEqual(x, 2)
+        self.assertEqual(y, 2)
+        self.assertEqual(z, 3)
+        averaging = data.attributes["Averaging"]
+        self.assertEqual(averaging, 3)
+        data_channels = data.attributes["Data Channels"]
+        self.assertEqual(len(data_channels), 6)
+
+        max_idx = {
+            'row': int(x),
+            'column': int(y),
+            'depth': int(z),
+            'run': int(averaging),
+            'channel': len(data_channels)
+        }
+            
+        def data_idx_to_table_row_col(column, row, depth, run, channel):
+            channel_idx = data_channels.index(channel)
+            tables_row_idx = channel_idx + run * max_idx["channel"] + row * max_idx["run"] * max_idx["channel"] + column * max_idx["row"] * max_idx["run"] * max_idx["channel"]
+            return tables_row_idx, depth
+
+        def find_hidden_pie(column, row, depth, run, channel):
+            # swap row and column because NeaReaderMultiChannelTXT swaps them
+            pie = {'row': column, 'column': row, 'run': run, 'depth': depth, 'channel': channel}
+            table_row, table_col = data_idx_to_table_row_col(
+                column=pie["column"],
+                row=pie["row"],
+                depth=pie["depth"],
+                run=pie["run"],
+                channel=pie["channel"],
+            )
+            metas = data.metas[table_row][:3]
+            self.assertEqual(metas[0], pie["column"])
+            self.assertEqual(metas[1], pie["row"])
+            self.assertEqual(metas[2], pie["run"])
+            pie_val = data.X[table_row, table_col]
+
+            self.assertEqual(pie_val, 3.1415926, f"pie not found ({pie_val} != 3.1415926) for row: {row} col: {column} run: {run} channel: {channel} depth: {depth}")
+
+        for pie in hidden_pies:
+            find_hidden_pie(pie["column"], pie["row"], pie["depth"], pie["run"], pie["channel"])
+
+        check_attributes(data)
 
 class TestEnvi(unittest.TestCase):
 
