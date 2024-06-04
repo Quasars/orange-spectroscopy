@@ -11,7 +11,7 @@ from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import Absorbance, Transmittance, \
     Integrate, Interpolate, Cut, SavitzkyGolayFiltering, \
     GaussianSmoothing, PCADenoising, RubberbandBaseline, \
-    Normalize, LinearBaseline, CurveShift, EMSC, MissingReferenceException, \
+    Normalize, LinearBaseline, LinearTransform, EMSC, MissingReferenceException, \
     WrongReferenceException, NormalizeReference, XASnormalization, ExtractEXAFS, \
     PreprocessException, NormalizePhaseReference, Despike, SpSubtract
 from orangecontrib.spectroscopy.preprocess.als import ALSP, ARPLS, AIRPLS
@@ -58,7 +58,7 @@ PREPROCESSORS_INDEPENDENT_SAMPLES = [
     Normalize(method=Normalize.Vector),
     Normalize(method=Normalize.Area, int_method=Integrate.PeakMax, lower=0, upper=10000),
     Normalize(method=Normalize.MinMax),
-    CurveShift(1),
+    LinearTransform(1, 2),
     Despike(threshold=5, cutoff=60, dis=5),
     ALSP(lam=100E+6, itermax=5, p=0.5),
     ARPLS(lam=100E+5, itermax=5, ratio=0.5),
@@ -588,14 +588,14 @@ class TestPCADenoising(unittest.TestCase):
                                         [4.75015528, 3.15366444, 1.46254138, 0.23693223]])
 
 
-class TestCurveShift(unittest.TestCase):
+class TestLinearTransform(unittest.TestCase):
 
     def test_simple(self):
         data = Table.from_numpy(None, [[1.0, 2.0, 3.0, 4.0]])
-        f = CurveShift(amount=1.1)
+        f = LinearTransform(amount=1.1, scale=2.)
         fdata = f(data)
         np.testing.assert_almost_equal(fdata.X,
-                                       [[2.1, 3.1, 4.1, 5.1]])
+                                       [[3.1, 5.1, 7.1, 9.1]])
 
 
 class TestUtils(unittest.TestCase):

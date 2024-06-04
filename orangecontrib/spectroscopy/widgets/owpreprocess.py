@@ -961,6 +961,9 @@ class OWPreprocess(SpectralPreprocessReference):
         if name == "orangecontrib.infrared.cutinverse":
             name = "orangecontrib.spectroscopy.cut"
             settings["inverse"] = True
+        if name == "orangecontrib.infrared.curveshift":
+            name = "orangecontrib.spectroscopy.lineartransform"
+            settings["scale"] = 1.
         return [((name, settings), version)]
 
     @classmethod

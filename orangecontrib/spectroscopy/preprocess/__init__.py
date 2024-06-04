@@ -730,28 +730,40 @@ class ExtractEXAFS(Preprocess):
         return data.transform(domain)
 
 
-class CurveShiftFeature(SelectColumn):
+class LinearTransformFeature(SelectColumn):
     InheritEq = True
 
 
-class _CurveShiftCommon(CommonDomain):
+class _LinearTransformCommon(CommonDomain):
 
-    def __init__(self, amount, domain):
+    def __init__(self, amount, scale, domain):
         super().__init__(domain)
         self.amount = amount
+        self.scale = scale
+
 
     def transformed(self, data):
-        return data.X + self.amount
+        return self.scale * data.X + self.amount
 
 
-class CurveShift(Preprocess):
+class LinearTransform(Preprocess):
+    """
+    Linear transformation of the data into the form:
+    y = scale * x + amount
 
-    def __init__(self, amount=0.):
+    Parameters
+    ----------
+    amount : float
+    scale  : float
+    """
+
+    def __init__(self, amount=0., scale=1.):
         self.amount = amount
+        self.scale = scale
 
     def __call__(self, data):
-        common = _CurveShiftCommon(self.amount, data.domain)
-        atts = [a.copy(compute_value=CurveShiftFeature(i, common))
+        common = _LinearTransformCommon(self.amount, self.scale, data.domain)
+        atts = [a.copy(compute_value=LinearTransformFeature(i, common))
                 for i, a in enumerate(data.domain.attributes)]
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
