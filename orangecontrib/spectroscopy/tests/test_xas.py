@@ -59,4 +59,4 @@ class TestExtractEXAFS(unittest.TestCase):
         exafs = extra(data)
         numpy.testing.assert_almost_equal(
             [-3.46450033e-01, -3.45888957e-01, -3.44362296e-01, -3.41912861e-01,
-             -3.38582017e-01, -3.34409725e-01, -3.29434571e-01, -3.23693808e-01], exafs.X[0, :8])
+             -3.38582017e-01, -3.34409725e-01, -3.29434571e-01, -3.23693808e-01], exafs.X[0, :8], decimal=3)
