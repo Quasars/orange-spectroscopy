@@ -5,6 +5,28 @@ import Orange
 import numpy as np
 from Orange.data import FileFormat, ContinuousVariable, StringVariable, TimeVariable
 
+from .util import VisibleImage
+
+
+class OpusVisibleImage(VisibleImage):
+    """
+    Visible image is only opened and read when needed. This avoids
+    making image copies at table transformations.
+    """
+
+    def __init__(self, name, pos_x, pos_y, size_x, size_y, filename, index):
+        super().__init__(name, pos_x, pos_y, size_x, size_y)
+        self.filename = filename
+        self.index = index
+
+    @property
+    def image(self):
+        import opusFC
+        from PIL import Image
+        opus_img = opusFC.getVisImages(self.filename)[self.index]
+        imgio = io.BytesIO(opus_img['image'])
+        return Image.open(imgio).convert('RGBA')
+
 
 class OPUSReader(FileFormat):
     """Reader for OPUS files"""
@@ -173,17 +195,20 @@ class OPUSReader(FileFormat):
         except Exception as e:
             warnings.warn(f"Visible images load failed: {e}")
         else:
-            for img in opus_imgs:
+            for index, img in enumerate(opus_imgs):
                 try:
-                    visible_images.append({
-                        'name': img['Title'],
-                        'image_ref': io.BytesIO(img['image']),
-                        'pos_x': img['Pos. X'] * img['PixelSizeX'],
-                        'pos_y': img['Pos. Y'] * img['PixelSizeY'],
-                        'pixel_size_x': img['PixelSizeX'],
-                        'pixel_size_y': img['PixelSizeY'],
-                    })
-                except KeyError:
+                    from PIL import Image
+                    width, height = Image.open(io.BytesIO(img['image'])).size
+                    vimage = OpusVisibleImage(name=img["Title"],
+                                              pos_x=img['Pos. X'] * img['PixelSizeX'],
+                                              pos_y=img['Pos. Y'] * img['PixelSizeY'],
+                                              size_x=width * img['PixelSizeX'],
+                                              size_y=height * img['PixelSizeY'],
+                                              filename=self.filename,
+                                              index=index
+                                             )
+                    visible_images.append(vimage)
+                except (KeyError, OSError):
                     pass
 
         domain = Orange.data.Domain(attrs, clses, metas)

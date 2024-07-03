@@ -1,7 +1,5 @@
 import unittest
 from unittest.mock import patch
-from io import BytesIO
-from PIL import Image
 
 import numpy as np
 import Orange
@@ -11,6 +9,7 @@ from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
 from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF
+from orangecontrib.spectroscopy.io.opus import OpusVisibleImage
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
 from orangecontrib.spectroscopy.io import SPAReader
@@ -122,21 +121,18 @@ class TestOpusReader(unittest.TestCase):
         self.assertEqual(len(d.attributes["visible_images"]), 1)
 
         img_info = d.attributes["visible_images"][0]
-        # decompress bytes only in widgets to reduce memory footprint
-        self.assertEqual(type(img_info["image_ref"].getvalue()), bytes)
-        self.assertEqual(img_info["name"], "Image 01")
-        self.assertAlmostEqual(img_info["pixel_size_x"], 0.90088498)
-        self.assertAlmostEqual(img_info["pixel_size_y"], 0.89284902)
-        self.assertAlmostEqual(img_info["pos_x"],
-                               43552.0 * img_info["pixel_size_x"])
-        self.assertAlmostEqual(img_info["pos_y"],
-                               20727.0 * img_info["pixel_size_y"])
+        self.assertIsInstance(img_info, OpusVisibleImage)
+        self.assertEqual(img_info.name, "Image 01")
+        self.assertAlmostEqual(img_info.pos_x,
+                               43552.0 * 0.9008849859237671)
+        self.assertAlmostEqual(img_info.pos_y,
+                               20727.0 * 0.8928490281105042)
+        self.assertAlmostEqual(img_info.size_x, 600, places=0)
+        self.assertAlmostEqual(img_info.size_y, 480, places=0)
 
         # test image
-        with img_info["image_ref"] as f:
-            img = Image.open(f)
-            img = np.array(img)
-            self.assertEqual(img.shape, (538, 666, 3))
+        img = np.array(img_info.image)
+        self.assertEqual(img.shape, (538, 666, 4))
 
 
 class TestHermesHDF5Reader(unittest.TestCase):
