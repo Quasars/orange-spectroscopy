@@ -109,3 +109,17 @@ class TileFileFormat:
         if append_tables:
             ret_table = Table.concatenate([ret_table] + append_tables)
         return ret_table
+
+
+class VisibleImage:
+
+    def __init__(self, name, pos_x, pos_y, size_x, size_y):
+        self.name = name
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.size_x = size_x
+        self.size_y = size_y
+
+    @property
+    def image(self):
+        raise NotImplementedError
