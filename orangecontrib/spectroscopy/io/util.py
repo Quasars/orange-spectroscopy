@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 from Orange.data import Domain, ContinuousVariable, Table
 
@@ -109,3 +111,44 @@ class TileFileFormat:
         if append_tables:
             ret_table = Table.concatenate([ret_table] + append_tables)
         return ret_table
+
+
+class VisibleImage:
+
+    def __init__(self, name, pos_x, pos_y, size_x, size_y):
+        self.name = name
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.size_x = size_x
+        self.size_y = size_y
+
+    @property
+    def image(self):
+        raise NotImplementedError
+
+
+class ConstantBytesVisibleImage(VisibleImage):
+    """
+    Visible image is saved in _image_bytes, which is not copied at deepcopy.
+    This prevents memory use when tables are deep-copied.
+    """
+
+    def __init__(self, name, pos_x, pos_y, size_x, size_y, image_bytes):
+        super().__init__(name, pos_x, pos_y, size_x, size_y)
+        self._image_bytes = image_bytes
+
+    @property
+    def image(self):
+        from PIL import Image
+        return Image.open(self._image_bytes)
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for k, v in self.__dict__.items():
+            if k == "_image_bytes":
+                setattr(obj, k, v)
+            else:
+                setattr(obj, k, deepcopy(v, memo))
+        return obj

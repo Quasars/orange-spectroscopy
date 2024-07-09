@@ -18,8 +18,10 @@ from AnyQt.QtTest import QSignalSpy
 import Orange
 from Orange.data import DiscreteVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest
+from Orange.util import OrangeDeprecationWarning
 
 from orangecontrib.spectroscopy.data import _spectra_from_image, build_spec_table
+from orangecontrib.spectroscopy.io.util import VisibleImage
 from orangecontrib.spectroscopy.preprocess.integrate import IntegrateFeaturePeakSimple, Integrate
 from orangecontrib.spectroscopy.widgets import owhyper
 from orangecontrib.spectroscopy.widgets.owhyper import \
@@ -497,10 +499,23 @@ class TestOWHyperWithDask(TestOWHyper):
                             for d in cls.strange_data]
 
 
+class _VisibleImageStream(VisibleImage):
+    """ Do not use this class in practice because too many things
+    will get copied when transforming tables."""
+
+    def __init__(self, name, pos_x, pos_y, size_x, size_y, stream):
+        super().__init__(name, pos_x, pos_y, size_x, size_y)
+        self.stream = stream
+
+    @property
+    def image(self):
+        return Image.open(self.stream)
+
+
 class TestVisibleImage(WidgetTest):
 
     @classmethod
-    def mock_visible_image_data(cls):
+    def mock_visible_image_data_oldformat(cls):
         red_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAAA"
                                        "oAAAAKCAYAAACNMs+9AAAAFUlE"
                                        "QVR42mP8z8AARIQB46hC+ioEAG"
@@ -538,6 +553,23 @@ class TestVisibleImage(WidgetTest):
         ]
 
     @classmethod
+    def mock_visible_image_data(cls):
+        red_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAAA"
+                                       "oAAAAKCAYAAACNMs+9AAAAFUlE"
+                                       "QVR42mP8z8AARIQB46hC+ioEAG"
+                                       "X8E/cKr6qsAAAAAElFTkSuQmCC"))
+        black_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAA"
+                                         "AoAAAAKCAQAAAAnOwc2AAAAEU"
+                                         "lEQVR42mNk+M+AARiHsiAAcCI"
+                                         "KAYwFoQ8AAAAASUVORK5CYII="))
+
+        return [
+            _VisibleImageStream("Image 01", 100, 100, 17., 23., red_img),
+            _VisibleImageStream("Image 02", 0.5, 0.5, 10, 3, black_img),
+            _VisibleImageStream("Image 03", 100, 100, 17., 23., red_img),
+        ]
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.data_with_visible_images = Orange.data.Table(
@@ -550,11 +582,10 @@ class TestVisibleImage(WidgetTest):
         self.widget = self.create_widget(OWHyper)  # type: OWHyper
 
     def assert_same_visible_image(self, img_info, vis_img, mock_rect):
-        img = Image.open(img_info["image_ref"]).convert('RGBA')
+        img = img_info.image.convert('RGBA')
         img = np.array(img)[::-1]
-        rect = QRectF(img_info['pos_x'], img_info['pos_y'],
-                      img.shape[1] * img_info['pixel_size_x'],
-                      img.shape[0] * img_info['pixel_size_y'])
+        rect = QRectF(img_info.pos_x, img_info.pos_y,
+                      img_info.size_x, img_info.size_y)
         self.assertTrue((vis_img.image == img).all())
         mock_rect.assert_called_with(rect)
 
@@ -700,3 +731,23 @@ class TestVisibleImage(WidgetTest):
             self.assert_same_visible_image(data.attributes["visible_images"][0],
                                            w.imageplot.vis_img,
                                            mock_rect)
+
+    def test_oldformat(self):
+        data = Orange.data.Table(
+            "agilent/4_noimage_agg256.dat"
+        )
+        data.attributes["visible_images"] = \
+            self.mock_visible_image_data_oldformat()
+        w = self.widget
+
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.send_signal("Data", data)
+
+        wait_for_image(w)
+
+        self.assertNotIn(w.imageplot.vis_img, w.imageplot.plot.items)
+
+        w.controls.show_visible_image.setChecked(True)
+        self.assertIn(w.imageplot.vis_img, w.imageplot.plot.items)
+        w.controls.show_visible_image.setChecked(False)
+        self.assertNotIn(w.imageplot.vis_img, w.imageplot.plot.items)

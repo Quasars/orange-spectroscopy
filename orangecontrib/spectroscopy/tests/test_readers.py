@@ -1,7 +1,6 @@
+from importlib import resources
 import unittest
 from unittest.mock import patch
-from io import BytesIO
-from PIL import Image
 
 import numpy as np
 import Orange
@@ -11,6 +10,7 @@ from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
 from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF
+from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
 from orangecontrib.spectroscopy.io import SPAReader
@@ -122,21 +122,18 @@ class TestOpusReader(unittest.TestCase):
         self.assertEqual(len(d.attributes["visible_images"]), 1)
 
         img_info = d.attributes["visible_images"][0]
-        # decompress bytes only in widgets to reduce memory footprint
-        self.assertEqual(type(img_info["image_ref"].getvalue()), bytes)
-        self.assertEqual(img_info["name"], "Image 01")
-        self.assertAlmostEqual(img_info["pixel_size_x"], 0.90088498)
-        self.assertAlmostEqual(img_info["pixel_size_y"], 0.89284902)
-        self.assertAlmostEqual(img_info["pos_x"],
-                               43552.0 * img_info["pixel_size_x"])
-        self.assertAlmostEqual(img_info["pos_y"],
-                               20727.0 * img_info["pixel_size_y"])
+        self.assertIsInstance(img_info, ConstantBytesVisibleImage)
+        self.assertEqual(img_info.name, "Image 01")
+        self.assertAlmostEqual(img_info.pos_x,
+                               43552.0 * 0.9008849859237671)
+        self.assertAlmostEqual(img_info.pos_y,
+                               20727.0 * 0.8928490281105042)
+        self.assertAlmostEqual(img_info.size_x, 600, places=0)
+        self.assertAlmostEqual(img_info.size_y, 480, places=0)
 
         # test image
-        with img_info["image_ref"] as f:
-            img = Image.open(f)
-            img = np.array(img)
-            self.assertEqual(img.shape, (538, 666, 3))
+        img = np.array(img_info.image)
+        self.assertEqual(img.shape, (538, 666, 3))
 
 
 class TestHermesHDF5Reader(unittest.TestCase):
@@ -261,6 +258,37 @@ class TestAgilentReader(unittest.TestCase):
         self.assertAlmostEqual(d[2][2], 1.14063489)
         self.assertEqual(min(getx(d)), 1990.178226)
         self.assertEqual(max(getx(d)), 2113.600132)
+
+    def test_no_visible_image_read(self):
+        # Test file in this repo has no visible image
+        d = Orange.data.Table("agilent/5_mosaic_agg1024.dmt")
+
+        # visible_images is not a permanent key
+        self.assertNotIn("visible_images", d.attributes)
+
+    @unittest.skipIf(not hasattr(resources, "files"),
+                     "importlib.resources.files requires python>=3.9")
+    def test_visible_image_read(self):
+        # Test file in agilent_format has 2 visible images
+        vis_mosaic = resources.files("agilent_format") / "datasets" / "5_mosaic_agg1024.dmt"
+        d = Orange.data.Table.from_file(vis_mosaic)
+
+        self.assertIn("visible_images", d.attributes)
+        self.assertEqual(len(d.attributes["visible_images"]), 2)
+
+        img_info = d.attributes["visible_images"][0]
+        self.assertIsInstance(img_info, ConstantBytesVisibleImage)
+        self.assertEqual(img_info.name, "IR Cutout")
+        self.assertAlmostEqual(img_info.pos_x,
+                               0)
+        self.assertAlmostEqual(img_info.pos_y,
+                               0)
+        self.assertAlmostEqual(img_info.size_x, 701, places=0)
+        self.assertAlmostEqual(img_info.size_y, 1444, places=0)
+
+        # test image
+        img = np.array(img_info.image)
+        self.assertEqual(img.shape, (280, 140, 3))
 
     def test_envi_comparison(self):
         # Image

@@ -5,6 +5,8 @@ import Orange
 import numpy as np
 from Orange.data import FileFormat, ContinuousVariable, StringVariable, TimeVariable
 
+from .util import ConstantBytesVisibleImage
+
 
 class OPUSReader(FileFormat):
     """Reader for OPUS files"""
@@ -173,17 +175,20 @@ class OPUSReader(FileFormat):
         except Exception as e:
             warnings.warn(f"Visible images load failed: {e}")
         else:
-            for img in opus_imgs:
+            for index, img in enumerate(opus_imgs):
                 try:
-                    visible_images.append({
-                        'name': img['Title'],
-                        'image_ref': io.BytesIO(img['image']),
-                        'pos_x': img['Pos. X'] * img['PixelSizeX'],
-                        'pos_y': img['Pos. Y'] * img['PixelSizeY'],
-                        'pixel_size_x': img['PixelSizeX'],
-                        'pixel_size_y': img['PixelSizeY'],
-                    })
-                except KeyError:
+                    from PIL import Image
+                    image_bytes = io.BytesIO(img['image'])
+                    width, height = Image.open(image_bytes).size
+                    vimage = ConstantBytesVisibleImage(name=img["Title"],
+                                                       pos_x=img['Pos. X'] * img['PixelSizeX'],
+                                                       pos_y=img['Pos. Y'] * img['PixelSizeY'],
+                                                       size_x=width * img['PixelSizeX'],
+                                                       size_y=height * img['PixelSizeY'],
+                                                       image_bytes=image_bytes
+                                                       )
+                    visible_images.append(vimage)
+                except (KeyError, OSError):
                     pass
 
         domain = Orange.data.Domain(attrs, clses, metas)

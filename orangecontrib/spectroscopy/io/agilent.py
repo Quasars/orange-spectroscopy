@@ -1,10 +1,33 @@
+import io
+import warnings
+
 import Orange
 import numpy as np
 from Orange.data import FileFormat, ContinuousVariable, Domain
 
 from agilent_format import agilentImage, agilentImageIFG, agilentMosaic, agilentMosaicIFG, \
     agilentMosaicTiles
-from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image, TileFileFormat
+from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image, \
+    TileFileFormat, ConstantBytesVisibleImage
+
+
+def load_visible_images(vis_img_list: list[dict]) -> list[ConstantBytesVisibleImage]:
+    visible_images = []
+    for img in vis_img_list:
+        try:
+            with open(img['image_ref'], 'rb') as fh:
+                image_bytes = io.BytesIO(fh.read())
+            vimage = ConstantBytesVisibleImage(name=img["name"],
+                                               pos_x=img['pos_x'],
+                                               pos_y=img['pos_y'],
+                                               size_x=img['img_size_x'],
+                                               size_y=img['img_size_y'],
+                                               image_bytes=image_bytes,
+                                               )
+            visible_images.append(vimage)
+        except (KeyError, OSError) as e:
+            warnings.warn(f"Visible images load failed: {e}")
+    return visible_images
 
 
 class AgilentImageReader(FileFormat, SpectralFileFormat):
@@ -89,7 +112,7 @@ class agilentMosaicReader(FileFormat, SpectralFileFormat):
         am = agilentMosaic(self.filename, dtype=np.float64)
         info = am.info
         X = am.data
-        visible_images = am.vis
+        visible_images = load_visible_images(am.vis)
 
         try:
             features = info['wavenumbers']
