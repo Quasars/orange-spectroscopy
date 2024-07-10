@@ -55,6 +55,12 @@ def find_zpd(ifg, peak_search):
     else:
         raise NotImplementedError
 
+def wing_size(ifg, zpd):
+    """Calculate negative and positive wing size (including zpd point)"""
+    wing_n = zpd + 1
+    wing_p = ifg.shape[-1] - zpd
+    return wing_n, wing_p
+
 def apodize(ifg, zpd, apod_func):
     """
     Perform apodization of asymmetric interferogram using selected apodization
@@ -73,17 +79,19 @@ def apodize(ifg, zpd, apod_func):
         ifg_apod (np.array): apodized interferogram(s)
     """
 
-    # Calculate negative and positive wing size
-    # correcting zpd from 0-based index
-    ifg_N = ifg.shape[-1]
-    wing_n = zpd + 1
-    wing_p = ifg_N - (zpd + 1)
-
     if apod_func == ApodFunc.BOXCAR:
         # Boxcar apodization AKA as-collected
         return ifg
 
-    elif apod_func == ApodFunc.BLACKMAN_HARRIS_3:
+    # Calculate negative and positive wing size
+    # correcting zpd from 0-based index
+    ifg_N = ifg.shape[-1]
+    wing_n, wing_p = wing_size(ifg, zpd)
+    # Use larger wing to define apodization window width
+    M = max(wing_n, wing_p)
+
+    # Generate apodization function
+    if apod_func == ApodFunc.BLACKMAN_HARRIS_3:
         # Blackman-Harris (3-term)
         # Reference: W. Herres and J. Gronholz, Bruker
         #           "Understanding FT-IR Data Processing"
@@ -91,18 +99,6 @@ def apodize(ifg, zpd, apod_func):
         A1 = 0.49755
         A2 = 0.07922
         A3 = 0.0
-        n_n = np.arange(wing_n)
-        n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
-        Bs = np.hstack((Bs_n[::-1], Bs_p))
-
     elif apod_func == ApodFunc.BLACKMAN_HARRIS_4:
         # Blackman-Harris (4-term)
         # Reference: W. Herres and J. Gronholz, Bruker
@@ -111,31 +107,28 @@ def apodize(ifg, zpd, apod_func):
         A1 = 0.48829
         A2 = 0.14128
         A3 = 0.01168
-        n_n = np.arange(wing_n)
-        n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
-        Bs = np.hstack((Bs_n[::-1], Bs_p))
-
     elif apod_func == ApodFunc.BLACKMAN_NUTTALL:
-        # Blackman-Nuttall (Eric Peach)
-        # TODO I think this has silent problems with asymmetric interferograms
-        delta = np.min([wing_n, wing_p])
+        # Blackman-Nuttall
+        # Reference: A. Nuttall, "Some windows with very good sidelobe behavior," IEEE
+        #            Transactions on Acoustics, Speech, and Signal Processing, 1981.
+        A0 = 0.3635819
+        A1 = 0.4891775
+        A2 = 0.1365995
+        A3 = 0.0106411
+    else:
+        raise ValueError(f"Invalid apodization function {apod_func}")
 
-        # Create Blackman Nuttall Window according to the formula given by Wolfram.
-        xs = np.arange(ifg_N)
-        Bs = np.zeros(ifg_N)
-        Bs = 0.3635819\
-            - 0.4891775 * np.cos(2*np.pi*xs/(2*delta - 1))\
-            + 0.1365995 * np.cos(4*np.pi*xs/(2*delta - 1))\
-            - 0.0106411 * np.cos(6*np.pi*xs/(2*delta - 1))
+    n = np.arange(1-M, M, 1)
+    Bs = A0 \
+         + A1 * np.cos(np.pi*n/(M-1)) \
+         + A2 * np.cos(np.pi*2*n/(M-1)) \
+         + A3 * np.cos(np.pi*3*n/(M-1))
 
+    # Select appropriate subsection of apodization function
+    if wing_n > wing_p:
+        Bs = Bs[:ifg_N]
+    else:
+        Bs = Bs[2 * M - 1 - ifg_N:]
     # Apodize the sampled Interferogram
     try:
         ifg_apod = ifg * Bs
@@ -143,6 +136,18 @@ def apodize(ifg, zpd, apod_func):
         raise ValueError("Apodization function size mismatch: %s" % e)
 
     return ifg_apod
+
+def ramp(ifg, zpd):
+    wing_n, wing_p = wing_size(ifg, zpd)
+    # Use smaller wing to define symmetric subset size
+    M = min(wing_n, wing_p)
+    ramp = np.linspace(0, 1, 2 * M - 1)
+    if wing_n < wing_p:
+        ifg[..., :ramp.shape[0]] *= ramp
+    else:
+        ifg[..., -ramp.shape[0]:] *= ramp[::-1]
+
+    return ifg
 
 def _zero_fill_size(ifg_N, zff):
     # Calculate desired array size
@@ -227,6 +232,7 @@ class IRFFT():
             # Note that L is now the zpd index
             Ixs = ifg[self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = ramp(ifg, self.zpd)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
             Nzff = ifg.shape[0]
@@ -312,6 +318,7 @@ class MultiIRFFT(IRFFT):
             # Note that L is now the zpd index
             Ixs = ifg[:, self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = ramp(ifg, self.zpd)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[:, self.zpd:], ifg[:, 0:self.zpd]))
             Nzff = ifg.shape[1]
