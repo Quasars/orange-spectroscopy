@@ -112,14 +112,16 @@ class TestOWPreprocess(WidgetTest):
     def test_saving_preprocessors(self):
         settings = self.widget.settingsHandler.pack_data(self.widget)
         self.assertEqual([], settings["storedsettings"]["preprocessors"])
-        self.widget.add_preprocessor(self.widget.PREPROCESSORS[0])
+        pa = list(self.widget._qname2ppdef.values())[0]
+        self.widget.add_preprocessor(pa)
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        self.assertEqual(self.widget.PREPROCESSORS[0].qualname,
+        self.assertEqual(pa.qualname,
                          settings["storedsettings"]["preprocessors"][0][0])
 
     def test_saving_preview_position(self):
         self.assertEqual(None, self.widget.preview_n)
-        self.widget.add_preprocessor(self.widget.PREPROCESSORS[0])
+        pa = list(self.widget._qname2ppdef.values())[0]
+        self.widget.add_preprocessor(pa)
         settings = self.widget.settingsHandler.pack_data(self.widget)
         self.widget = self.create_widget(OWPreprocess, stored_settings=settings)
         self.assertEqual(None, self.widget.preview_n)

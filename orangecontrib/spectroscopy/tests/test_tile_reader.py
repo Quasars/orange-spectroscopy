@@ -82,7 +82,8 @@ class TestTileReaderWidget(WidgetTest):
         """ Test that loading a preprocessor signal in the widget works """
         # OWPreprocess test setup from test_owpreprocess.test_allpreproc_indv
         self.preproc_widget = self.create_widget(OWPreprocess)
-        self.preproc_widget.add_preprocessor(self.preproc_widget.PREPROCESSORS[0])
+        pa = list(self.preproc_widget._qname2ppdef.values())[0]
+        self.preproc_widget.add_preprocessor(pa)
         self.preproc_widget.commit.now()
         pp_out = self.get_output("Preprocessor", widget=self.preproc_widget)
         self.send_signal("Preprocessor", pp_out, widget=self.widget)
@@ -94,7 +95,7 @@ class TestTileReaderWidget(WidgetTest):
         self.assertIsInstance(pp_tile, type(pp_from_model))
         # MultiInput with OWIntegrate
         self.int_widget = self.create_widget(OWIntegrate)
-        self.int_widget.add_preprocessor(self.int_widget.PREPROCESSORS[0])
+        self.int_widget.add_preprocessor(pa)
         self.int_widget.commit.now()
         pp_out_2 = self.get_output("Preprocessor", widget=self.int_widget)
         self.send_signal("Preprocessor", pp_out_2, 2, widget=self.widget)
