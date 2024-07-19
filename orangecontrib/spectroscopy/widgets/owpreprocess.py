@@ -459,30 +459,9 @@ class SpectralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
                                "the reference input.")
         preprocessor = Msg("Preprocessor warning: see the widget for details.")
 
-    def _build_preprocessor_list(self):
-        if self.editor_registry is None:
-            return
-        plist = []
-        qualnames = set()
-        for category in self.editor_registry.categories():
-            for editor in self.editor_registry.sorted(category):
-                assert editor.qualname is not None
-                assert editor.qualname not in qualnames
-                pa = PreprocessAction(editor.name,
-                                      editor.qualname,
-                                      editor.name,
-                                      Description(editor.name,
-                                                  editor.icon if editor.icon else
-                                                  icon_path("Discretize.svg")),
-                                      editor)
-                qualnames.add(editor.qualname)
-                plist.append(pa)
-        self.PREPROCESSORS = plist
-
     def __init__(self):
         super().__init__()
         ConcurrentWidgetMixin.__init__(self)
-        self._build_preprocessor_list()
 
         self.preview_runner = PreviewRunner(self)
 
