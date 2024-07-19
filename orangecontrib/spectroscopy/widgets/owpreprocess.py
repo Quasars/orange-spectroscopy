@@ -633,7 +633,6 @@ class SpectralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
         self._qname2ppdef = {ppdef.qualname: ppdef for ppdef in self.PREPROCESSORS}
 
     def _init_preprocessors_registry(self):
-        plist = []
         qualnames = set()
         self._qname2ppdef = {}
         for category in self.editor_registry.categories():
@@ -642,20 +641,25 @@ class SpectralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
 
             for editor in self.editor_registry.sorted(category):
                 assert editor.qualname is not None
-                assert editor.qualname not in qualnames
-                pa = PreprocessAction(editor.name,
-                                      editor.qualname,
-                                      editor.name,
-                                      Description(editor.name,
-                                                  editor.icon if editor.icon else
-                                                  icon_path("Discretize.svg")),
-                                      editor)
-                qualnames.add(editor.qualname)
-                self._qname2ppdef[pa.qualname] = pa
-                plist.append(pa)
+                if editor.qualname in qualnames:
+                    seen = self._qname2ppdef[editor.qualname].viewclass
+                    if editor is seen:
+                        pa = self._qname2ppdef[editor.qualname]
+                    else:
+                        assert False, "editor.qualname repeats for different editors"
+                else:
+                    pa = PreprocessAction(editor.name,
+                                          editor.qualname,
+                                          editor.name,
+                                          Description(editor.name,
+                                                      editor.icon if editor.icon else
+                                                      icon_path("Discretize.svg")),
+                                          editor)
+                    qualnames.add(editor.qualname)
+                    self._qname2ppdef[pa.qualname] = pa
+                    item = self._create_preprocessor_item(pa)
+                    self.preprocessors.appendRow([item])
 
-                item = self._create_preprocessor_item(pa)
-                self.preprocessors.appendRow([item])
                 action = self._create_preprocessor_action(pa)
                 category_menu.addAction(action)
 
