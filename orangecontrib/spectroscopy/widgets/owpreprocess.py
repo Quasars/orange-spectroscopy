@@ -515,8 +515,6 @@ class SpectralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
             dragDropMode=QListView.DragOnly
         )
 
-        self._qname2ppdef = {ppdef.qualname: ppdef for ppdef in self.PREPROCESSORS}
-
         # List of 'selected' preprocessors and their parameters.
         self.preprocessormodel = None
 
@@ -622,25 +620,71 @@ class SpectralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
 
         return self.preview_runner.show_preview(show_info_anyway=show_info_anyway)
 
-    def _initialize(self):
-        for pp_def in self.PREPROCESSORS:
-            description = pp_def.description
-            if description.icon:
-                icon = QIcon(description.icon)
-            else:
-                icon = QIcon()
-            item = QStandardItem(icon, description.title)
-            item.setToolTip(description.summary or "")
-            item.setData(pp_def, DescriptionRole)
-            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable |
-                          Qt.ItemIsDragEnabled)
+    def _create_preprocessor_action(self, pp_def):
+        description = pp_def.description
+        if description.icon:
+            icon = QIcon(description.icon)
+        else:
+            icon = QIcon()
+        action = QAction(
+            description.title, self, triggered=lambda x, p=pp_def: self.add_preprocessor(p)
+        )
+        action.setToolTip(description.summary or "")
+        action.setIcon(icon)
+        return action
+
+    def _create_preprocessor_item(self, pp_def):
+        description = pp_def.description
+        if description.icon:
+            icon = QIcon(description.icon)
+        else:
+            icon = QIcon()
+        item = QStandardItem(icon, description.title)
+        item.setToolTip(description.summary or "")
+        item.setData(pp_def, DescriptionRole)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable |
+                      Qt.ItemIsDragEnabled)
+
+    def _init_preprocessors_flat(self):
+        for pa in self.PREPROCESSORS:
+            item = self._create_preprocessor_item(pa)
             self.preprocessors.appendRow([item])
-            action = QAction(
-                description.title, self, triggered=lambda x, p=pp_def: self.add_preprocessor(p)
-            )
-            action.setToolTip(description.summary or "")
-            action.setIcon(icon)
+            action = self._create_preprocessor_action(pa)
             self.preprocessor_menu.addAction(action)
+        self._qname2ppdef = {ppdef.qualname: ppdef for ppdef in self.PREPROCESSORS}
+
+    def _init_preprocessors_registry(self):
+        plist = []
+        qualnames = set()
+        self._qname2ppdef = {}
+        for category in self.editor_registry.categories():
+            category_menu = \
+                self.preprocessor_menu if category == "" else self.preprocessor_menu.addMenu(category)
+
+            for editor in self.editor_registry.sorted(category):
+                assert editor.qualname is not None
+                assert editor.qualname not in qualnames
+                pa = PreprocessAction(editor.name,
+                                      editor.qualname,
+                                      editor.name,
+                                      Description(editor.name,
+                                                  editor.icon if editor.icon else
+                                                  icon_path("Discretize.svg")),
+                                      editor)
+                qualnames.add(editor.qualname)
+                self._qname2ppdef[pa.qualname] = pa
+                plist.append(pa)
+
+                item = self._create_preprocessor_item(pa)
+                self.preprocessors.appendRow([item])
+                action = self._create_preprocessor_action(pa)
+                category_menu.addAction(action)
+
+    def _initialize(self):
+        if self.editor_registry is None:
+            self._init_preprocessors_flat()
+        else:
+            self._init_preprocessors_registry()
 
         try:
             model = self.load(self.storedsettings)
