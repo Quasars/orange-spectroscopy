@@ -13,7 +13,7 @@ from orangecontrib.spectroscopy.preprocess import Absorbance, Transmittance, \
     GaussianSmoothing, PCADenoising, RubberbandBaseline, \
     Normalize, LinearBaseline, ShiftAndScale, EMSC, MissingReferenceException, \
     WrongReferenceException, NormalizeReference, XASnormalization, ExtractEXAFS, \
-    PreprocessException, NormalizePhaseReference, Despike, SpSubtract
+    PreprocessException, NormalizePhaseReference, Despike, SpSubtract, MNFDenoising
 from orangecontrib.spectroscopy.preprocess.als import ALSP, ARPLS, AIRPLS
 from orangecontrib.spectroscopy.preprocess.me_emsc import ME_EMSC
 from orangecontrib.spectroscopy.preprocess.atm_corr import AtmCorr
@@ -167,6 +167,7 @@ PREPROCESSORS_INDEPENDENT_SAMPLES += \
 # internal parameters.
 PREPROCESSORS_GROUPS_OF_SAMPLES = [
     PCADenoising(components=2),
+    MNFDenoising(components=2),
 ]
 
 PREPROCESSORS_INDEPENDENT_SAMPLES += list(
@@ -586,6 +587,29 @@ class TestPCADenoising(unittest.TestCase):
         np.testing.assert_almost_equal(newdata.X[:2],
                                        [[5.08718247, 3.51315614, 1.40204280, 0.21105556],
                                         [4.75015528, 3.15366444, 1.46254138, 0.23693223]])
+
+
+class TestMNFDenoising(unittest.TestCase):
+
+    def test_no_samples(self):
+        data = Orange.data.Table("iris")
+        proc = MNFDenoising()
+        d1 = proc(data[:0])
+        newdata = data.transform(d1.domain)
+        np.testing.assert_equal(newdata.X, np.nan)
+
+    def test_iris(self):
+        data = Orange.data.Table("iris")
+        proc = MNFDenoising(components=2)
+        d1 = proc(data)
+        newdata = data.transform(d1.domain)
+        differences = newdata.X - data.X
+        self.assertTrue(np.all(np.abs(differences) < 0.6))
+        # pin some values to detect changes in the PCA implementation
+        # (for example normalization)
+        np.testing.assert_almost_equal(newdata.X[:2],
+                                       [[5.1084779, 3.4893387, 1.4068703, 0.1887913],
+                                        [4.7484942, 3.1913347, 1.427665, 0.2304239]])
 
 
 class TestShiftAndScale(unittest.TestCase):

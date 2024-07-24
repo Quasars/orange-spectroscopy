@@ -1012,4 +1012,4 @@ class OWPreprocess(SpectralPreprocessReference):
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
     data = Orange.data.Table("collagen.csv")
-    WidgetPreview(OWPreprocess).run(set_data=data[:3], set_reference=data[10:11])
+    WidgetPreview(OWPreprocess).run(set_data=data[:30], set_reference=data[10:11])
