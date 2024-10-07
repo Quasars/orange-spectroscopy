@@ -9,6 +9,8 @@ from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 from .util import ConstantBytesVisibleImage
 
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
+
 
 
 class OPUSReader(FileFormat):
