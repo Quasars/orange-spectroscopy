@@ -51,7 +51,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Orange-Spectroscopy (Add-on)'
-copyright = '2019'
+copyright = '2024'
 author = 'Quasars'
 
 # The version info for the project you're documenting, acts as replacement for
