@@ -6,9 +6,9 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import QWidget, QPushButton, \
     QGridLayout, QFormLayout, QAction, QVBoxLayout, QWidgetAction, QSplitter, \
-    QToolTip, QGraphicsRectItem
+    QToolTip, QGraphicsRectItem, QLabel
 from AnyQt.QtGui import QColor, QKeySequence, QPainter, QBrush, QStandardItemModel, \
-    QStandardItem, QLinearGradient, QPixmap, QIcon
+    QStandardItem, QLinearGradient, QPixmap, QIcon, QPen
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, QSize
 from AnyQt.QtTest import QTest
@@ -17,6 +17,7 @@ from AnyQt.QtCore import pyqtSignal as Signal
 
 import bottleneck
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
 from pyqtgraph import GraphicsWidget
 import colorcet
@@ -244,8 +245,37 @@ _color_palettes = [
     # misc
     ("rainbow", {0: np.array(colorcet.rainbow_bgyr_35_85_c73) * 255}),
     ("isolum", {0: np.array(colorcet.isoluminant_cgo_80_c38) * 255}),
+    ("Jet", {0: pg.colormap.get("jet", source='matplotlib').getLookupTable(nPts=256)}),
+    ("Viridis", {0: pg.colormap.get("viridis", source='matplotlib').getLookupTable(nPts=256)}),
+
+    # cyclic
+    ("HSV", {0: pg.colormap.get("hsv", source='matplotlib').getLookupTable(nPts=256)}),
+]
+#r, g, b, c, m, y, k, w
+vector_color = [
+    ("Black", {0: (0,0,0)}),
+    ("White", {0: (255,255,255)}),
+    ("Red", {0: (255,0,0)}),
+    ("Green", {0: (0,255,0)}),
+    ("Blue", {0: (0,0,255)}),
+    ("Cyan", {0: (0,255,255)}),
+    ("Magenta", {0: (255,0,255)}),
+    ("Yellow", {0: (255,255,0)}),
+    ("By Feature", {0: ('by feature')})
 ]
 
+bins = [
+    ("1 x 1", {0, (1)}),
+    ("2 x 2", {0, (2)}),
+    ("3 x 3", {0, (3)}),
+    ("4 x 4", {0, (4)}),
+    ("5 x 5", {0, (5)}),
+    ("6 x 6", {0, (6)}),
+    ("7 x 7", {0, (7)}),
+    ("8 x 8", {0, (8)}),
+    ("9 x 9", {0, (9)}),
+    ("10 x 10", {0, (10)}),
+]
 
 def palette_gradient(colors):
     n = len(colors)
@@ -282,6 +312,355 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
         item.setData(palette, Qt.UserRole)
         model.appendRow([item])
     return model
+
+
+def vector_color_model(colors):
+    model = QStandardItemModel()
+    for name, palette in colors:
+        item = QStandardItem(name)
+        item.setData(palette, Qt.UserRole)
+        model.appendRow([item])
+    return model
+
+
+def circular_mean(degs):
+    sin = np.nansum(np.sin(np.radians(degs*2)))
+    cos = np.nansum(np.cos(np.radians(degs*2)))
+    return np.arctan2(sin, cos)/2
+
+
+class VectorSettingMixin:
+    show_vector_plot = Setting(False, schema_only=True)
+    vector_angle = ContextSetting(None)
+    vector_magnitude = ContextSetting(None)
+    vector_color_index = Setting(0)
+    vcol_byval_index = Setting(0)
+    vcol_byval_feat = ContextSetting(None)
+    vector_scale = Setting(1)
+    vector_width = Setting(1)
+    vector_opacity = Setting(255)
+    v_bin = Setting(0)
+
+    def setup_vector_plot_controls(self):
+
+        box = gui.vBox(self)
+
+        self.cb_vector = gui.checkBox(box, self, "show_vector_plot",
+                                      label="Show vector plot",
+                                      callback=self.enable_vector)
+
+        self.vectorbox = gui.widgetBox(box, box=False)
+
+        self.vector_opts = DomainModel(DomainModel.SEPARATED,
+                                       valid_types=DomainModel.PRIMITIVE, placeholder='None')
+
+        self.vector_cbyf_opts = DomainModel(DomainModel.SEPARATED,
+                                            valid_types=(ContinuousVariable,), placeholder='None')
+
+        self.vector_col_opts = vector_color_model(vector_color)
+        self.vector_pal_opts = color_palette_model(_color_palettes, (QSize(64, 16)))
+        self.vector_bin_opts = vector_color_model(bins)
+
+        self.vector_angle = None
+        self.vector_magnitude = None
+        self.vcol_byval_feat = None
+        self.color_opts = vector_color
+
+        gb = create_gridbox(self.vectorbox, box=False)
+
+        v_angle_select = gui.comboBox(None, self, 'vector_angle', searchable=True,
+                                      label="Vector Angle", model=self.vector_opts,
+                                      contentsLength=10,
+                                      callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Angle: ", v_angle_select)
+
+        v_mag_select = gui.comboBox(None, self, 'vector_magnitude', searchable=True,
+                                    label="Vector Magnitude", model=self.vector_opts,
+                                    contentsLength=10,
+                                    callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Magnitude: ", v_mag_select)
+
+        v_bin_select = gui.comboBox(None, self, 'v_bin', label="Pixel Binning",
+                                    model=self.vector_bin_opts,
+                                    contentsLength=10,
+                                    callback=self._update_binsize)
+        grid_add_labelled_row(gb, "Binning: ", v_bin_select)
+
+        v_color_select = gui.comboBox(None, self, 'vector_color_index',
+                                       label="Vector color", model=self.vector_col_opts,
+                                       contentsLength=10,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Color: ", v_color_select)
+
+        v_color_byval = gui.comboBox(None, self, 'vcol_byval_feat',
+                                      label="Vector color by Feature",
+                                      model=self.vector_cbyf_opts,
+                                      contentsLength=10,
+                                      callback=self._update_cbyval)
+        grid_add_labelled_row(gb, "Feature: ", v_color_byval)
+
+        v_color_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
+                                             label="", model=self.vector_pal_opts,
+                                             contentsLength=5,
+                                             callback=self._update_cbyval)
+        v_color_byval_select.setIconSize(QSize(64, 16))
+        grid_add_labelled_row(gb, "Palette: ", v_color_byval_select)
+
+        gb = create_gridbox(self.vectorbox, box=False)
+
+        v_scale_slider = gui.hSlider(None, self, 'vector_scale', label="Scale",
+                                     minValue=1, maxValue=1000, step=10, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Scale: ", v_scale_slider)
+
+        v_width_slider = gui.hSlider(None, self, 'vector_width', label="Width",
+                                     minValue=1, maxValue=20, step=1, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Width: ", v_width_slider)
+
+        v_opacity_slider = gui.hSlider(None, self, 'vector_opacity', label="Opacity",
+                                       minValue=0, maxValue=255, step=5, createLabel=False,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Opacity: ", v_opacity_slider)
+
+        self.vectorbox.setVisible(self.show_vector_plot)
+        self.update_vector_plot_interface()
+        
+        return box
+
+    def update_vector_plot_interface(self):
+        vector_params = ['vector_angle', 'vector_magnitude', 'vector_color_index',
+                         'vector_scale', 'vector_width', 'vector_opacity', 'v_bin']
+        for i in vector_params:
+            getattr(self.controls, i).setEnabled(self.show_vector_plot)
+
+        if self.vector_color_index == 8 and self.show_vector_plot:
+            self.controls.vcol_byval_index.setEnabled(True)
+            self.controls.vcol_byval_feat.setEnabled(True)
+            if self.vcol_byval_feat is not None and self.show_vector_plot:
+                self.vect_legend.setVisible(True)
+                self.vect_legend.adapt_to_size()
+            else:
+                self.vect_legend.setVisible(False)
+        else:
+            self.controls.vcol_byval_index.setEnabled(False)
+            self.controls.vcol_byval_feat.setEnabled(False)
+            self.vect_legend.setVisible(False)
+
+    def enable_vector(self):
+        self.vectorbox.setVisible(self.show_vector_plot)
+        self._update_vector()
+
+    def _update_vector(self):
+        self.update_vector_plot_interface()
+        self.update_vectors()
+
+    def _update_vector_params(self):
+        self.update_binsize()
+        self._update_vector()
+
+    def _update_cbyval(self):
+        self.cols = None
+        self._update_vector()
+
+    def _update_binsize(self):
+        self.v_bin_change = 1
+        self.cols = None
+        self.update_binsize()
+
+    def init_vector_plot(self, data):
+        domain = data.domain if data is not None else None
+        self.vector_opts.set_domain(domain)
+        self.vector_cbyf_opts.set_domain(domain)
+
+        # initialize values so that the combo boxes are not in invalid states
+        if self.vector_opts:
+            # TODO here we could instead set good default values if available
+            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
+        else:
+            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
+
+
+class VectorMixin:
+
+    def __init__(self):
+        self.a = None
+        self.th = None
+        self.cols = None
+        self.new_xs = None
+        self.new_ys = None
+        self.v_bin_change = 0
+
+        ci = self.plotview.centralWidget
+        self.vector_plot = VectorPlot()
+        self.vector_plot.hide()
+        self.plot.addItem(self.vector_plot)
+        self.vect_legend = ImageColorLegend()
+        self.vect_legend.setVisible(False)
+        ci.addItem(self.vect_legend)
+
+    def update_vectors(self):
+        v = self.get_vector_data()
+        if self.lsx is None:  # image is not shown or is being computed
+            v = None
+        if v is None:
+            self.vector_plot.hide()
+        else:
+            valid = self.data_valid_positions
+            lsx, lsy = self.lsx, self.lsy
+            xindex, yindex = self.xindex, self.yindex
+            scale = self.vector_scale
+            w = self.vector_width
+            th = np.asarray(v[:,0], dtype=float)
+            v_mag = np.asarray(v[:,1], dtype=float)
+            wy = _shift(lsy)*2
+            wx = _shift(lsx)*2
+            if self.v_bin == 0:
+                y = np.linspace(*lsy)[yindex[valid]]
+                x = np.linspace(*lsx)[xindex[valid]]
+                amp = v_mag / max(v_mag) * (scale/100)
+                dispx = amp*wx/2*np.cos(np.radians(th))
+                dispy = amp*wy/2*np.sin(np.radians(th))
+                xcurve = np.empty((dispx.shape[0]*2))
+                ycurve = np.empty((dispy.shape[0]*2))
+                xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+                ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+                vcols = self.get_vector_color(v[:,2])
+                v_params = [xcurve, ycurve, w, vcols]
+                self.vector_plot.setData(v_params)
+            else:
+                if self.a is None:
+                    self.update_binsize()
+                amp = self.a / max(self.a) * (scale/100)
+                dispx = amp*wx/2*np.cos(self.th)
+                dispy = amp*wy/2*np.sin(self.th)
+                xcurve = np.empty((dispx.shape[0]*2))
+                ycurve = np.empty((dispy.shape[0]*2))
+                xcurve[0::2], xcurve[1::2] = self.new_xs - dispx, self.new_xs + dispx
+                ycurve[0::2], ycurve[1::2] = self.new_ys - dispy, self.new_ys + dispy
+                vcols = self.get_vector_color(v[:,2])
+                v_params = [xcurve, ycurve, w, vcols]
+                self.vector_plot.setData(v_params)
+            self.vector_plot.show()
+            if self.vector_color_index == 8 and \
+                self.vcol_byval_feat is not None:
+                self.update_vect_legend()
+
+    def update_vect_legend(self):#feat
+        if self.v_bin != 0:
+            feat = self.cols
+        else:
+            feat = self.data.get_column(self.vcol_byval_feat)
+        fmin, fmax = np.min(feat), np.max(feat)
+        self.vect_legend.set_range(fmin, fmax)
+        self.vect_legend.set_colors(_color_palettes[self.vcol_byval_index][1][0])
+        self.vect_legend.setVisible(True)
+        self.vect_legend.adapt_to_size()
+
+    def get_vector_data(self):
+        if self.show_vector_plot is False or self.data is None:
+            return None
+
+        ang = self.vector_angle
+        mag = self.vector_magnitude
+        col = self.vcol_byval_feat
+        angs = self.data.get_column(ang) if ang else np.full(len(self.data), 0)
+        mags = self.data.get_column(mag) if mag else np.full(len(self.data), 1)
+        cols = self.data.get_column(col) if col else np.full(len(self.data), None)
+
+        return np.vstack([angs, mags, cols]).T
+
+    def get_vector_color(self, feat):
+        if self.vector_color_index == 8:
+            if feat[0] is None: # a feat has not been selected yet
+                return vector_color[0][1][0] + (self.vector_opacity,)
+            else:
+                if self.v_bin != 0:
+                    if self.cols is None:
+                        self.update_binsize()
+                    feat = self.cols
+                fmin, fmax = np.min(feat), np.max(feat)
+                if fmin == fmax:
+                    # put a warning here?
+                    return vector_color[0][1][0] + (self.vector_opacity,)
+                feat_idxs = np.asarray(((feat-fmin)/(fmax-fmin))*255, dtype=int)
+                col_vals = np.asarray(_color_palettes[self.vcol_byval_index][1][0][feat_idxs],
+                                      dtype=int)
+                out = [np.hstack((np.expand_dims(feat_idxs, 1), col_vals)),
+                       self.vector_opacity]
+                return out
+        else:
+            return vector_color[self.vector_color_index][1][0] + (self.vector_opacity,)
+
+    def update_binsize(self):
+        self.parent.Warning.bin_size_error.clear()
+        if self.v_bin == 0:
+            self.v_bin_change = 0
+            self.update_vectors()
+        else:
+            v = self.get_vector_data()
+            valid = self.data_valid_positions
+            lsx, lsy = self.lsx, self.lsy
+            xindex, yindex = self.xindex, self.yindex
+            if lsx is None:
+                v = None
+            if v is None:
+                self.v_bin_change = 0
+                self.vector_plot.hide()
+            else:
+                th = np.asarray(v[:,0], dtype=float)
+                v_mag = np.asarray(v[:,1], dtype=float)
+                col = np.asarray(v[:,2], dtype=float)
+                y = np.linspace(*lsy)[yindex]
+                x = np.linspace(*lsx)[xindex]
+                df = pd.DataFrame(
+                    [x, y, np.asarray([1 if i else 0 for i in valid]),v_mag, th, col],
+                    index = ['x', 'y', 'valid', 'v_mag', 'th', 'cols']).T
+
+                v_df = df.pivot_table(values = 'valid', columns = 'x', index = 'y', fill_value = 0)
+                a_df = df.pivot_table(values = 'v_mag', columns = 'x', index = 'y')
+                th_df = df.pivot_table(values = 'th', columns = 'x', index = 'y')
+                col_df = df.pivot_table(values = 'cols', columns = 'x', index = 'y')
+                bin_sz = self.v_bin+1
+                if bin_sz > v_df.shape[0] or bin_sz > v_df.shape[1]:
+                    bin_sz = v_df.shape[0] if bin_sz > v_df.shape[0] else v_df.shape[1]
+                    self.parent.Warning.bin_size_error(bin_sz, bin_sz)
+                x_mod, y_mod = v_df.shape[1] % bin_sz, v_df.shape[0] % bin_sz
+                st_x_idx = int(np.floor(x_mod/2))
+                st_y_idx = int(np.floor(y_mod/2))
+
+                nvalid = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                a = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                th = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                cols = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                columns = v_df.columns
+                rows = v_df.index
+                new_xs, new_ys = [], []
+                for i in range(st_y_idx, v_df.shape[0]-y_mod, bin_sz):
+                    for j in range(st_x_idx, v_df.shape[1]-x_mod, bin_sz):
+                        nvalid[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(v_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        a[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(a_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        th[int(i/bin_sz),int(j/bin_sz)] = \
+                            circular_mean(th_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        cols[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(col_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        new_xs.append(np.sum(columns[j:j+bin_sz])/bin_sz)
+                        new_ys.append(np.sum(rows[i:i+bin_sz])/bin_sz)
+                nvalid = nvalid.flatten() > 0 & ~np.isnan(nvalid.flatten())
+                self.a = a.flatten()[nvalid]
+                self.th = th.flatten()[nvalid]
+                self.cols = cols.flatten()[nvalid]
+                self.new_xs = np.asarray(new_xs)[nvalid]
+                self.new_ys = np.asarray(new_ys)[nvalid]
+                if self.v_bin_change == 1:
+                    self.v_bin_change = 0
+                    self.update_vectors()
 
 
 class AxesSettingsMixin:
@@ -706,6 +1085,16 @@ class ImageColorLegend(GraphicsWidget):
 
 class ImageParameterSetter(CommonParameterSetter):
     IMAGE_ANNOT_BOX = "Image annotations"
+    BKG_CBAR = "Colorbar"
+    VECT_CBAR = "Vector Colorbar"
+
+    def update_cbar_label(self, **settings):
+        self.colorbar.setLabel(settings[self.TITLE_LABEL])
+        self.colorbar.resizeEvent(None)
+
+    def update_vcbar_label(self, **settings):
+        self.vcolorbar.setLabel(settings[self.TITLE_LABEL])
+        self.vcolorbar.resizeEvent(None)
 
     def __init__(self, master):
         super().__init__()
@@ -717,10 +1106,16 @@ class ImageParameterSetter(CommonParameterSetter):
                 self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
                 self.X_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
                 self.Y_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.BKG_CBAR: {self.TITLE_LABEL: ("", "")},
+                self.VECT_CBAR: {self.TITLE_LABEL: ("", "")},
             },
         }
 
         self._setters[self.IMAGE_ANNOT_BOX] = self._setters[self.ANNOT_BOX]
+        self._setters[self.IMAGE_ANNOT_BOX].update({
+            self.BKG_CBAR: self.update_cbar_label,
+            self.VECT_CBAR: self.update_vcbar_label,
+        })
 
     @property
     def title_item(self):
@@ -729,7 +1124,7 @@ class ImageParameterSetter(CommonParameterSetter):
     @property
     def axis_items(self):
         return [value["item"] for value in self.master.plot.axes.values()] \
-               + [self.master.legend.axis]
+               + [self.master.legend.axis] + [self.master.vect_legend.axis]
 
     @property
     def getAxis(self):
@@ -738,6 +1133,98 @@ class ImageParameterSetter(CommonParameterSetter):
     @property
     def legend_items(self):
         return []
+
+    @property
+    def colorbar(self):
+        return self.master.legend.axis
+
+    @property
+    def vcolorbar(self):
+        return self.master.vect_legend.axis
+
+
+class VectorPlot(pg.GraphicsObject):
+
+    def __init__(self):
+        pg.GraphicsObject.__init__(self)
+        self.params = None
+
+        self._maxSpotPxWidth = 0
+        self._boundingRect = None
+
+    def setData(self, params):
+        self._maxSpotPxWidth = 0
+        self._boundingRect = None
+
+        self.params = params
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+        self.update()
+
+    def viewTransformChanged(self):
+        self.prepareGeometryChange()
+
+    def paint(self, p, option, widget):
+        if self.params is not None:
+            if isinstance(self.params[3], tuple):
+                path = pg.arrayToQPath(self.params[0], self.params[1],
+                                       connect = 'pairs', finiteCheck=False)
+                pen = QPen(QBrush(QColor(*self.params[3])), self.params[2])
+                pen.setCosmetic(True)
+                p.setPen(pen)
+                p.drawPath(path)
+            elif isinstance(self.params[3], list):
+                pen = QPen(QBrush(QColor()), self.params[2])
+                pen.setCosmetic(True)
+                unique_cols = np.unique(self.params[3][0], return_index=True, axis=0)
+                irgbx2 = np.hstack((self.params[3][0],
+                                    self.params[3][0])).reshape(self.params[3][0].shape[0]*2, 4)
+                for i in unique_cols[0]:
+                    path = pg.arrayToQPath(self.params[0][np.where(irgbx2[:,0] == i[0])],
+                                        self.params[1][np.where(irgbx2[:,0] == i[0])],
+                                        connect = 'pairs', finiteCheck=False)
+                    pen.setColor(QColor(*i[1:], self.params[3][1]))
+                    p.setPen(pen)
+                    p.drawPath(path)
+
+    # These functions are the same as pg.plotcurveitem with small adaptations
+    def pixelPadding(self):
+        self._maxSpotPxWidth = self.params[2]*0.7072
+        return self._maxSpotPxWidth
+
+    def boundingRect(self):
+        if self.params is None:
+            return QRectF()
+        elif self._boundingRect is None and self.params is not None:
+            (xmn, xmx) = (np.nanmin(self.params[0]), np.nanmax(self.params[0]))
+            (ymn, ymx) = (np.nanmin(self.params[1]), np.nanmax(self.params[1]))
+            if xmn is None or xmx is None:
+                return QRectF()
+            if ymn is None or ymx is None:
+                return QRectF()
+
+            px = py = 0.0
+            pxPad = self.pixelPadding()
+            if pxPad > 0:
+                # determine length of pixel in local x, y directions
+                px, py = self.pixelVectors()
+                try:
+                    px = 0 if px is None else px.length()
+                except OverflowError:
+                    px = 0
+                try:
+                    py = 0 if py is None else py.length()
+                except OverflowError:
+                    py = 0
+
+                # return bounds expanded by pixel size
+                px *= pxPad
+                py *= pxPad
+            #px += self._maxSpotWidth * 0.5
+            #py += self._maxSpotWidth * 0.5
+            self._boundingRect = QRectF(xmn-px, ymn-py, (2*px)+xmx-xmn, (2*py)+ymx-ymn)
+
+        return self._boundingRect
 
 
 class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
@@ -772,6 +1259,8 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
+        self.xindex = None
+        self.yindex = None
 
         self.plotview = GraphicsView()
         ci = pg.GraphicsLayout()
@@ -948,6 +1437,12 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_values = None
         self.data_imagepixels = None
         self.data_valid_positions = None
+        self.xindex = None
+        self.yindex = None
+
+        if isinstance(self, VectorMixin):
+            self.update_binsize()
+            self.update_vectors()  # clears the vector plot
 
         self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
                     self.parent.image_values(),
@@ -973,7 +1468,8 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      image_values, image_values_fixed_levels, state: TaskState):
+                      image_values, image_values_fixed_levels,
+                      state: TaskState):
 
         if data is None or attr_x is None or attr_y is None:
             raise UndefinedImageException
@@ -1050,6 +1546,14 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.update_color_schema()
             self.update_legend_visible()
 
+            # indices need to be saved to quickly draw vectors
+            self.yindex = yindex
+            self.xindex = xindex
+
+            if isinstance(self, VectorMixin):
+                self.update_binsize()
+                self.update_vectors()
+
             # shift centres of the pixels so that the axes are useful
             shiftx = _shift(lsx)
             shifty = _shift(lsy)
@@ -1082,13 +1586,43 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             raise ex
 
 
-class ImagePlot(BasicImagePlot):
+class ImagePlot(BasicImagePlot,
+                VectorSettingMixin, VectorMixin):
+
     attr_x = ContextSetting(None, exclude_attributes=True)
     attr_y = ContextSetting(None, exclude_attributes=True)
+
+    def __init__(self, parent):
+        BasicImagePlot.__init__(self, parent)
+        VectorSettingMixin.__init__(self)
+        VectorMixin.__init__(self)
 
 
 class CurvePlotHyper(CurvePlot):
     viewtype = Setting(AVERAGE)  # average view by default
+
+
+def create_gridbox(widget, box=False, add_space=False):
+    grid = QGridLayout()
+    grid.setColumnMinimumWidth(0, 50)
+    grid.setColumnStretch(1, 1)
+    b = gui.widgetBox(widget, box=box, orientation=grid)
+    if not box:
+        if add_space:
+            b.setContentsMargins(8, 4, 8, 4)
+        else:
+            b.setContentsMargins(0, 0, 0, 0)
+    # This must come after calling widgetBox, since widgetBox overrides it
+    grid.setVerticalSpacing(8)
+    return b
+
+
+def grid_add_labelled_row(grid, label, widget):
+    if not isinstance(grid, QGridLayout):
+        grid = grid.layout()
+    row = grid.rowCount()
+    grid.addWidget(QLabel(label), row, 0)
+    grid.addWidget(widget, row, 1)
 
 
 class OWHyper(OWWidget, SelectionOutputsMixin):
@@ -1105,7 +1639,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     replaces = ["orangecontrib.infrared.widgets.owhyper.OWHyper"]
     keywords = ["image", "spectral", "chemical", "imaging"]
 
-    settings_version = 7
+    settings_version = 8
     settingsHandler = DomainContextHandler()
 
     imageplot = SettingProvider(ImagePlot)
@@ -1136,6 +1670,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     class Warning(OWWidget.Warning):
         threshold_error = Msg("Low slider should be less than High")
+        bin_size_error = Msg("Selected bin size larger than image size, bin size {} x {} used")
 
     class Error(OWWidget.Error):
         image_too_big = Msg("Image for chosen features is too big ({} x {}).")
@@ -1185,6 +1720,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         dbox = gui.widgetBox(self.controlArea, "Image values")
 
         icbox = gui.widgetBox(self.controlArea, "Image colors")
+        
+        ivbox = gui.widgetBox(self.controlArea, "Vector plot")
 
         rbox = gui.radioButtons(
             dbox, self, "value_type", callback=self._change_integration)
@@ -1197,7 +1734,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             self.box_values_spectra, self, "integration_method",
             items=(a.name for a in self.integration_methods),
             callback=self._change_integral_type)
-        gui.rubber(self.controlArea)
 
         gui.appendRadioButton(rbox, "Use feature")
 
@@ -1235,10 +1771,16 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         splitter.setOrientation(Qt.Vertical)
         self.imageplot = ImagePlot(self)
         self.imageplot.selection_changed.connect(self.output_image_selection)
+        # add image settings to the main panne after ImagePlot.__init__
+        iabox.layout().addWidget(self.imageplot.axes_settings_box)
+        icbox.layout().addWidget(self.imageplot.color_settings_box)
 
         # add image settings to the main panne after ImagePlot.__init__
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
+        ivbox.layout().addWidget(self.imageplot.setup_vector_plot_controls())
+
+        self.data = None
 
         # do not save visible image (a complex structure as a setting;
         # only save its name)
@@ -1292,6 +1834,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         self._setup_plot_parameters()
 
+        gui.rubber(self.controlArea)
+
     def _setup_plot_parameters(self):
         parts_from_spectra = [SpectraParameterSetter.ANNOT_BOX,
                               SpectraParameterSetter.LABELS_BOX,
@@ -1303,16 +1847,19 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         VisualSettingsDialog(self, self.imageplot.parameter_setter.initial_settings)
 
     def setup_visible_image_controls(self):
-        self.visbox = gui.widgetBox(self.controlArea, True)
+        self.visbox = gui.widgetBox(self.controlArea, box="Visible image")
 
         gui.checkBox(
             self.visbox, self, 'show_visible_image',
             label='Show visible image',
             callback=lambda: (self.update_visible_image_interface(), self.update_visible_image()))
 
+        self.visboxhide = gui.widgetBox(self.visbox, box=False)
+        self.visboxhide.hide()
+
         self.visible_image_model = VisibleImageListModel()
         gui.comboBox(
-            self.visbox, self, 'visible_image',
+            self.visboxhide, self, 'visible_image',
             model=self.visible_image_model,
             callback=self.update_visible_image)
 
@@ -1323,13 +1870,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             ('Difference', QPainter.CompositionMode_Difference)
         ])
         gui.comboBox(
-            self.visbox, self, 'visible_image_composition', label='Composition mode:',
+            self.visboxhide, self, 'visible_image_composition', label='Composition mode:',
             model=PyListModel(self.visual_image_composition_modes.keys()),
             callback=self.update_visible_image_composition_mode
         )
 
         gui.hSlider(
-            self.visbox, self, 'visible_image_opacity', label='Opacity:',
+            self.visboxhide, self, 'visible_image_opacity', label='Opacity:',
             minValue=0, maxValue=255, step=10, createLabel=False,
             callback=self.update_visible_image_opacity
         )
@@ -1340,6 +1887,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     def update_visible_image_interface(self):
         controlled = ['visible_image', 'visible_image_composition', 'visible_image_opacity']
+        self.visboxhide.setVisible(self.show_visible_image)
         for c in controlled:
             getattr(self.controls, c).setEnabled(self.show_visible_image)
 
@@ -1353,6 +1901,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_interface_data(self, data):
         self.init_attr_values(data)
         self.init_visible_images(data)
+        self.imageplot.init_vector_plot(data)
 
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
