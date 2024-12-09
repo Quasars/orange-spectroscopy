@@ -43,16 +43,36 @@ class HDF5Reader_HERMES(FileFormat, SpectralFileFormat):
 
     def read_spectra(self):
         import h5py
-        hdf5_file = h5py.File(self.filename)
-        if 'entry1/collection/beamline' in hdf5_file and \
-                hdf5_file['entry1/collection/beamline'][()].astype('str') == 'Hermes':
-            x_locs = np.array(hdf5_file['entry1/Counter0/sample_x'])
-            y_locs = np.array(hdf5_file['entry1/Counter0/sample_y'])
-            energy = np.array(hdf5_file['entry1/Counter0/energy'])
-            intensities = np.array(hdf5_file['entry1/Counter0/data']).T
-            return _spectra_from_image(intensities, energy, x_locs, y_locs)
-        else:
-            raise IOError("Not an HDF5 HERMES file")
+        with h5py.File(self.filename, 'r') as hdf5_file:
+            if 'entry1/collection/beamline' in hdf5_file and \
+                    hdf5_file['entry1/collection/beamline'][()].astype('str') == 'Hermes':
+                x_locs = np.array(hdf5_file['entry1/Counter0/sample_x'])
+                y_locs = np.array(hdf5_file['entry1/Counter0/sample_y'])
+                energy = np.array(hdf5_file['entry1/Counter0/energy'])
+                intensities = np.array(hdf5_file['entry1/Counter0/data']).T
+                return _spectra_from_image(intensities, energy, x_locs, y_locs)
+            else:
+                raise IOError("Not an HDF5 HERMES file")
+
+
+class HDF5Reader_SoftiMAX(FileFormat, SpectralFileFormat):
+    """ A very case specific reader for HDF5 files from the SoftiMAX beamline in MAX-IV"""
+    EXTENSIONS = ('.hdf5',)
+    DESCRIPTION = 'HDF5 file @SoftiMAX/MAX-IV'
+
+    def read_spectra(self):
+        print("SoftiMax")
+        import h5py
+        with h5py.File(self.filename, 'r') as hdf5_file:
+            if 'entry1/collection/beamline' in hdf5_file and \
+                    hdf5_file['entry1/collection/beamline'][()].astype('str') == ['SLS Sophie at Softimax MAXIV']:
+                x_locs = np.array(hdf5_file['entry1/counter0/sample_x'])
+                y_locs = np.array(hdf5_file['entry1/counter0/sample_y'])
+                energy = np.array(hdf5_file['entry1/counter0/energy'])
+                intensities = np.array(hdf5_file['entry1/counter0/data']).T
+                return _spectra_from_image(intensities, energy, y_locs, x_locs)
+            else:
+                raise IOError("Not a SoftiMAX file")
 
 
 class HDF5Reader_ROCK(FileFormat, SpectralFileFormat):
