@@ -8,6 +8,7 @@ recursive-include orangecontrib/spectroscopy/datasets NeaReaderGSF_test/*
 recursive-include orangecontrib/spectroscopy/datasets renishaw_test_files/*
 recursive-include orangecontrib/spectroscopy/datasets photothermal/*
 recursive-include orangecontrib/spectroscopy/datasets perkinelmer/*
+recursive-include orangecontrib/spectroscopy/datasets polar/*
 
 global-exclude __pycache__
 
