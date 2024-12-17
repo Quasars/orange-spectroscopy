@@ -125,7 +125,6 @@ if __name__ == '__main__':
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
         install_requires=[
-            'setuptools>=51.0.0',  # same as the last one needed for Orange3
             'pip>=19.3',  # same as for Orange 3.37
             'numpy>=1.21.0,<2.0.0',
             'Orange3>=3.37.0',
