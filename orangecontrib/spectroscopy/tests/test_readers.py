@@ -400,6 +400,20 @@ class TestPTIRFileReader(unittest.TestCase):
         self.assertAlmostEqual(d[0]["map_x"], -4088.96337890625)
         self.assertAlmostEqual(d[0]["map_y"], -886.1981201171875)
 
+    def test_image_read(self):
+        reader = initialize_reader(PTIRFileReader,
+                                   "photothermal/Spectra_w_Image.ptir")
+        reader.data_signal = b'//ZI/*/DEMODS/0/R'
+        d = reader.read()
+        self.assertAlmostEqual(d[0][0], -74.8579711914063)
+        self.assertEqual(min(getx(d)), 930.0)
+        self.assertEqual(max(getx(d)), 3020.0)
+        self.assertAlmostEqual(d[0]["map_x"], 8738.8798828125)
+        self.assertAlmostEqual(d[0]["map_y"], -704.0499877929688)
+        self.assertAlmostEqual(d[0]["z-focus"], 3160.149999999998)
+        self.assertIn("visible_images", d.attributes)
+        self.assertEqual(len(d.attributes["visible_images"]), 2)
+
 
 class TestGSF(unittest.TestCase):
 
