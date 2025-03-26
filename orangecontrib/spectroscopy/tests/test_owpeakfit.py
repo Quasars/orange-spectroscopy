@@ -171,14 +171,18 @@ class TestPeakFit(unittest.TestCase):
         out_result = model.fit(self.data.X[0], params, x=getx(self.data))
         out_table = fit_peaks(self.data, model, params)
         out_row = out_table[0]
-        self.assertEqual(out_row.x.shape[0], len(pcs) + len(out_result.var_names) + 1)
+        self.assertEqual(out_row.x.shape[0], len(pcs) + len(out_result.var_names) + 5)
         attrs = [a.name for a in out_table.domain.attributes[:4]]
         self.assertEqual(attrs, ["v0 area", "v0 amplitude", "v0 center", "v0 sigma"])
         self.assertNotEqual(0, out_row["v0 area"].value)
         self.assertEqual(out_result.best_values["v0_amplitude"], out_row["v0 amplitude"].value)
         self.assertEqual(out_result.best_values["v0_center"], out_row["v0 center"].value)
         self.assertEqual(out_result.best_values["v0_sigma"], out_row["v0 sigma"].value)
+        self.assertEqual(out_result.chisqr, out_row["Chi-square"].value)
         self.assertEqual(out_result.redchi, out_row["Reduced chi-square"].value)
+        self.assertEqual(out_result.aic, out_row["Akaike info crit"].value)
+        self.assertEqual(out_result.bic, out_row["Bayesian info crit"].value)
+        self.assertEqual(out_result.rsquared, out_row["R-squared"].value)
         self.assertEqual(out_row.id, self.data.ids[0])
 
 

@@ -5,13 +5,19 @@
 from lmfit import Model
 import numpy as np
 
+FIT_STATISTICS = ["chisqr", "redchi", "aic", "bic", "rsquared"]
 
 def n_best_fit_parameters(model, params):
-    """Number of output parameters for best fit results"""
+    """Number of output parameters for best fit results
+
+    This is composed of calculated outputs, varying parameters + uncertainties, and fit statistics.
+    """
     number_of_peaks = len(model.components)
+    calculated_outputs = 1  # Area under the curve
     var_params = [name for name, par in params.items() if par.vary]
     number_of_params = len(var_params)
-    return number_of_peaks + number_of_params + 1
+    fit_statistics = len(FIT_STATISTICS)
+    return number_of_peaks * calculated_outputs + number_of_params + fit_statistics
 
 
 def best_fit_results(model_result, x, shape):
@@ -32,7 +38,8 @@ def best_fit_results(model_result, x, shape):
         for param in [n for n in out.var_names if n.startswith(comp.prefix)]:
             output[col] = best_values[param]
             col += 1
-    output[-1] = out.redchi
+    for i, stat in enumerate(FIT_STATISTICS):
+        output[-5 + i] = getattr(out, stat, np.nan)
     return output
 
 

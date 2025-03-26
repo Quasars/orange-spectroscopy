@@ -51,7 +51,8 @@ def fit_results_table(output, model_result, orig_data):
         features.append(ContinuousVariable(name=f"{prefix} area"))
         for param in [n for n in out.var_names if n.startswith(comp.prefix)]:
             features.append(ContinuousVariable(name=param.replace("_", " ")))
-    features.append(ContinuousVariable(name="Reduced chi-square"))
+    for stat in ["Chi-square", "Reduced chi-square", "Akaike info crit", "Bayesian info crit", "R-squared"]:
+        features.append(ContinuousVariable(name=stat))
 
     domain = Domain(features,
                     orig_data.domain.class_vars,
