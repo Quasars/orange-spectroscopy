@@ -308,6 +308,7 @@ class OWPeakFit(SpectralPreprocess):
         super().__init__()
         self.subset_data = None
         self.subset_indices = None
+        self._invalidated = False
         self.preview_runner = PeakPreviewRunner(self)
         self.curveplot.selection_type = SELECTONE
         self.curveplot.select_at_least_1 = True
@@ -317,6 +318,12 @@ class OWPeakFit(SpectralPreprocess):
         # GUI
         # box = gui.widgetBox(self.controlArea, "Options")
 
+    @Inputs.data
+    @check_sql_input
+    def set_data(self, data=None):
+        self.data = data
+        self._invalidated = True
+
     @Inputs.data_subset
     @check_sql_input
     def set_subset_data(self, subset):
@@ -324,7 +331,11 @@ class OWPeakFit(SpectralPreprocess):
 
     def handleNewSignals(self):
         self._handle_subset_data()
-        super().handleNewSignals()
+        if self._invalidated:
+            self._invalidated = False
+            super().handleNewSignals()
+        else:
+            self.show_preview(show_info_anyway=True)
 
     # OWDataProjectionWidget
     def _handle_subset_data(self):
