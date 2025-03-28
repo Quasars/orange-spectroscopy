@@ -17,29 +17,33 @@ def n_best_fit_parameters(model, params):
     var_params = [name for name, par in params.items() if par.vary]
     number_of_params = len(var_params)
     fit_statistics = len(FIT_STATISTICS)
-    return number_of_peaks * calculated_outputs + number_of_params + fit_statistics
+    return number_of_peaks * calculated_outputs + number_of_params * 2 + fit_statistics
 
 
 def best_fit_results(model_result, x, shape):
-    """Return array of best-fit results"""
-    out = model_result
+    """Return array of best-fit results and uncertainties"""
+    res = model_result
     sorted_x = np.sort(x)
-    comps = out.eval_components(x=sorted_x)
-    best_values = out.best_values
+    comps = res.eval_components(x=sorted_x)
 
     output = np.zeros(shape)
 
     # add peak values to output storage
     col = 0
-    for comp in out.model.components:
+    for comp in res.model.components:
         # Peak area
         output[col] = np.trapz(np.broadcast_to(comps[comp.prefix], x.shape), sorted_x)
         col += 1
-        for param in [n for n in out.var_names if n.startswith(comp.prefix)]:
-            output[col] = best_values[param]
+        for param in [n for n in res.var_names if n.startswith(comp.prefix)]:
+            output[col] = res.best_values[param]
+            col += 1
+    for comp in res.model.components:
+        # Standard deviation from uncertainties matrix
+        for param in [n for n in res.var_names if n.startswith(comp.prefix)]:
+            output[col] = res.params[param].stderr
             col += 1
     for i, stat in enumerate(FIT_STATISTICS):
-        output[-5 + i] = getattr(out, stat, np.nan)
+        output[-5 + i] = getattr(res, stat, np.nan)
     return output
 
 
