@@ -77,7 +77,7 @@ class OPUSReader(FileFormat):
             y_data = np.vstack(y_data)
             meta_data = np.vstack(meta_data)
 
-        elif type(data) == opusFC.MultiRegionTRCDataReturn:
+        elif type(data) == opusFC.MultiRegionTRCDataReturn and len(data.regions):
             y_data = []
             meta_data = []
             metas.extend([ContinuousVariable.make(MAP_X_VAR),
@@ -142,7 +142,8 @@ class OPUSReader(FileFormat):
             y_data = data.y[None, :]
 
         else:
-            raise ValueError("Empty or unsupported opusFC DataReturn object: " + type(data))
+            warnings.warn(f"Empty or unsupported opusFC DataReturn object: {type(data)}")
+            return Orange.data.Table()
 
         import_params = ['SRT', 'SNM']
 
