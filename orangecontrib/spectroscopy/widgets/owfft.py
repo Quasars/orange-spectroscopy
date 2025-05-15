@@ -68,6 +68,8 @@ class OWFFT(OWWidget):
     out_limit1 = settings.Setting(400)
     out_limit2 = settings.Setting(4000)
     autocommit = settings.Setting(False)
+    use_phaseinput_for_complexfft = settings.Setting(False)
+    asym_apod = settings.Setting(False)
 
     sweep_opts = ("Single",
                   "Forward-Backward",
@@ -95,6 +97,7 @@ class OWFFT(OWWidget):
     class Warning(OWWidget.Warning):
         # This is not actuully called anywhere at the moment
         phase_res_limit_low = Msg("Phase resolution limit too low")
+        complex_data_phase_zero = Msg("Phase data is not connected, thus it is considered zero.")
 
     class Error(OWWidget.Error):
         fft_error = Msg("FFT error:\n{}")
@@ -204,6 +207,12 @@ class OWFFT(OWWidget):
         self.optionsBox = gui.widgetBox(None, "FFT Options")
         layout.addWidget(self.optionsBox, 0, 1, 3, 1)
 
+        cb0 = gui.checkBox(
+            self.optionsBox, self, "use_phaseinput_for_complexfft",
+            label="Complex FFT with phase input",
+            callback=self.complex_fft_changed
+            )
+        
         box = gui.comboBox(
             self.optionsBox, self, "apod_func",
             label="Apodization function:",
@@ -350,10 +359,14 @@ class OWFFT(OWWidget):
         self.controls.zpd2.setDisabled(self.peak_search_enable or self.sweeps == 0)
         self.commit.deferred()
 
+    def complex_fft_changed(self):
+        self.configui_for_polar_FFT_inputphase()
+        self.commit.deferred()
+
     @gui.deferred
     def commit(self):
         if self.data is not None:
-            if self.use_polar_FFT:
+            if self.use_polar_FFT or self.use_phaseinput_for_complexfft:
                 self.calculate_polar_FFT()
             else:
                 self.calculateFFT()
@@ -496,20 +509,29 @@ class OWFFT(OWWidget):
         self.Outputs.spectra.send(self.spectra_table)
         self.Outputs.phases.send(self.phases_table)
 
+
     def calculate_polar_FFT(self):
-        # polar channel data comes in alternating channel pairs
-        # of amplitude and phase data for the same channel for each run
-        amplitude_in = self.data.X[::2]
-        phases_in = self.data.X[1::2]
+
+        # Reset info, error and warning dialogs
+        self.Error.clear()
+        self.Warning.clear()
+
+        if self.use_phaseinput_for_complexfft:
+            amplitude_in = self.data.X
+            phases_in = self.stored_phase.X if self.stored_phase is not None else None
+        else:
+            amplitude_in = self.data.X[::2]
+            phases_in = self.data.X[1::2]
+        
+        if phases_in is None:
+            phases_in = 0
+            self.Warning.complex_data_phase_zero()
+
         ifg_data = amplitude_in * np.exp(phases_in * 1j)
 
         wavenumbers = None
         spectra = []
         phases = []
-
-        # Reset info, error and warning dialogs
-        self.Error.clear()
-        self.Warning.clear()
 
         fft_single = irfft.ComplexFFT(
             dx=self.dx,
@@ -535,12 +557,21 @@ class OWFFT(OWWidget):
             [ContinuousVariable.make(f"{w}") for w in wavenumbers],
             metas=self.data.domain.metas,
         )
-        self.spectra_table = Table.from_numpy(
-            wavenumbers_domain, X=spectra, metas=self.data.metas[::2]
-        )
-        phases_table = Table.from_numpy(
-            wavenumbers_domain, X=phases, metas=self.data.metas[1::2]
-        )
+
+        if self.use_phaseinput_for_complexfft:
+            self.spectra_table = Table.from_numpy(
+            wavenumbers_domain, X=spectra, metas=self.data.metas
+            )
+            phases_table = Table.from_numpy(
+                wavenumbers_domain, X=phases, metas=self.data.metas
+            )
+        else:
+            self.spectra_table = Table.from_numpy(
+                wavenumbers_domain, X=spectra, metas=self.data.metas[::2]
+            )
+            phases_table = Table.from_numpy(
+                wavenumbers_domain, X=phases, metas=self.data.metas[1::2]
+            )
 
         self.Outputs.spectra.send(self.spectra_table)
         self.Outputs.phases.send(phases_table)
@@ -667,6 +698,22 @@ class OWFFT(OWWidget):
             spectra = spectra[:, limits[0]:limits[1]]
 
         return wavenumbers, spectra
+    
+    def configui_for_polar_FFT_inputphase(self):
+        """
+        Configure the GUI for polar FFT with phase from strored_phase input
+        """
+        if self.use_phaseinput_for_complexfft:
+            self.dx_HeNe = False
+            self.dx_edit.setDisabled(False)
+            self.dx_HeNe_cb.setChecked(False)
+            self.controls.phase_corr.setDisabled(True)
+            self.controls.phase_res_limit.setDisabled(True)
+            self.controls.phase_resolution.setDisabled(True)
+        else:
+            self.controls.phase_corr.setDisabled(False)
+            self.controls.phase_res_limit.setDisabled(False)
+            self.controls.phase_resolution.setDisabled(False)
 
 
 def load_test_gsf() -> Orange.data.Table:
@@ -682,4 +729,6 @@ def load_test_gsf() -> Orange.data.Table:
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    WidgetPreview(OWFFT).run(load_test_gsf())
+    data = Orange.data.Table("20250412-TGQ1-O2A-ifg-lowdrift.xyz")
+    phase = Orange.data.Table("20250412-TGQ1-O2P-ifg-lowdrift.xyz")
+    WidgetPreview(OWFFT).run(set_data=data,set_stored_phase=phase)
