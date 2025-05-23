@@ -140,7 +140,6 @@ class OWFFT(OWWidget):
             callback=self.setting_changed,
             valueType=float,
             disabled=self.dx_auto,
-            # disabledBy=self.controls.dx_auto,
         )
         lb = gui.widgetLabel(self.dataBox, "cm")
         grid.addWidget(self.dx_auto_cb, 0, 0)
@@ -635,9 +634,8 @@ class OWFFT(OWWidget):
             
             self.dx = dx
             self.zff = 2
-            self.dx_auto = False
-            self.dx_auto_cb.setDisabled(True)
-            self.dx_edit.setDisabled(True)
+            self.dx_auto = True
+            self.dx_edit.setDisabled(self.dx_auto)
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
             self.controls.peak_search.setEnabled(True)
@@ -659,19 +657,9 @@ class OWFFT(OWWidget):
         try:
             lwn = self.data.get_column("Effective Laser Wavenumber")
         except ValueError:
-            if not self.dx_auto_cb.isEnabled():
-                # Only reset if disabled by this code, otherwise leave alone
-                self.dx_auto_cb.setDisabled(False)
-                self.infoc.setText("")
-                self.dx_auto = True
-                self.dx_edit.setDisabled(self.dx_auto)
-                self.dx = 1.0 / DEFAULT_HENE / 2.0
-            return
+            lwn = DEFAULT_HENE
         else:
             lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
-            self.dx_auto = False
-            self.dx_auto_cb.setDisabled(True)
-            self.dx_edit.setDisabled(True)
         try:
             udr = self.data.get_column("Under Sampling Ratio")
         except ValueError:
@@ -679,9 +667,10 @@ class OWFFT(OWWidget):
         else:
             udr = udr[0] if (udr == udr[0]).all() else ValueError()
 
-        self.dx = (1 / lwn / 2 ) * udr
         self.infoc.setText("{0} cm<sup>-1</sup> laser, {1} sampling interval".format(lwn, udr))
-    
+        if self.dx_auto:
+            self.dx = (1 / lwn / 2 ) * udr
+
     def limit_range(self, wavenumbers, spectra):
 
         limits = np.searchsorted(wavenumbers,
@@ -697,12 +686,9 @@ class OWFFT(OWWidget):
     
     def configui_for_complex_fft(self):
         """
-        Configure the GUI for polar FFT with phase from strored_phase input
+        Disable Phase correction controls when calculating a complex FFT.
         """
         if self.complexfft:
-            self.dx_auto = False
-            self.dx_edit.setDisabled(False)
-            self.dx_auto_cb.setChecked(False)
             self.controls.phase_corr.setDisabled(True)
             self.controls.phase_res_limit.setDisabled(True)
             self.controls.phase_resolution.setDisabled(True)
