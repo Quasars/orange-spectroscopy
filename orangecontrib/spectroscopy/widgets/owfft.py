@@ -286,10 +286,6 @@ class OWFFT(OWWidget):
 
         gui.auto_commit(self.outputBox, self, "autocommit", "Calculate", box=False)
 
-        # Disable the controls initially (no data)
-        self.dataBox.setDisabled(True)
-        self.optionsBox.setDisabled(True)
-
     @Inputs.data
     def set_data(self, dataset):
         """
@@ -308,13 +304,9 @@ class OWFFT(OWWidget):
             self.use_interleaved_data = False
             self.complexfft_cb.setDisabled(False)
             self.check_metadata()
-            self.dataBox.setDisabled(False)
-            self.optionsBox.setDisabled(False)
         else:
             self.data = None
             self.spectra_table = None
-            self.dataBox.setDisabled(True)
-            self.optionsBox.setDisabled(True)
             self.infoa.setText("No data on input.")
             self.infob.setText("")
             self.Outputs.spectra.send(self.spectra_table)
@@ -351,7 +343,7 @@ class OWFFT(OWWidget):
 
     def dx_auto_changed(self):
         self.dx_edit.setDisabled(self.dx_auto)
-        if self.dx_auto is True:
+        if self.dx_auto is True and self.data is not None:
             self.check_metadata()
         self.commit.deferred()
 
