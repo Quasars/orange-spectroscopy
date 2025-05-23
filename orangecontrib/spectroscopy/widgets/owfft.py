@@ -37,6 +37,7 @@ class OWFFT(OWWidget):
     # An icon resource file path for this widget
     # (a path relative to the module where this widget is defined)
     icon = "icons/fft.svg"
+    keywords = ["Fast Fourier Transform", "FFT", "IFG"]
 
     # Define inputs and outputs
     class Inputs:
