@@ -50,9 +50,8 @@ class OWFFT(OWWidget):
     replaces = ["orangecontrib.infrared.widgets.owfft.OWFFT"]
 
     # Define widget settings
-    laser_wavenumber = settings.Setting(DEFAULT_HENE)
-    dx_HeNe = settings.Setting(True)
-    dx = settings.Setting(1.0)
+    dx_auto = settings.Setting(True)
+    dx = settings.Setting(1.0 / DEFAULT_HENE / 2.0)
     auto_sweeps = settings.Setting(True)
     sweeps = settings.Setting(0)
     peak_search = settings.Setting(irfft.PeakSearch.MAXIMUM)
@@ -109,8 +108,6 @@ class OWFFT(OWWidget):
         self.stored_phase = None
         self.spectra_table = None
         self.reader = None
-        if self.dx_HeNe is True:
-            self.dx = 1.0 / self.laser_wavenumber / 2.0
         self.use_interleaved_data = False
 
         layout = QGridLayout()
@@ -133,19 +130,20 @@ class OWFFT(OWWidget):
         gui.widgetLabel(self.dataBox, "Datapoint spacing (Δx):")
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
+        self.dx_auto_cb = gui.checkBox(
+            self.dataBox, self, "dx_auto",
+            label="Auto",
+            callback=self.dx_auto_changed,
+            )
         self.dx_edit = gui.lineEdit(
             self.dataBox, self, "dx",
             callback=self.setting_changed,
             valueType=float,
-            disabled=self.dx_HeNe,
-            )
-        self.dx_HeNe_cb = gui.checkBox(
-            self.dataBox, self, "dx_HeNe",
-            label="HeNe laser",
-            callback=self.dx_changed,
-            )
+            disabled=self.dx_auto,
+            # disabledBy=self.controls.dx_auto,
+        )
         lb = gui.widgetLabel(self.dataBox, "cm")
-        grid.addWidget(self.dx_HeNe_cb, 0, 0)
+        grid.addWidget(self.dx_auto_cb, 0, 0)
         grid.addWidget(self.dx_edit, 0, 1, 1, 2)
         grid.addWidget(lb, 0, 3)
 
@@ -351,10 +349,10 @@ class OWFFT(OWWidget):
             self.controls.zpd2.setDisabled(self.sweeps == 0)
         self.commit.deferred()
 
-    def dx_changed(self):
-        self.dx_edit.setDisabled(self.dx_HeNe)
-        if self.dx_HeNe is True:
-            self.dx = 1.0 / self.laser_wavenumber / 2.0
+    def dx_auto_changed(self):
+        self.dx_edit.setDisabled(self.dx_auto)
+        if self.dx_auto is True:
+            self.check_metadata()
         self.commit.deferred()
 
     def peak_search_changed(self):
@@ -645,8 +643,8 @@ class OWFFT(OWWidget):
             
             self.dx = dx
             self.zff = 2
-            self.dx_HeNe = False
-            self.dx_HeNe_cb.setDisabled(True)
+            self.dx_auto = False
+            self.dx_auto_cb.setDisabled(True)
             self.dx_edit.setDisabled(True)
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
@@ -669,18 +667,18 @@ class OWFFT(OWWidget):
         try:
             lwn = self.data.get_column("Effective Laser Wavenumber")
         except ValueError:
-            if not self.dx_HeNe_cb.isEnabled():
+            if not self.dx_auto_cb.isEnabled():
                 # Only reset if disabled by this code, otherwise leave alone
-                self.dx_HeNe_cb.setDisabled(False)
+                self.dx_auto_cb.setDisabled(False)
                 self.infoc.setText("")
-                self.dx_HeNe = True
-                self.dx_edit.setDisabled(self.dx_HeNe)
-                self.dx = 1.0 / self.laser_wavenumber / 2.0
+                self.dx_auto = True
+                self.dx_edit.setDisabled(self.dx_auto)
+                self.dx = 1.0 / DEFAULT_HENE / 2.0
             return
         else:
             lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
-            self.dx_HeNe = False
-            self.dx_HeNe_cb.setDisabled(True)
+            self.dx_auto = False
+            self.dx_auto_cb.setDisabled(True)
             self.dx_edit.setDisabled(True)
         try:
             udr = self.data.get_column("Under Sampling Ratio")
@@ -710,9 +708,9 @@ class OWFFT(OWWidget):
         Configure the GUI for polar FFT with phase from strored_phase input
         """
         if self.complexfft:
-            self.dx_HeNe = False
+            self.dx_auto = False
             self.dx_edit.setDisabled(False)
-            self.dx_HeNe_cb.setChecked(False)
+            self.dx_auto_cb.setChecked(False)
             self.controls.phase_corr.setDisabled(True)
             self.controls.phase_res_limit.setDisabled(True)
             self.controls.phase_resolution.setDisabled(True)
