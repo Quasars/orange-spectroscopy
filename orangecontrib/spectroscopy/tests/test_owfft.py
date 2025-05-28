@@ -7,7 +7,7 @@ from Orange.widgets.tests.base import WidgetTest
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.io.neaspec import NeaReaderGSF
 from orangecontrib.spectroscopy import irfft
-from orangecontrib.spectroscopy.widgets.owfft import OWFFT, CHUNK_SIZE
+from orangecontrib.spectroscopy.widgets.owfft import OWFFT, CHUNK_SIZE, DEFAULT_HENE
 
 
 class TestOWFFT(WidgetTest):
@@ -29,16 +29,22 @@ class TestOWFFT(WidgetTest):
         self.send_signal("Interferogram", self.ifg_seq)
         self.assertEqual(self.widget.dx, (1 / 1.57980039e+04 / 2) * 4)
         self.send_signal("Interferogram", self.ifg_single)
-        self.assertEqual(self.widget.dx, (1 / self.widget.laser_wavenumber / 2))
+        self.assertEqual(self.widget.dx, (1 / DEFAULT_HENE / 2))
 
     def test_respect_custom_dx(self):
         """ Setting new data should not overwrite custom dx value """
         self.send_signal("Interferogram", self.ifg_single)
-        self.widget.dx_HeNe = False
+        self.widget.dx_auto = False
         self.widget.dx = 5
-        self.widget.dx_changed()
+        self.widget.dx_auto_changed()
         self.send_signal("Interferogram", self.ifg_single)
         self.assertEqual(self.widget.dx, 5)
+        self.assertEqual(self.widget.dx_auto, False)
+        # Disconnent, reconnect
+        self.send_signal("Interferogram", None)
+        self.send_signal("Interferogram", self.ifg_single)
+        self.assertEqual(self.widget.dx, 5)
+        self.assertEqual(self.widget.dx_auto, False)
 
     def test_auto_dx(self):
         self.send_signal("Interferogram", self.ifg_seq)
@@ -129,9 +135,10 @@ class TestOWFFT(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.ifg_gsf)
         self.commit_and_wait()
         # testing info panel text associated with the input file metadata
-        widget_text = self.widget.infoc.text()
-        self.assertIn('Applying Complex Fourier Transform.', widget_text)
+        widget_text = self.widget.info_dx.text()
         self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
+        self.assertTrue(self.widget.use_interleaved_data)
+        self.assertTrue(self.widget.complexfft)
 
         spectra = self.get_output(self.widget.Outputs.spectra)
         phases = self.get_output(self.widget.Outputs.phases)
@@ -139,3 +146,11 @@ class TestOWFFT(WidgetTest):
         np.testing.assert_allclose(phases.X.size, (2049))
         np.testing.assert_allclose(spectra.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789))
         np.testing.assert_allclose(phases.X[0, 396:399], (2.61539453, 2.65495979, 2.72814989))
+
+    def test_migrate_HeNe(self):
+        settings = {"dx_HeNe": False}
+        OWFFT.migrate_settings(settings, 1)
+        self.assertEqual(settings["dx_auto"], False)
+        settings = {"dx_HeNe": True}
+        OWFFT.migrate_settings(settings, 1)
+        self.assertEqual(settings["dx_auto"], True)
