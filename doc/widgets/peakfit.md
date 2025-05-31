@@ -6,6 +6,7 @@ Fit data to a composite peak model.
 **Inputs**
 
  - Data: Input data set
+ - Data Subset: Subset of the data
 
 **Outputs**
 
@@ -23,8 +24,9 @@ resulting total fit.
 1. Add a [model](#models-and-parameters) component from the dropdown menu.
 2. Input model initial parameters and [constraints](#constraints).
 3. Visualize the initial peak and peak color.
-4. Select subsample of data for preview fit calculation.
-5. Preview plot of fit results for subsample. Center line of selected model is visualized along with
+4. Set subsample size of data for preview fit calculation.<br> 
+   If subset input is present, subsample will be selected from the resulting subset of the input data. 
+5. Preview plot of fit results for subsample.<br> Center line of selected model is visualized along with
 the fit results for the selected curve:
    - Black dash: selected curve
    - Red line: total fit
