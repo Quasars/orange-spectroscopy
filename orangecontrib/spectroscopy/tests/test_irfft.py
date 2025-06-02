@@ -22,10 +22,10 @@ class TestIRFFT(unittest.TestCase):
         self.ifgs = {
             'even_sym': self.ifg_single.X[0],
             'odd_sym': self.ifg_single.X[0][1:],
-            'even_asym': self.ifg_seq_ref.X[0][1:],
-            'odd_asym': self.ifg_seq_ref.X[0],
-            'even_asym_reverse': self.ifg_seq_ref.X[0][1:][::-1],
-            'odd_asym_reverse': self.ifg_seq_ref.X[0][::-1],
+            'even_trunc': self.ifg_seq_ref.X[0][1:],
+            'odd_trunc': self.ifg_seq_ref.X[0],
+            'even_trunc_reverse': self.ifg_seq_ref.X[0][1:][::-1],
+            'odd_trunc_reverse': self.ifg_seq_ref.X[0][::-1],
         }
 
     def test_zero_fill(self):
@@ -161,10 +161,10 @@ class TestIRFFT(unittest.TestCase):
                     self.assertAlmostEqual(ifg[zpd], out[zpd])
 
     def test_ramp(self):
-        ifg = self.ifgs['odd_asym']
+        ifg = self.ifgs['odd_trunc']
         zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
         ramp_fwd = ramp(ifg, zpd)
-        ifg_rev = self.ifgs['odd_asym_reverse']
+        ifg_rev = self.ifgs['odd_trunc_reverse']
         zpd_rev = find_zpd(ifg_rev, PeakSearch.ABSOLUTE)
         ramp_rev = ramp(ifg_rev, zpd_rev)
         np.testing.assert_array_equal(ramp_fwd, ramp_rev[::-1])

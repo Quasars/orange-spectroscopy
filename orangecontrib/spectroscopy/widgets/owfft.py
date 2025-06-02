@@ -613,10 +613,10 @@ class OWFFT(OWWidget):
                 zpd2 = irfft.find_zpd(data[1][::-1], self.peak_search)
                 # Forward / backward zpds never perfectly match
                 if zpd1 >= zpd2 - var and zpd1 <= zpd2 + var:
-                    # forward-backward, symmetric and asymmetric
+                    # forward-backward, symmetric and truncated symmetric
                     sweeps = 1
                 else:
-                    # single, asymetric
+                    # single, truncated symetric
                     sweeps = 0
         # Honour custom sweeps setting
         if self.auto_sweeps:
