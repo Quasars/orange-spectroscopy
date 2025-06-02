@@ -7,7 +7,7 @@ from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
                                               find_zpd, PeakSearch, ApodFunc,
-                                              MultiIRFFT, apodize, ramp,
+                                              MultiIRFFT, apodize,
                                               )
 
 dx = 1.0 / 15797.337544 / 2.0
@@ -26,6 +26,7 @@ class TestIRFFT(unittest.TestCase):
             'odd_trunc': self.ifg_seq_ref.X[0],
             'even_trunc_reverse': self.ifg_seq_ref.X[0][1:][::-1],
             'odd_trunc_reverse': self.ifg_seq_ref.X[0][::-1],
+            'fake_asym': self.ifg_seq_ref.X[0],
         }
 
     def test_zero_fill(self):
@@ -97,6 +98,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = IRFFT(dx=dx_ag,
                     apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    apod_asym=False,
                     zff=1,
                     phase_res=None,
                     phase_corr=PhaseCorrection.MERTZ,
@@ -133,6 +135,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = MultiIRFFT(dx=dx_ag,
                          apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         apod_asym=False,
                          zff=1,
                          phase_res=None,
                          phase_corr=PhaseCorrection.MERTZ,
@@ -153,18 +156,24 @@ class TestIRFFT(unittest.TestCase):
 
     def test_apodization(self):
         for apod_func in ApodFunc:
+            if apod_func == ApodFunc.BOXCAR:
+                ifg = self.ifgs['even_sym']
+                zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
+                out = apodize(ifg, zpd, apod_func, False)
+                np.testing.assert_array_equal(ifg, out)
+                continue
             for k, ifg in self.ifgs.items():
-                with self.subTest(apod_func=apod_func.name, ifg=k):
+                if 'asym' in k:
+                    # Test asymmetric ifgs
+                    apod_asym = True
+                    ramp_value = 1
+                else:
+                    # Test symmetric and truncated ifgs
+                    apod_asym = False
+                    ramp_value = 0.5
+                with self.subTest(apod_func=apod_func.name, ifg=k, asym=apod_asym):
                     zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
-                    out = apodize(ifg, zpd, apod_func)
+                    out = apodize(ifg, zpd, apod_func, apod_asym)
                     # Apodization should not change value at zpd
-                    self.assertAlmostEqual(ifg[zpd], out[zpd])
-
-    def test_ramp(self):
-        ifg = self.ifgs['odd_trunc']
-        zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
-        ramp_fwd = ramp(ifg, zpd)
-        ifg_rev = self.ifgs['odd_trunc_reverse']
-        zpd_rev = find_zpd(ifg_rev, PeakSearch.ABSOLUTE)
-        ramp_rev = ramp(ifg_rev, zpd_rev)
-        np.testing.assert_array_equal(ramp_fwd, ramp_rev[::-1])
+                    # Ramp should reduce zpd value by half
+                    self.assertAlmostEqual(ifg[zpd] * ramp_value, out[zpd])
