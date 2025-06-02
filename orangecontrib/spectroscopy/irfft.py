@@ -193,10 +193,11 @@ class IRFFT():
     def __init__(self, dx,
                  apod_func=ApodFunc.BLACKMAN_HARRIS_3, zff=2,
                  phase_res=None, phase_corr=PhaseCorrection.MERTZ,
-                 peak_search=PeakSearch.MAXIMUM,
+                 peak_search=PeakSearch.MAXIMUM, apod_asym=False,
                 ):
         self.dx = dx
         self.apod_func = apod_func
+        self.apod_asym = apod_asym
         self.zff = zff
         self.phase_res = phase_res
         self.phase_corr = phase_corr
