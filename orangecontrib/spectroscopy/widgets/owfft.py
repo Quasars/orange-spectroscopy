@@ -433,6 +433,7 @@ class OWFFT(OWWidget):
             fft_single = irfft.MultiIRFFT(
                 dx=self.dx,
                 apod_func=self.apod_func,
+                apod_asym=self.apod_asym,
                 zff=2**self.zff,
                 phase_res=self.phase_resolution if self.phase_res_limit else None,
                 phase_corr=self.phase_corr,

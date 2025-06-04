@@ -97,6 +97,7 @@ class TestOWFFT(WidgetTest):
         abs = Orange.data.Table("agilent/4_noimage_agg256.dat")
 
         self.widget.apod_func = irfft.ApodFunc.BLACKMAN_HARRIS_4
+        self.widget.apod_asym = False
         self.widget.zff = 0  # 2**0 = 1
         self.widget.phase_res_limit = False
         self.widget.phase_corr = irfft.PhaseCorrection.MERTZ
