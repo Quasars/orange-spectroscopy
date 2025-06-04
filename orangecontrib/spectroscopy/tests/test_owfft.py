@@ -139,6 +139,7 @@ class TestOWFFT(WidgetTest):
         self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
         self.assertTrue(self.widget.use_interleaved_data)
         self.assertTrue(self.widget.complexfft)
+        self.assertTrue(self.widget.apod_asym)
 
         spectra = self.get_output(self.widget.Outputs.spectra)
         phases = self.get_output(self.widget.Outputs.phases)
