@@ -1,4 +1,5 @@
 from enum import IntEnum
+import warnings
 
 import numpy as np
 
@@ -220,11 +221,19 @@ class IRFFT():
     def __init__(self, dx,
                  apod_func=ApodFunc.BLACKMAN_HARRIS_3, zff=2,
                  phase_res=None, phase_corr=PhaseCorrection.MERTZ,
-                 peak_search=PeakSearch.MAXIMUM, apod_asym=False,
+                 peak_search=PeakSearch.MAXIMUM, apod_asym=None,
                 ):
         self.dx = dx
         self.apod_func = apod_func
-        self.apod_asym = apod_asym
+        if apod_asym is None:
+            warnings.warn(
+                "Apodization symmetry must now be specified.\n"
+                "Defaulting to previous asymmetric behaviour, which is not appropriate for symmetric interferometers (FT-IR).\n"
+                "See Quasars/orange-spectroscopy#641 for details.",
+                category=FutureWarning)
+            self.apod_asym = True
+        else:
+            self.apod_asym = apod_asym
         self.zff = zff
         self.phase_res = phase_res
         self.phase_corr = phase_corr
@@ -247,7 +256,7 @@ class IRFFT():
         # Calculate phase on interferogram of specified size 2*L
         L = self.phase_ifg_size(ifg.shape[0])
         if L == 0: # Use full ifg for phase
-            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
             ifg = zero_fill(ifg, self.zff)
             # Rotate the Complete IFG so that the centerburst is at edges.
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))

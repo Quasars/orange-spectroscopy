@@ -5,7 +5,7 @@ import Orange
 
 from orangecontrib.spectroscopy.data import getx
 
-from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
+from orangecontrib.spectroscopy.irfft import (IRFFT, ComplexFFT, zero_fill, PhaseCorrection,
                                               find_zpd, PeakSearch, ApodFunc,
                                               MultiIRFFT, apodize,
                                               )
@@ -78,6 +78,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = IRFFT(dx=dx_ag,
                     apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    apod_asym=False,
                     zff=1,
                     phase_res=None,
                     phase_corr=PhaseCorrection.MERTZ,
@@ -120,6 +121,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = MultiIRFFT(dx=dx_ag,
                          apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         apod_asym=False,
                          zff=1,
                          phase_res=None,
                          phase_corr=PhaseCorrection.MERTZ,
@@ -177,3 +179,9 @@ class TestIRFFT(unittest.TestCase):
                     # Apodization should not change value at zpd
                     # Ramp should reduce zpd value by half
                     self.assertAlmostEqual(ifg[zpd] * ramp_value, out[zpd])
+
+    def test_apod_asym_warning(self):
+        for FFT in IRFFT, MultiIRFFT, ComplexFFT:
+            with self.assertWarns(FutureWarning):
+                fft = FFT(dx=dx)
+            self.assertTrue(fft.apod_asym)
