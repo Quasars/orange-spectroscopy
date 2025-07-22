@@ -134,6 +134,16 @@ class TestOWPeakFit(WidgetTest):
         self.widget.commit.now()
         wait_for_preview(self.widget, 10000)
 
+    def test_subset_preview(self):
+        subset = self.data.from_table_rows(self.data, [2])
+        self.widget.add_preprocessor(PREPROCESSORS[0])
+        self.send_signal("Data Subset", subset)
+        self.send_signal("Data", self.data)
+        wait_for_preview(self.widget)
+        assert self.widget.sample_data(self.data).ids == subset.ids
+        assert self.widget.preview_runner.preview_data.ids == subset.ids
+
+
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
