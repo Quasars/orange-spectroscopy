@@ -9,7 +9,7 @@ from Orange.data.io import FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
-from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannel, NeaImageGSF
+from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannel
 from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
@@ -442,25 +442,43 @@ class TestNea(unittest.TestCase):
 
     def test_open_v1(self):
         data = Orange.data.Table("spectra20_small.nea")
-        self.assertEqual(len(data), 12)
-        self.assertEqual("channel", data.domain.metas[2].name)
-        np.testing.assert_almost_equal(getx(data), [0.000295, 0.00092])
-        self.assertEqual("O0A", data.metas[0][2])
-        np.testing.assert_almost_equal(data.X[0, 0], 10.2608052)  # O0A
-        self.assertEqual("O0P", data.metas[6][2])
-        np.testing.assert_almost_equal(data.X[6, 0], 0)  # O0P
+        self.assertEqual(len(data), 20)
+        self.assertEqual("run", data.domain.metas[2].name)
+        self.assertEqual("channel", data.domain.metas[3].name)
+        np.testing.assert_almost_equal(getx(data), [295.1543, 920.4681])
+        self.assertEqual("O0A", data.metas[0][3])
+        np.testing.assert_almost_equal(data.X[0, 0], 11.21555)  # O0A
+        self.assertEqual("O0A", data.metas[6][3])
+        np.testing.assert_almost_equal(data.X[6, 0], 7.610092)  # O0P
 
     def test_open_v2(self):
         fn = "nea_test_v2.txt"
         absolute_filename = FileFormat.locate(fn, dataset_dirs)
-        data = NeaReader(absolute_filename).read()
+        reader = NeaReader(absolute_filename)
+        reader.sheet = "All"
+        data = reader.read()
         self.assertEqual(len(data), 12)
         self.assertEqual("channel", data.domain.metas[2].name)
         np.testing.assert_almost_equal(getx(data), [15., 89.])
         self.assertEqual("O0A", data.metas[0][2])
         np.testing.assert_almost_equal(data.X[0, 0], 92.0)
-        self.assertEqual("O0A", data.metas[6][2])
-        np.testing.assert_almost_equal(data.X[6, 0], 38.0)
+        self.assertEqual("O0P", data.metas[1][2])
+        np.testing.assert_almost_equal(data.X[1, 0], 21.0)
+        self.assertEqual("O1A", data.metas[8][2])
+        np.testing.assert_almost_equal(data.X[8, 1], 57.0)
+
+    def test_ifg_read(self):
+        fn = 'NeaReaderMultichannel_test/Test_Au_Fourier_Scan_Synchrotron.txt'
+        absolute_filename = FileFormat.locate(fn, dataset_dirs)
+        reader = NeaReader(absolute_filename)
+        reader.sheet = "All"
+        data = reader.read()
+        self.assertEqual(len(data), 30)
+        self.assertEqual("channel", data.domain.metas[3].name)
+        self.assertEqual("Z", data.metas[0][3])
+        self.assertEqual("M", data.metas[1][3])
+        self.assertEqual("O0A", data.metas[2][3])
+        self.assertEqual("O0P", data.metas[3][3])
 
 
 class TestNeaGSF(unittest.TestCase):
@@ -487,37 +505,37 @@ class TestNeaImageGSF(unittest.TestCase):
     def test_type_detect(self):
         # For Phase
         fn = 'NeaReaderGSF_test O2P raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Phase')
         # For Amplitude
         fn = 'NeaReaderGSF_test O2A raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Amplitude')
         # Topography
         fn = 'NeaReaderGSF_test Z raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Topography')
         # No correct channelname
         fn = 'NeaReaderGSF_test.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Topography')
         # For backward scan naming
         fn = 'NeaReaderGSF_test R-Z raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Topography')
         # Backward name amplitude
         fn = 'NeaReaderGSF_test R-O2A raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Amplitude')
         # total bullshit
         fn = 'mittudomenmiaezanev asdha 2A dk raw.gsf'
-        signaltype = NeaImageGSF.detect_signal_type(fn)
+        signaltype = NeaReader.detect_image_signaltype(fn)
         self.assertEqual(signaltype, 'Topography')
 
     def test_read(self):
         fn = "whitelight.gsf"
         absolute_filename = FileFormat.locate(fn, dataset_dirs)
-        data = NeaImageGSF(absolute_filename).read()
+        data = NeaReader(absolute_filename).read()
         self.assertEqual(data.attributes["measurement.signaltype"],'Topography')
         self.assertEqual(data.X.shape, (20000, 1))
         # check some pixel vaules
