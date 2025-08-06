@@ -3,7 +3,8 @@ import pyqtgraph as pg
 import bottleneck as bn
 
 from scipy.ndimage import sobel
-from scipy.ndimage.interpolation import shift
+from scipy.ndimage import shift
+from skimage.registration import phase_cross_correlation
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel
@@ -22,15 +23,7 @@ from orangecontrib.spectroscopy.utils import NanInsideHypercube, InvalidAxisExce
     get_hypercube
 
 
-# the following line imports the copied code so that
-# we do not need to depend on scikit-learn
-from orangecontrib.spectroscopy.utils.skimage.register_translation import register_translation
 from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox
-
-
-# instead of from skimage.feature import register_translation
-
-# stack alignment code originally from: https://github.com/jpacold/STXM_live
 
 
 class RegisterTranslation:
@@ -42,7 +35,7 @@ class RegisterTranslation:
         """Return the shift (in each axis) needed to align to the base.
         Shift down and right are positive. First coordinate belongs to
         the first axis (rows in numpy)."""
-        s, _, _ = register_translation(base, shifted, upsample_factor=self.upsample_factor)
+        s, _, _ = phase_cross_correlation(base, shifted, upsample_factor=self.upsample_factor)
         return s
 
 
@@ -65,6 +58,14 @@ def shift_fill(img, sh, fill=np.nan):
 
 def alignstack(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
     """Align to the first image"""
+    shifts = calculate_stack_shifts(raw, shiftfn, ref_frame_num=ref_frame_num,
+                                    filterfn=filterfn)
+    aligned = alignstack_with_shifts(raw, shifts)
+
+    return shifts, aligned
+
+def calculate_stack_shifts(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
+    """Calculate the shifts for each image in the stack"""
     base = filterfn(raw[ref_frame_num])
     shifts = []
 
@@ -75,14 +76,21 @@ def alignstack(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
             shifts.append((0, 0))
     shifts = np.array(shifts)
 
+    return shifts
+
+def alignstack_with_shifts(raw, shifts):
+    """Aligns the stack using the provided shifts"""
     aligned = np.zeros((len(raw),) + raw[0].shape, dtype=raw[0].dtype)
     for k in range(len(raw)):
         aligned[k] = shift_fill(raw[k], shifts[k])
 
-    return shifts, aligned
+    return aligned
 
+def process_stack(data, xat, yat, upsample_factor=100, use_sobel=False, ref_frame_num=0, refdata=None):
 
-def process_stack(data, xat, yat, upsample_factor=100, use_sobel=False, ref_frame_num=0):
+    calculate_shift = RegisterTranslation(upsample_factor=upsample_factor)
+    filterfn = sobel if use_sobel else lambda x: x
+
     hypercube, lsx, lsy = get_hypercube(data, xat, yat)
     if bn.anynan(hypercube):
         raise NanInsideHypercube(True)
