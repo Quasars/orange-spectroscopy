@@ -162,6 +162,7 @@ class OWStackAlign(OWWidget):
     sobel_filter = settings.Setting(False)
     attr_x = ContextSetting(None, exclude_attributes=True)
     attr_y = ContextSetting(None, exclude_attributes=True)
+    upscale_factor = settings.Setting(1)
     ref_frame_num = settings.Setting(0)
 
     def __init__(self):
@@ -194,11 +195,17 @@ class OWStackAlign(OWWidget):
                      label="Use sobel filter",
                      callback=self._sobel_changed)
         gui.separator(box)
-        hbox = gui.hBox(box)
+        hbox1 = gui.hBox(box)
+        self.le_upscale = lineEditIntRange(box, self, "upscale_factor", bottom=1, default=1,
+                                    callback=self._update_attr)
+        hbox1.layout().addWidget(QLabel("Upscale factor:", self))
+        hbox1.layout().addWidget(self.le_upscale)
+
         self.le1 = lineEditIntRange(box, self, "ref_frame_num", bottom=1, default=1,
                                     callback=self._ref_frame_changed)
-        hbox.layout().addWidget(QLabel("Reference frame:", self))
-        hbox.layout().addWidget(self.le1)
+        hbox2 = gui.hBox(box)
+        hbox2.layout().addWidget(QLabel("Reference frame:", self))
+        hbox2.layout().addWidget(self.le1)
 
         gui.rubber(self.controlArea)
 
@@ -281,7 +288,7 @@ class OWStackAlign(OWWidget):
             try:
                 refdata = self.refdata if self.use_refinput else None
                 shifts, new_stack = process_stack(self.data, self.attr_x, self.attr_y,
-                                                  upsample_factor=100, use_sobel=self.sobel_filter,
+                                                  upsample_factor=self.upscale_factor, use_sobel=self.sobel_filter,
                                                   ref_frame_num=self.ref_frame_num-1, refdata=refdata)
             except NanInsideHypercube as e:
                 self.Error.nan_in_image(e.args[0])
