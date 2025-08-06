@@ -28,7 +28,6 @@ from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox
 
 
 class RegisterTranslation:
-
     def __init__(self, upsample_factor=1):
         self.upsample_factor = upsample_factor
 
@@ -36,7 +35,9 @@ class RegisterTranslation:
         """Return the shift (in each axis) needed to align to the base.
         Shift down and right are positive. First coordinate belongs to
         the first axis (rows in numpy)."""
-        s, _, _ = phase_cross_correlation(base, shifted, upsample_factor=self.upsample_factor)
+        s, _, _ = phase_cross_correlation(
+            base, shifted, upsample_factor=self.upsample_factor
+        )
         return s
 
 
@@ -59,11 +60,13 @@ def shift_fill(img, sh, fill=np.nan):
 
 def alignstack(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
     """Align to the first image"""
-    shifts = calculate_stack_shifts(raw, shiftfn, ref_frame_num=ref_frame_num,
-                                    filterfn=filterfn)
+    shifts = calculate_stack_shifts(
+        raw, shiftfn, ref_frame_num=ref_frame_num, filterfn=filterfn
+    )
     aligned = alignstack_with_shifts(raw, shifts)
 
     return shifts, aligned
+
 
 def calculate_stack_shifts(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
     """Calculate the shifts for each image in the stack"""
@@ -79,6 +82,7 @@ def calculate_stack_shifts(raw, shiftfn, ref_frame_num=0, filterfn=lambda x: x):
 
     return shifts
 
+
 def alignstack_with_shifts(raw, shifts):
     """Aligns the stack using the provided shifts"""
     aligned = np.zeros((len(raw),) + raw[0].shape, dtype=raw[0].dtype)
@@ -87,33 +91,41 @@ def alignstack_with_shifts(raw, shifts):
 
     return aligned
 
-def process_stack(data, xat, yat, upsample_factor=100, use_sobel=False, ref_frame_num=0, refdata=None):
 
+def process_stack(
+    data, xat, yat, upsample_factor=100, use_sobel=False, ref_frame_num=0, refdata=None
+):
     calculate_shift = RegisterTranslation(upsample_factor=upsample_factor)
     filterfn = sobel if use_sobel else lambda x: x
 
     hypercube, lsx, lsy = get_hypercube(data, xat, yat)
     if bn.anynan(hypercube):
         raise NanInsideHypercube(True)
-    
+
     if refdata is None:
-        shifts, aligned_stack = alignstack(hypercube.T,
-                                        shiftfn=calculate_shift,
-                                        ref_frame_num=ref_frame_num,
-                                        filterfn=filterfn)
+        shifts, aligned_stack = alignstack(
+            hypercube.T,
+            shiftfn=calculate_shift,
+            ref_frame_num=ref_frame_num,
+            filterfn=filterfn,
+        )
     else:
         if refdata.X.shape[1] != data.X.shape[1]:
-            raise WrongReferenceException("Reference data must have the same number of frames as the input data.")
-        
+            raise WrongReferenceException(
+                "Reference data must have the same number of frames as the input data."
+            )
+
         hypercube_ref, _, _ = get_hypercube(refdata, xat, yat)
         if bn.anynan(hypercube_ref):
             raise NanInsideHypercube(True)
-        shifts = calculate_stack_shifts(hypercube_ref.T,
-                                        shiftfn=calculate_shift, 
-                                        ref_frame_num=ref_frame_num,
-                                        filterfn=filterfn)
+        shifts = calculate_stack_shifts(
+            hypercube_ref.T,
+            shiftfn=calculate_shift,
+            ref_frame_num=ref_frame_num,
+            filterfn=filterfn,
+        )
         aligned_stack = alignstack_with_shifts(hypercube.T, shifts)
-        
+
     xmin, ymin = shifts[:, 0].min(), shifts[:, 1].min()
     xmax, ymax = shifts[:, 0].max(), shifts[:, 1].max()
     xmin, xmax = int(round(xmin)), int(round(xmax))
@@ -192,10 +204,14 @@ class OWStackAlign(OWWidget):
         self.contextAboutToBeOpened.connect(self._init_interface_data)
 
         refbox = gui.widgetBox(self.controlArea, "Tracking images")
-        gui.checkBox(refbox, self, "use_refinput",
-                     label="Use reference images",
-                     callback=self._use_ref_changed)
-        
+        gui.checkBox(
+            refbox,
+            self,
+            "use_refinput",
+            label="Use reference images",
+            callback=self._use_ref_changed,
+        )
+
         box = gui.widgetBox(self.controlArea, "Parameters")
 
         gui.checkBox(box, self, "sobel_filter",
@@ -203,8 +219,9 @@ class OWStackAlign(OWWidget):
                      callback=self._sobel_changed)
         gui.separator(box)
         hbox1 = gui.hBox(box)
-        self.le_upscale = lineEditIntRange(box, self, "upscale_factor", bottom=1, default=1,
-                                    callback=self._update_attr)
+        self.le_upscale = lineEditIntRange(
+            box, self, "upscale_factor", bottom=1, default=1, callback=self._update_attr
+        )
         hbox1.layout().addWidget(QLabel("Upscale factor:", self))
         hbox1.layout().addWidget(self.le_upscale)
 
@@ -241,7 +258,9 @@ class OWStackAlign(OWWidget):
 
     def _use_ref_changed(self):
         if self.use_refinput and self.refdata is None:
-            self.Warning.missing_reference("Reference is not connected. Using data only.")
+            self.Warning.missing_reference(
+                "Reference is not connected. Using data only."
+            )
         self._ref_frame_changed()
 
     def _sobel_changed(self):
