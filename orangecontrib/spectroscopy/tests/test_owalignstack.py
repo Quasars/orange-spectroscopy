@@ -255,6 +255,18 @@ class TestOWStackAlign(WidgetTest):
         self.assertTrue(self.widget.Error.invalid_axis.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.invalid_axis.is_shown())
+    
+    def test_reference_warning(self):
+        data = stxm_diamond
+        # only Data is set, reference input not used = No warning
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Warning.missing_reference.is_shown())
+        # Toggle use reference input option = warning appears
+        self.widget.controls.use_refinput.toggle()
+        self.assertTrue(self.widget.Warning.missing_reference.is_shown())
+        # Reference data is connected = warning disappears
+        self.send_signal(self.widget.Inputs.refdata, data)
+        self.assertFalse(self.widget.Warning.missing_reference.is_shown())
 
     def test_missing_metas(self):
         domain = Domain(stxm_diamond.domain.attributes)

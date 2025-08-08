@@ -257,11 +257,15 @@ class OWStackAlign(OWWidget):
         self.commit.deferred()
 
     def _use_ref_changed(self):
+        self.Warning.missing_reference.clear()
+        self._check_use_ref()
+        self._ref_frame_changed()
+
+    def _check_use_ref(self):
         if self.use_refinput and self.refdata is None:
             self.Warning.missing_reference(
                 "Reference is not connected. Using data only."
             )
-        self._ref_frame_changed()
 
     def _sobel_changed(self):
         self.commit.deferred()
@@ -282,28 +286,34 @@ class OWStackAlign(OWWidget):
 
     @Inputs.data
     def set_data(self, dataset):
+        self.Warning.missing_reference.clear()
         self.closeContext()
         self.openContext(dataset)
         if dataset is not None:
             self.data = dataset
+            self._check_use_ref()
             self._sanitize_ref_frame()
         else:
             self.data = None
         self.Error.nan_in_image.clear()
         self.Error.invalid_axis.clear()
+        self.Error.wrong_reference.clear()
         self.commit.now()
 
     @Inputs.refdata
     def set_reference(self, refdataset):
+        self.Warning.missing_reference.clear()
         self.closeContext()
         self.openContext(refdataset)
         if refdataset is not None:
             self.refdata = refdataset
+            self._check_use_ref()
             self._sanitize_ref_frame()
         else:
             self.refdata = None
         self.Error.nan_in_image.clear()
         self.Error.invalid_axis.clear()
+        self.Error.wrong_reference.clear()
         self.commit.now()
 
     @gui.deferred
@@ -312,7 +322,7 @@ class OWStackAlign(OWWidget):
 
         self.Error.nan_in_image.clear()
         self.Error.invalid_axis.clear()
-
+        self.Error.wrong_reference.clear()
         self.plotview.plotItem.clear()
 
         if self.data and len(self.data.domain.attributes) and self.attr_x and self.attr_y:
