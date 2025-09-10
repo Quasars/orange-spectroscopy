@@ -102,7 +102,7 @@ class IntegrateFeatureEdgeBaseline(IntegrateFeature):
             # interpolate unknowns as trapz can not handle them
             y_s, _ = nan_extend_edges_and_interpolate(x, y_s)
         y_s = y_s - self.compute_baseline(x, y_s)
-        return np.trapz(y_s, x, axis=1)
+        return np.trapezoid(y_s, x, axis=1)
 
     def compute_draw_info(self, x, ys):
         return [("curve", (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS)),
@@ -144,7 +144,7 @@ class IntegrateFeatureSeparateBaseline(IntegrateFeature):
             # interpolate unknowns as trapz can not handle them
             y_s, _ = nan_extend_edges_and_interpolate(x_s, y_s)
 
-        return np.trapz(y_s, x_s, axis=1)
+        return np.trapezoid(y_s, x_s, axis=1)
 
     def compute_draw_info(self, x_s, y_s):
         xl, ysl = self.limit_region(x_s, y_s)
