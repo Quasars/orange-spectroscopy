@@ -142,6 +142,11 @@ class IntegrateBaselineEditor(IntegrateSimpleEditor):
     integrator = Integrate.Baseline
 
 
+class IntegrateBaselineAbsoluteEditor(IntegrateSimpleEditor):
+    qualname = "orangecontrib.infrared.integrate.baseline_absolute"
+    integrator = Integrate.BaselineAbsolute
+
+
 class IntegratePeakMaxEditor(IntegrateSimpleEditor):
     qualname = "orangecontrib.infrared.integrate.peak_max"
     integrator = Integrate.PeakMax
@@ -199,6 +204,7 @@ PREPROCESSORS = [
     ) for c in [
         IntegrateSimpleEditor,
         IntegrateBaselineEditor,
+        IntegrateBaselineAbsoluteEditor,
         IntegratePeakMaxEditor,
         IntegratePeakMaxBaselineEditor,
         IntegrateAtEditor,
