@@ -1,0 +1,31 @@
+h5entries:
+  soleil_hermes_beamline_2024BBB:
+    format_id: entry1/collection/beamlinfwefwe
+    format_id_value: Herfewfemes
+    file_extenstion: hdf5
+    instrument: Hermes_beamline
+
+    x_locs: entry1/Counter0/sample_x
+    y_locs: entry1/Counter0/sample_y
+    energies: entry1/Counter0/energy
+    intensities: entry1/Counter0/data
+
+    meta_keys: []
+
+    attributes: []
+
+  soleil_rock_beamline_2024:
+    format_id: QEXAFS_00000/QuickEXAFS
+    format_id_value: Hermes
+    file_extenstion: hdf5
+    instrument: Hermes_beamline
+
+    x_locs: entry1/Counter0/sample_x
+    y_locs: entry1/Counter0/sample_y
+    energies: entry1/Counter0/energy
+    intensities: entry1/Counter0/data
+
+    meta_keys: []
+
+    attributes: []
+
