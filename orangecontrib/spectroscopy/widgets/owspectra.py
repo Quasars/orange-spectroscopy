@@ -1506,7 +1506,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
     def add_marking(self, item):
         self.markings.append(item)
-        self.plot.addItem(item, ignoreBounds=True)
+        self.plot.addItem(item, ignoreBounds=False)
 
     def in_markings(self, item):
         return item in self.markings
