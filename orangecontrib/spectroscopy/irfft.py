@@ -1,4 +1,5 @@
 from enum import IntEnum
+import warnings
 
 import numpy as np
 
@@ -55,10 +56,15 @@ def find_zpd(ifg, peak_search):
     else:
         raise NotImplementedError
 
-def apodize(ifg, zpd, apod_func):
+def wing_size(ifg, zpd):
+    """Calculate negative and positive wing size (including zpd point in both)"""
+    wing_n = zpd + 1
+    wing_p = ifg.shape[-1] - zpd
+    return wing_n, wing_p
+
+def apodize(ifg, zpd, apod_func, apod_asym):
     """
-    Perform apodization of asymmetric interferogram using selected apodization
-    function
+    Perform apodization of interferogram using selected apodization function
 
     Args:
         ifg (np.array): interferogram array (1D or 2D row-wise)
@@ -68,22 +74,24 @@ def apodize(ifg, zpd, apod_func):
                 <ApodFunc.BLACKMAN_HARRIS_3: 1> : Blackman-Harris (3-term)
                 <ApodFunc.BLACKMAN_HARRIS_4: 2> : Blackman-Harris (4-term)
                 <ApodFunc.BLACKMAN_NUTTALL: 3>  : Blackman-Nuttall (Eric Peach implementation)
+        apod_asym (bool): Apply asymmetric apodization for asymmetric interferometers (s-SNOM, DFTS)
+                          Otherwise, truncate symmetric apodization function as required and apply ramp
 
     Returns:
         ifg_apod (np.array): apodized interferogram(s)
     """
 
-    # Calculate negative and positive wing size
-    # correcting zpd from 0-based index
-    ifg_N = ifg.shape[-1]
-    wing_n = zpd + 1
-    wing_p = ifg_N - (zpd + 1)
-
     if apod_func == ApodFunc.BOXCAR:
         # Boxcar apodization AKA as-collected
         return ifg
 
-    elif apod_func == ApodFunc.BLACKMAN_HARRIS_3:
+    # Calculate negative and positive wing size
+    # correcting zpd from 0-based index
+    ifg_N = ifg.shape[-1]
+    wing_n, wing_p = wing_size(ifg, zpd)
+
+    # Generate apodization function
+    if apod_func == ApodFunc.BLACKMAN_HARRIS_3:
         # Blackman-Harris (3-term)
         # Reference: W. Herres and J. Gronholz, Bruker
         #           "Understanding FT-IR Data Processing"
@@ -91,18 +99,6 @@ def apodize(ifg, zpd, apod_func):
         A1 = 0.49755
         A2 = 0.07922
         A3 = 0.0
-        n_n = np.arange(wing_n)
-        n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
-        Bs = np.hstack((Bs_n[::-1], Bs_p))
-
     elif apod_func == ApodFunc.BLACKMAN_HARRIS_4:
         # Blackman-Harris (4-term)
         # Reference: W. Herres and J. Gronholz, Bruker
@@ -111,30 +107,55 @@ def apodize(ifg, zpd, apod_func):
         A1 = 0.48829
         A2 = 0.14128
         A3 = 0.01168
+    elif apod_func == ApodFunc.BLACKMAN_NUTTALL:
+        # Blackman-Nuttall
+        # Reference: A. Nuttall, "Some windows with very good sidelobe behavior," IEEE
+        #            Transactions on Acoustics, Speech, and Signal Processing, 1981.
+        A0 = 0.3635819
+        A1 = 0.4891775
+        A2 = 0.1365995
+        A3 = 0.0106411
+    else:
+        raise ValueError(f"Invalid apodization function {apod_func}")
+
+    if apod_asym:
+        # Scale window to each wing length (asymmetric interferometer)
         n_n = np.arange(wing_n)
         n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
-        Bs = np.hstack((Bs_n[::-1], Bs_p))
+        Bs_n = A0 \
+               + A1 * np.cos(np.pi*n_n/wing_n) \
+               + A2 * np.cos(np.pi*2*n_n/wing_n) \
+               + A3 * np.cos(np.pi*3*n_n/wing_n)
+        Bs_p = A0 \
+               + A1 * np.cos(np.pi*n_p/wing_p) \
+               + A2 * np.cos(np.pi*2*n_p/wing_p) \
+               + A3 * np.cos(np.pi*3*n_p/wing_p)
+        # Flip Bs_n and overlap at zpd (Bs_n[0] == Bs_p[0])
+        Bs = np.hstack((Bs_n[::-1], Bs_p[1:]))
+    else:
+        # Use larger wing to define apodization window width (symmetric interferometer)
+        M = max(wing_n, wing_p)
+        n = np.arange(1-M, M, 1)
+        Bs = A0 \
+             + A1 * np.cos(np.pi*n/(M-1)) \
+             + A2 * np.cos(np.pi*2*n/(M-1)) \
+             + A3 * np.cos(np.pi*3*n/(M-1))
 
-    elif apod_func == ApodFunc.BLACKMAN_NUTTALL:
-        # Blackman-Nuttall (Eric Peach)
-        # TODO I think this has silent problems with asymmetric interferograms
-        delta = np.min([wing_n, wing_p])
+        # Select appropriate subsection of apodization function
+        if wing_n > wing_p:
+            Bs = Bs[:ifg_N]
+        else:
+            Bs = Bs[2 * M - 1 - ifg_N:]
 
-        # Create Blackman Nuttall Window according to the formula given by Wolfram.
-        xs = np.arange(ifg_N)
-        Bs = np.zeros(ifg_N)
-        Bs = 0.3635819\
-            - 0.4891775 * np.cos(2*np.pi*xs/(2*delta - 1))\
-            + 0.1365995 * np.cos(4*np.pi*xs/(2*delta - 1))\
-            - 0.0106411 * np.cos(6*np.pi*xs/(2*delta - 1))
+        # Add ramp to avoid uneven counting of truncated section
+        # Use smaller wing to define symmetric subset size
+        # Skip if fully symmetric (phase data)
+        wing_min = min(wing_n, wing_p)
+        ramp = np.linspace(0, 1, 2 * wing_min - 1)
+        if wing_n < wing_p:
+            Bs[..., :ramp.shape[0]] *= ramp
+        elif wing_n > wing_p:
+            Bs[..., -ramp.shape[0]:] *= ramp[::-1]
 
     # Apodize the sampled Interferogram
     try:
@@ -143,6 +164,18 @@ def apodize(ifg, zpd, apod_func):
         raise ValueError("Apodization function size mismatch: %s" % e)
 
     return ifg_apod
+
+def ramp(ifg, zpd):
+    wing_n, wing_p = wing_size(ifg, zpd)
+    # Use smaller wing to define symmetric subset size
+    M = min(wing_n, wing_p)
+    ramp = np.linspace(0, 1, 2 * M - 1)
+    if wing_n < wing_p:
+        ifg[..., :ramp.shape[0]] *= ramp
+    else:
+        ifg[..., -ramp.shape[0]:] *= ramp[::-1]
+
+    return ifg
 
 def _zero_fill_size(ifg_N, zff):
     # Calculate desired array size
@@ -188,10 +221,19 @@ class IRFFT():
     def __init__(self, dx,
                  apod_func=ApodFunc.BLACKMAN_HARRIS_3, zff=2,
                  phase_res=None, phase_corr=PhaseCorrection.MERTZ,
-                 peak_search=PeakSearch.MAXIMUM,
+                 peak_search=PeakSearch.MAXIMUM, apod_asym=None,
                 ):
         self.dx = dx
         self.apod_func = apod_func
+        if apod_asym is None:
+            warnings.warn(
+                "Apodization symmetry must now be specified.\n"
+                "Defaulting to previous asymmetric behaviour, which is not appropriate for symmetric interferometers (FT-IR).\n"
+                "See Quasars/orange-spectroscopy#641 for details.",
+                category=FutureWarning)
+            self.apod_asym = True
+        else:
+            self.apod_asym = apod_asym
         self.zff = zff
         self.phase_res = phase_res
         self.phase_corr = phase_corr
@@ -214,7 +256,7 @@ class IRFFT():
         # Calculate phase on interferogram of specified size 2*L
         L = self.phase_ifg_size(ifg.shape[0])
         if L == 0: # Use full ifg for phase
-            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
             ifg = zero_fill(ifg, self.zff)
             # Rotate the Complete IFG so that the centerburst is at edges.
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
@@ -225,13 +267,13 @@ class IRFFT():
         else:
             # Select phase interferogram as copy
             # Note that L is now the zpd index
-            Ixs = ifg[self.zpd - L : self.zpd + L].copy()
-            ifg = apodize(ifg, self.zpd, self.apod_func)
+            Ixs = ifg[self.zpd - L : self.zpd + 1 + L].copy()
+            ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
             Nzff = ifg.shape[0]
 
-            Ixs = apodize(Ixs, L, self.apod_func)
+            Ixs = apodize(Ixs, L, self.apod_func, self.apod_asym)
             # Zero-fill Ixs to same size as ifg (instead of interpolating later)
             Ixs = _zero_fill_pad(Ixs, Nzff - Ixs.shape[0])
             Ixs = np.hstack((Ixs[L:], Ixs[0:L]))
@@ -299,7 +341,7 @@ class MultiIRFFT(IRFFT):
         # Calculate phase on interferogram of specified size 2*L
         L = self.phase_ifg_size(ifg.shape[1])
         if L == 0: # Use full ifg for phase #TODO multi is this code tested
-            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
             ifg = zero_fill(ifg, self.zff)
             # Rotate the Complete IFG so that the centerburst is at edges.
             ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
@@ -311,12 +353,12 @@ class MultiIRFFT(IRFFT):
             # Select phase interferogram as copy
             # Note that L is now the zpd index
             Ixs = ifg[:, self.zpd - L : self.zpd + L].copy()
-            ifg = apodize(ifg, self.zpd, self.apod_func)
+            ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
             ifg = zero_fill(ifg, self.zff)
             ifg = np.hstack((ifg[:, self.zpd:], ifg[:, 0:self.zpd]))
             Nzff = ifg.shape[1]
 
-            Ixs = apodize(Ixs, L, self.apod_func)
+            Ixs = apodize(Ixs, L, self.apod_func, self.apod_asym)
             # Zero-fill Ixs to same size as ifg (instead of interpolating later)
             Ixs = _zero_fill_pad(Ixs, Nzff - Ixs.shape[1])
             Ixs = np.hstack((Ixs[:, L:], Ixs[:, 0:L]))
@@ -349,7 +391,7 @@ class ComplexFFT(IRFFT):
         else:
             self.zpd = find_zpd(ifg, self.peak_search)
 
-        ifg = apodize(ifg, self.zpd, self.apod_func)
+        ifg = apodize(ifg, self.zpd, self.apod_func, self.apod_asym)
         ifg = zero_fill(ifg, self.zff)
         # Rotate the Complete IFG so that the centerburst is at edges.
         ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))

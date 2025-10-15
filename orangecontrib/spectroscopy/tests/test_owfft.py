@@ -97,6 +97,7 @@ class TestOWFFT(WidgetTest):
         abs = Orange.data.Table("agilent/4_noimage_agg256.dat")
 
         self.widget.apod_func = irfft.ApodFunc.BLACKMAN_HARRIS_4
+        self.widget.apod_asym = False
         self.widget.zff = 0  # 2**0 = 1
         self.widget.phase_res_limit = False
         self.widget.phase_corr = irfft.PhaseCorrection.MERTZ
@@ -139,6 +140,7 @@ class TestOWFFT(WidgetTest):
         self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
         self.assertTrue(self.widget.use_interleaved_data)
         self.assertTrue(self.widget.complexfft)
+        self.assertTrue(self.widget.apod_asym)
 
         spectra = self.get_output(self.widget.Outputs.spectra)
         phases = self.get_output(self.widget.Outputs.phases)

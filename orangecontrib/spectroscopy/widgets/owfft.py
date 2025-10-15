@@ -61,6 +61,7 @@ class OWFFT(OWWidget):
     zpd1 = settings.Setting(0)
     zpd2 = settings.Setting(0)
     apod_func = settings.Setting(1)
+    apod_asym = settings.Setting(False)
     zff = settings.Setting(1)  # an exponent for zero-filling factor, IRFFT() needs 2**zff
     phase_corr = settings.Setting(0)
     phase_res_limit = settings.Setting(True)
@@ -219,6 +220,13 @@ class OWFFT(OWWidget):
             items=self.apod_opts,
             callback=self.setting_changed
             )
+
+        gui.checkBox(
+            self.optionsBox, self, "apod_asym",
+            label="Asymmetric Interferometer",
+            callback=self.setting_changed,
+            tooltip="s-SNOM type interferometer",
+        )
 
         box = gui.comboBox(
             self.optionsBox, self, "zff",
@@ -394,6 +402,7 @@ class OWFFT(OWWidget):
 
         fft_single = irfft.IRFFT(dx=self.dx,
                                  apod_func=self.apod_func,
+                                 apod_asym=self.apod_asym,
                                  zff=2**self.zff,
                                  phase_res=self.phase_resolution if self.phase_res_limit else None,
                                  phase_corr=self.phase_corr,
@@ -424,6 +433,7 @@ class OWFFT(OWWidget):
             fft_single = irfft.MultiIRFFT(
                 dx=self.dx,
                 apod_func=self.apod_func,
+                apod_asym=self.apod_asym,
                 zff=2**self.zff,
                 phase_res=self.phase_resolution if self.phase_res_limit else None,
                 phase_corr=self.phase_corr,
@@ -535,6 +545,7 @@ class OWFFT(OWWidget):
         fft_single = irfft.ComplexFFT(
             dx=self.dx,
             apod_func=self.apod_func,
+            apod_asym=self.apod_asym,
             zff=2**self.zff,
             phase_res=self.phase_resolution if self.phase_res_limit else None,
             phase_corr=self.phase_corr,
@@ -603,10 +614,10 @@ class OWFFT(OWWidget):
                 zpd2 = irfft.find_zpd(data[1][::-1], self.peak_search)
                 # Forward / backward zpds never perfectly match
                 if zpd1 >= zpd2 - var and zpd1 <= zpd2 + var:
-                    # forward-backward, symmetric and asymmetric
+                    # forward-backward, symmetric and truncated symmetric
                     sweeps = 1
                 else:
-                    # single, asymetric
+                    # single, truncated symetric
                     sweeps = 0
         # Honour custom sweeps setting
         if self.auto_sweeps:
@@ -627,6 +638,8 @@ class OWFFT(OWWidget):
                 self.use_interleaved_data = True
                 self.complexfft = True
                 self.controls.complexfft.setDisabled(True)
+                self.apod_asym = True
+                self.controls.apod_asym.setDisabled(True)
                 self.configui_for_complex_fft()
                 self.info_type.setText(
                     f"{self.data.X.shape[0]} interleaved {channel_data} interferogram(s)\n"
@@ -698,6 +711,7 @@ class OWFFT(OWWidget):
         self.controls.complexfft.setDisabled(False)
         self.controls.auto_sweeps.setDisabled(False)
         self.controls.sweeps.setDisabled(False)
+        self.controls.apod_asym.setDisabled(False)
 
     @classmethod
     def migrate_settings(cls, settings_, version):
