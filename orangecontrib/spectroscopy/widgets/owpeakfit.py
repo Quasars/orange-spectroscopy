@@ -15,8 +15,10 @@ from Orange.widgets.data.owpreprocess import PreprocessAction, Description, icon
 from Orange.widgets.data.utils.preprocess import DescriptionRole, ParametersRole
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import TaskState
-from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.signals import Output, Input
+from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from orangewidget.widget import Msg
 
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import Cut
@@ -283,17 +285,30 @@ class OWPeakFit(SpectralPreprocess):
     PREPROCESSORS = PREPROCESSORS
     BUTTON_ADD_LABEL = "Add model..."
 
+    class Inputs(SpectralPreprocess.Inputs):
+        data_subset = Input("Data Subset", Table)
+
     class Outputs:
         fit_params = Output("Fit Parameters", Table, default=True)
         fits = Output("Fits", Table)
         residuals = Output("Residuals", Table)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    class Warning(SpectralPreprocess.Warning):
+        subset_not_subset = Msg(
+            "Subset data contains some instances that do not appear in "
+            "input data")
+        subset_independent = Msg(
+            "No subset data instances appear in input data")
+
     preview_on_image = True
 
     def __init__(self):
         self.markings_list = []
         super().__init__()
+        self.subset_data = None
+        self.subset_indices = None
+        self._invalidated = False
         self.preview_runner = PeakPreviewRunner(self)
         self.curveplot.selection_type = SELECTONE
         self.curveplot.select_at_least_1 = True
@@ -302,6 +317,51 @@ class OWPeakFit(SpectralPreprocess):
         self.preview_runner.preview_updated.connect(self.redraw_integral)
         # GUI
         # box = gui.widgetBox(self.controlArea, "Options")
+
+    @Inputs.data
+    @check_sql_input
+    def set_data(self, data=None):
+        self.data = data
+        self._invalidated = True
+
+    @Inputs.data_subset
+    @check_sql_input
+    def set_subset_data(self, subset):
+        self.subset_data = subset
+
+    def handleNewSignals(self):
+        self._handle_subset_data()
+        if self._invalidated:
+            self._invalidated = False
+            super().handleNewSignals()
+        else:
+            self.show_preview(show_info_anyway=True)
+
+    # OWDataProjectionWidget
+    def _handle_subset_data(self):
+        self.Warning.subset_independent.clear()
+        self.Warning.subset_not_subset.clear()
+        if self.data is None or self.subset_data is None:
+            self.subset_indices = set()
+        else:
+            self.subset_indices = set(self.subset_data.ids)
+            ids = set(self.data.ids)
+            if not self.subset_indices & ids:
+                self.Warning.subset_independent()
+            elif self.subset_indices - ids:
+                self.Warning.subset_not_subset()
+
+    def get_subset_mask(self):
+        if not self.subset_indices:
+            return None
+        return np.fromiter((ex.id in self.subset_indices for ex in self.data),
+                           dtype=bool, count=len(self.data))
+
+    def sample_data(self, data):
+        subset = self.get_subset_mask()
+        if subset is not None:
+            return data[subset][:self.preview_curves]
+        return super().sample_data(data)
 
     def redraw_integral(self):
         dis = []
