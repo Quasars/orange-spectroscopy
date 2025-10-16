@@ -6,7 +6,7 @@ from Orange.data.table import _ArrayConversion, _FromTableConversion, _thread_lo
     assure_domain_conversion_sparsity, _check_arrays, _compute_column
 from Orange.misc.cache import IDWeakrefCache
 from scipy import sparse as sp
-from Orange.data import Domain, Table, Variable, DomainConversion, DiscreteVariable
+from Orange.data import Domain, Table, Variable, DomainConversion, DiscreteVariable, Values, FilterString
 
 
 class _ArrayConversionComplex(_ArrayConversion):
@@ -240,3 +240,39 @@ class ComplexTable(Table):
 
     def _compute_contingency(self, col_vars=None, row_var=None):
         raise NotImplementedError()
+
+    # Amplitude / phase <-> Complex interconversion
+    @staticmethod
+    def amplitude_phase_to_complex(amplitude: np.array, phase: np.array) -> np.array:
+        return np.asarray(amplitude * np.exp(1j * phase, dtype=np.complex128))
+
+    @classmethod
+    def from_amplitude_phase_tables(cls, amplitude: Table, phase: Table):
+        table = cls.from_table(amplitude.domain, amplitude)
+        # Todo handle mis-matched amplitude / phase tables
+        # phase = phase.transform(amplitude.domain)
+        with table.unlocked_reference():
+            table.X = cls.amplitude_phase_to_complex(amplitude.X, phase.X)
+        return table
+
+    @classmethod
+    def from_interleaved_table(cls, interleaved: Table):
+        filter_amplitude = Values(
+            [FilterString("channel", FilterString.EndsWith, ref="A")]
+        )
+        filter_phase = Values([FilterString("channel", FilterString.EndsWith, ref="P")])
+        return cls.from_amplitude_phase_tables(
+            filter_amplitude(interleaved), filter_phase(interleaved)
+        )
+
+    def to_amplitude_table(self) -> Table:
+        table = Table.from_table(self.domain, self)
+        with table.unlocked_reference():
+            table.X = np.abs(self.X)
+        return table
+
+    def to_phase_table(self) -> Table:
+        table = Table.from_table(self.domain, self)
+        with table.unlocked_reference():
+            table.X = np.angle(self.X)
+        return table
