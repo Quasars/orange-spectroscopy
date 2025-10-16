@@ -9,6 +9,7 @@ from Orange.widgets import gui, settings
 
 from orangecontrib.spectroscopy.data import build_spec_table
 from orangecontrib.spectroscopy import irfft
+from orangecontrib.spectroscopy.irfft import PhaseCorrection
 
 
 def add_meta_to_table(data, var, values):
@@ -485,20 +486,23 @@ class OWFFT(OWWidget):
         spectra = np.vstack(spectra)
         phases = np.vstack(phases)
 
-        self.phases_table = build_spec_table(wavenumbers, phases,
-                                            additional_table=self.data)
-        if not self.peak_search_enable:
-            # All zpd values are equal by definition
-            zpd_fwd = zpd_fwd[:1]
-        self.phases_table = add_meta_to_table(self.phases_table,
-                                            ContinuousVariable.make("zpd_fwd"),
-                                            zpd_fwd)
-        if zpd_back:
+        if None not in phases:
+            self.phases_table = build_spec_table(wavenumbers, phases,
+                                                additional_table=self.data)
             if not self.peak_search_enable:
-                zpd_back = zpd_back[:1]
+                # All zpd values are equal by definition
+                zpd_fwd = zpd_fwd[:1]
             self.phases_table = add_meta_to_table(self.phases_table,
-                                                ContinuousVariable.make("zpd_back"),
-                                                zpd_back)
+                                                ContinuousVariable.make("zpd_fwd"),
+                                                zpd_fwd)
+            if zpd_back:
+                if not self.peak_search_enable:
+                    zpd_back = zpd_back[:1]
+                self.phases_table = add_meta_to_table(self.phases_table,
+                                                    ContinuousVariable.make("zpd_back"),
+                                                    zpd_back)
+        else:
+            self.phases_table = None
 
         if self.limit_output is True:
             wavenumbers, spectra = self.limit_range(wavenumbers, spectra)
