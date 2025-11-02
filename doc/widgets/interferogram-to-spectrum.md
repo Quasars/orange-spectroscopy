@@ -26,6 +26,7 @@ The **Interferogram to Spectrum** widgets calculates real or complex FFT for int
 3. FFT Options:
    - Complex FFT: Calculate the complex FFT from Amplitude and Phase data. Data can be interleaved or amplitude on first input and phase on the second.
    - Apodization Function: Windowing function to apply before FFT
+     - Asymmetric Interferometer: Apply apodization asymmetrically ([reference](https://doi.org/10.1364/oe.520793))
    - Zero Filling Factor: Pad dataset with zeros to 2**zff
    - Phase Correction: Calculate phase using Mertz, or use a stored phase. "None" outputs both real/imaginary values.
 4. Output:
