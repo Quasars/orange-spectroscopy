@@ -105,7 +105,6 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
     gamma = Setting(0)
 
     selection_changed = Signal()
-    locked_axes_changed = pyqtSignal(bool)
 
     def __init__(self, parent):
         QWidget.__init__(self)
