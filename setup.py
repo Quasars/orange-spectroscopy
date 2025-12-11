@@ -132,7 +132,7 @@ if __name__ == '__main__':
             'orange-canvas-core>=0.2.4',
             'orange-widget-base>=4.25.0',
             'scipy>=1.10.0',
-            'scikit-learn>=1.5.1',
+            'scikit-learn>=1.5.1,<1.8',
             'spectral>=0.22.3,!=0.23',
             'serverfiles>=0.2',
             'AnyQt>=0.2.0',
