@@ -84,6 +84,20 @@ def wns_to_unique_str(l):
 
     return [("%0." + str(decimals[default_format % wn]) + "f") % wn for wn in l]
 
+def combine_visimg(data, filenames):
+    atts = []
+    for k, i in enumerate(data):
+        try:
+            temp = i.attributes['visible_images']
+            for j in temp:
+                j.name = str(j.name + f' ({filenames[k].split("/")[-1]})')
+                atts.append(j)
+        except KeyError:
+            pass
+        except AttributeError:
+            pass
+    attsdict = {'visible_images': atts}
+    return attsdict
 
 def concatenate_data(tables, filenames, label):
     if not tables:
@@ -110,6 +124,7 @@ def concatenate_data(tables, filenames, label):
 
     # concatenate tables
     tables = [table.transform(domain) for table in tables]
+    visimg = combine_visimg(tables, filenames)
     data = type(tables[0]).concatenate(tables)
 
     with data.unlocked():
@@ -132,6 +147,7 @@ def concatenate_data(tables, filenames, label):
             chain(*(repeat(label, len(table))
                     for _, table in zip(filenames, tables)))
         )).reshape(-1, 1)
+        data.attributes.update(visimg)
 
     return data
 
