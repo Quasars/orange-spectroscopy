@@ -46,21 +46,28 @@ N_PROCESSES = None if env_proc == "all" else int(env_proc) if env_proc else min(
 
 def fit_results_table(output, model_result, orig_data):
     """Return best fit parameters as Orange.data.Table"""
-    out = model_result
+    res = model_result
     features = []
-    for comp in out.model.components:
+    metas = []
+    for comp in res.model.components:
         prefix = comp.prefix.rstrip("_")
         features.append(ContinuousVariable(name=f"{prefix} area"))
-        for param in [n for n in out.var_names if n.startswith(comp.prefix)]:
-            features.append(ContinuousVariable(name=param.replace("_", " ")))
-    features.append(ContinuousVariable(name="Reduced chi-square"))
+        for param in [n for n in res.var_names if n.startswith(comp.prefix)]:
+            name = param.replace("_", " ")
+            features.append(ContinuousVariable(name=name))
+            metas.append(ContinuousVariable(name=f"{name} ±"))
+    for stat in ["Chi-square", "Reduced chi-square", "Akaike info crit", "Bayesian info crit", "R-squared"]:
+        metas.append(ContinuousVariable(name=stat))
 
     domain = Domain(features,
                     orig_data.domain.class_vars,
-                    orig_data.domain.metas)
+                    orig_data.domain.metas + tuple(metas))
     out = orig_data.transform(domain)
+    x_cols = out.X.shape[1]
     with out.unlocked_reference(out.X):
-        out.X = output
+        out.X = output[:, :x_cols]
+    with out.unlocked(out.metas):
+        out.metas[:, len(orig_data.domain.metas):] = output[:, x_cols:]
     return out
 
 
