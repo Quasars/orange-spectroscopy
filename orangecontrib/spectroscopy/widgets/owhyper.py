@@ -835,8 +835,19 @@ class ImageColorSettingMixin:
                 # use a defined discrete palette
                 return dat.colors
 
+        pi = self.palette_index
+
+        # use a fixed table for measurement.signaltype in {Phase, Amplitude}
+        datatype = self.data.attributes.get("measurement.signaltype", None)
+        if datatype is not None:
+            palette_names = [n for n, _ in _color_palettes]
+            if datatype == "Amplitude":
+                pi = palette_names.index("fire")
+            if datatype == "Phase":
+                pi = palette_names.index("coolwarm")
+
         # use a continuous palette
-        data = self.color_cb.itemData(self.palette_index, role=Qt.UserRole)
+        data = self.color_cb.itemData(pi, role=Qt.UserRole)
         _, colors = max(data.items())
         cols = color_palette_table(colors)
         return cols
