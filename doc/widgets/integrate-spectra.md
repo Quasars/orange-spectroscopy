@@ -18,7 +18,11 @@ The **Integrate Spectra** widget allows you to add integrals to your data by sel
 
 1. Add integral:
    - Integral from 0:
+     - The sum of the area under the curve above (+) and below (-) zero. The integral is calculated using the [trapezoidal method](https://numpy.org/doc/stable/reference/generated/numpy.trapezoid.html).
    - Integral from baseline:
+     - The sum of the area under the curve above (+) and below (-) a baseline defined as a straight line between the integral endpoints. The integral is calculated using the trapezoidal method.
+   - Absolute integral from baseline: 
+     - The _absolute value_ of the area under the curve above and below the baseline defined as a straight line through the integral endpoints.
    - Peak from 0:
    - Peak from baseline:
    - Closest value:
