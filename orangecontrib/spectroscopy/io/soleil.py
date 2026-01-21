@@ -3,6 +3,7 @@ from Orange.data import FileFormat
 
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image
 
+import yaml
 
 class SelectColumnReader(FileFormat, SpectralFileFormat):
     """ Reader for files with multiple columns of numbers. The first column
@@ -53,6 +54,72 @@ class HDF5Reader_HERMES(FileFormat, SpectralFileFormat):
                 return _spectra_from_image(intensities, energy, x_locs, y_locs)
             else:
                 raise IOError("Not an HDF5 HERMES file")
+
+
+class HDF5Reader_HERMES_auto(FileFormat, SpectralFileFormat):
+    """ A very case specific reader for HDF5 files from the HEREMES beamline in SOLEIL configured through a yaml file"""
+    EXTENSIONS = ('.hdf5',)
+    DESCRIPTION = 'HDF5 auto file @HERMRES/SOLEIL'
+
+    def get_config(self):
+        # TODO should be set for the whole package somewhere in __init__
+        h5_config_file = 'orangecontrib/spectroscopy/io/hdf5_reader_config.yaml'
+        with open(h5_config_file) as h5f:
+            all_config = yaml.safe_load(h5f)
+
+        config_id = 'soleil_hermes_beamline_2024' # must be set for each reader separately
+
+        return all_config['h5entries'][config_id]
+
+    def read_spectra(self):
+        import h5py # TODO why is this here and not in the top?
+
+        h5_config = self.get_config()
+
+        hdf5_file = h5py.File(self.filename)
+
+        if h5_config['format_id'] in hdf5_file and \
+                hdf5_file[h5_config['format_id']][()].astype('str') == h5_config['format_id_value']:
+            x_locs = np.array(hdf5_file[h5_config['x_locs']])
+            y_locs = np.array(hdf5_file[h5_config['y_locs']])
+            energy = np.array(hdf5_file[h5_config['energies']])
+            intensities = np.array(hdf5_file[h5_config['intensities']]).T
+            return _spectra_from_image(intensities, energy, x_locs, y_locs)
+        else:
+            raise IOError("Not an HDF5 HERMES file")
+
+
+class PreconfHDF5Reader(FileFormat, SpectralFileFormat):
+    """ A very general reader for pre-configured HDF5 files"""
+    EXTENSIONS = ('.hdf5, .nxs',)
+    DESCRIPTION = 'HDF5 reader'
+
+    def get_h5configs(self):
+        # TODO should be set for the whole package somewhere in __init__
+        h5_config_file = 'orangecontrib/spectroscopy/io/hdf5_reader_config.yaml'
+        with open(h5_config_file) as h5f:
+            all_configs = yaml.safe_load(h5f)
+
+        return all_configs['h5entries']
+
+    def read_spectra(self):
+        import h5py # TODO why is this here and not in the top?
+
+        all_configs = self.get_h5configs()
+
+        hdf5_file = h5py.File(self.filename)
+
+        for config in all_configs:
+            if all_configs[config]['format_id'] in hdf5_file: # one entry might not be enough but a tree can be...
+                # if hdf5_file[all_configs[config]['format_id']][()].astype('str') == all_configs[config]['format_id_value']:
+                # we could do such test, but this is not general - testing the structure is probably better
+                x_locs = np.array(hdf5_file[all_configs[config]['x_locs']])
+                y_locs = np.array(hdf5_file[all_configs[config]['y_locs']])
+                energy = np.array(hdf5_file[all_configs[config]['energies']])
+                intensities = np.array(hdf5_file[all_configs[config]['intensities']]).T
+                return _spectra_from_image(intensities, energy, x_locs, y_locs)
+            else:
+                raise IOError(f"IOError {self.filename}")
 
 
 class HDF5Reader_ROCK(FileFormat, SpectralFileFormat):
