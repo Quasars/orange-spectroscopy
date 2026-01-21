@@ -41,6 +41,21 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                         channel_map[signal] = label
                 except:
                     pass
+
+        for discrete_maps in filter(lambda s: s == 'Heightmaps', keys):
+            hdf5_meas = hdf5_file[discrete_maps]
+            meas_keys = list(hdf5_meas.keys())
+            meas_attrs = hdf5_meas.attrs
+            for map_name in filter(lambda s: s.startswith('Heightmap'), meas_keys):
+                hdf5_map = hdf5_meas[map_name]
+                if hdf5_map.attrs['Units'] == b'' or \
+                    ('Checked' in hdf5_map.attrs.keys() and hdf5_map.attrs['Checked'][0] == 0):
+                    continue
+                signal = b'DF' + hdf5_map.attrs['Channel']
+                if not channel_map.keys().__contains__(signal):
+                    label = b'Discrete ' + hdf5_map.attrs['Label'].split()[0]
+                    channel_map[signal] = label
+
         if len(channel_map) == 0:
             raise IOError("Error reading channels from " + self.filename)
         return channel_map
@@ -64,6 +79,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         keys = list(hdf5_file.keys())
 
         hyperspectra = False
+        df = False
         intensities = []
         wavenumbers = []
         x_locs = []
@@ -109,117 +125,160 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
             visible_images.append(vimage)
 
         # load measurements
-        for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
-            hdf5_meas = hdf5_file[meas_name]
+        if b'DF' not in self.data_signal:
+            for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
+                hdf5_meas = hdf5_file[meas_name]
 
-            meas_keys = list(hdf5_meas.keys())
-            meas_attrs = hdf5_meas.attrs
+                meas_keys = list(hdf5_meas.keys())
+                meas_attrs = hdf5_meas.attrs
 
-            # check if this measurement contains the selected data channel
-            selected_signal = False
-            for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
-                hdf5_chan = hdf5_meas[chan_name]
-                if (hdf5_chan.attrs.keys().__contains__('DataSignal') and
-                        hdf5_chan.attrs['DataSignal'] == self.data_signal):
-                    selected_signal = True
-                    break
-            if not selected_signal:
-                continue
-
-            # build range arrays
-            spec_vals = []
-            try:
-                if meas_attrs.keys().__contains__('RangeWavenumberStart'):
-                    wn_start = meas_attrs['RangeWavenumberStart'][0]
-                    wn_end = meas_attrs['RangeWavenumberEnd'][0]
-                    wn_points = meas_attrs['RangeWavenumberPoints'][0]
-                    spec_vals = np.linspace(wn_start, wn_end, wn_points)
-            except:
-                raise IOError("Error reading wavenumber range from " + self.filename)
-
-            pos_vals = []
-            try:
-                if meas_attrs.keys().__contains__('RangeXStart'):
-                    x_start = meas_attrs['RangeXStart'][0]
-                    x_points = meas_attrs['RangeXPoints'][0]
-                    x_incr = meas_attrs['RangeXIncrement'][0]
-                    x_end = x_start + x_incr * (x_points - 1)
-                    x_min = min(x_start, x_end)
-                    if meas_attrs.keys().__contains__('RangeYStart'):
-                        y_start = meas_attrs['RangeYStart'][0]
-                        y_points = meas_attrs['RangeYPoints'][0]
-                        y_incr = meas_attrs['RangeYIncrement'][0]
-                        y_end = y_start + y_incr * (y_points - 1)
-                        y_min = min(y_start, y_end)
-
-                        # construct the positions array
-                        for iY in range(int(y_points)):
-                            y = y_min + iY * abs(y_incr)
-                            for iX in range(int(x_points)):
-                                x = x_min + iX * abs(x_incr)
-                                pos_vals.append([x, y])
-                        pos_vals = np.array(pos_vals)
-                else:
-                    pos_vals = np.array([1])
-            except:
-                raise IOError("Error reading position data from " + self.filename)
-            hyperspectra = pos_vals.shape[0] > 1
-
-            # ignore backgrounds and unchecked data
-            if not hyperspectra:
-                if meas_attrs.keys().__contains__('IsBackground') and meas_attrs['IsBackground'][0]:
-                    continue
-                if meas_attrs.keys().__contains__('Checked') and not meas_attrs['Checked'][0]:
+                # check if this measurement contains the selected data channel
+                selected_signal = False
+                for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
+                    hdf5_chan = hdf5_meas[chan_name]
+                    if (hdf5_chan.attrs.keys().__contains__('DataSignal') and
+                            hdf5_chan.attrs['DataSignal'] == self.data_signal):
+                        selected_signal = True
+                        break
+                if not selected_signal:
                     continue
 
-            if len(wavenumbers) == 0:
-                wavenumbers = spec_vals
+                # build range arrays
+                spec_vals = []
+                try:
+                    if meas_attrs.keys().__contains__('RangeWavenumberStart'):
+                        wn_start = meas_attrs['RangeWavenumberStart'][0]
+                        wn_end = meas_attrs['RangeWavenumberEnd'][0]
+                        wn_points = meas_attrs['RangeWavenumberPoints'][0]
+                        spec_vals = np.linspace(wn_start, wn_end, wn_points)
+                except:
+                    raise IOError("Error reading wavenumber range from " + self.filename)
 
-            if hyperspectra:
-                x_len = meas_attrs['RangeXPoints'][0]
-                y_len = meas_attrs['RangeYPoints'][0]
-                x_locs = pos_vals[:x_len,0]
-                y_indices = np.round(np.linspace(0, pos_vals.shape[0] - 1, y_len)).astype(int)
-                y_locs = pos_vals[y_indices,1]
-                # adding focus positions
-                z_locs = hdf5_meas['Dataset_Focus'][:]
-            else:
-                x_locs.append(meas_attrs['LocationX'][0])
-                y_locs.append(meas_attrs['LocationY'][0])
-                z_locs.append(meas_attrs['LocationZ'][0])
+                pos_vals = []
+                try:
+                    if meas_attrs.keys().__contains__('RangeXStart'):
+                        x_start = meas_attrs['RangeXStart'][0]
+                        x_points = meas_attrs['RangeXPoints'][0]
+                        x_incr = meas_attrs['RangeXIncrement'][0]
+                        x_end = x_start + x_incr * (x_points - 1)
+                        x_min = min(x_start, x_end)
+                        if meas_attrs.keys().__contains__('RangeYStart'):
+                            y_start = meas_attrs['RangeYStart'][0]
+                            y_points = meas_attrs['RangeYPoints'][0]
+                            y_incr = meas_attrs['RangeYIncrement'][0]
+                            y_end = y_start + y_incr * (y_points - 1)
+                            y_min = min(y_start, y_end)
 
-            # load channels
-            for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
-                hdf5_chan = hdf5_meas[chan_name]
-                chan_attrs = hdf5_chan.attrs
+                            # construct the positions array
+                            for iY in range(int(y_points)):
+                                y = y_min + iY * abs(y_incr)
+                                for iX in range(int(x_points)):
+                                    x = x_min + iX * abs(x_incr)
+                                    pos_vals.append([x, y])
+                            pos_vals = np.array(pos_vals)
+                    else:
+                        pos_vals = np.array([1])
+                except:
+                    raise IOError("Error reading position data from " + self.filename)
+                hyperspectra = pos_vals.shape[0] > 1
 
-                signal = chan_attrs['DataSignal']
-                if signal != self.data_signal:
-                    continue
+                # ignore backgrounds and unchecked data
+                if not hyperspectra:
+                    if meas_attrs.keys().__contains__('IsBackground') and meas_attrs['IsBackground'][0]:
+                        continue
+                    if meas_attrs.keys().__contains__('Checked') and not meas_attrs['Checked'][0]:
+                        continue
 
-                data = hdf5_chan['Raw_Data']
+                if len(wavenumbers) == 0:
+                    wavenumbers = spec_vals
+
                 if hyperspectra:
-                    rows = meas_attrs['RangeYPoints'][0]
-                    cols = meas_attrs['RangeXPoints'][0]
-                    # organized rows, columns, wavelengths
-                    intensities = np.reshape(data, (rows,cols,data.shape[1])) 
-                    break
+                    x_len = meas_attrs['RangeXPoints'][0]
+                    y_len = meas_attrs['RangeYPoints'][0]
+                    x_locs = pos_vals[:x_len,0]
+                    y_indices = np.round(np.linspace(0, pos_vals.shape[0] - 1, y_len)).astype(int)
+                    y_locs = pos_vals[y_indices,1]
+                    # adding focus positions
+                    z_locs = hdf5_meas['Dataset_Focus'][:]
                 else:
-                    intensities.append(data[0,:])
+                    x_locs.append(meas_attrs['LocationX'][0])
+                    y_locs.append(meas_attrs['LocationY'][0])
+                    z_locs.append(meas_attrs['LocationZ'][0])
+
+                # load channels
+                for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
+                    hdf5_chan = hdf5_meas[chan_name]
+                    chan_attrs = hdf5_chan.attrs
+
+                    signal = chan_attrs['DataSignal']
+                    if signal != self.data_signal:
+                        continue
+
+                    data = hdf5_chan['Raw_Data']
+                    if hyperspectra:
+                        rows = meas_attrs['RangeYPoints'][0]
+                        cols = meas_attrs['RangeXPoints'][0]
+                        # organized rows, columns, wavelengths
+                        intensities = np.reshape(data, (rows,cols,data.shape[1])) 
+                        break
+                    else:
+                        intensities.append(data[0,:])
+
+        elif b'DF' in self.data_signal:
+            hyperspectra = True
+            df = True
+            for map_name in filter(lambda s: s.startswith('Heightmap'), hdf5_file['Heightmaps']):
+                hdf5_map = hdf5_file['Heightmaps'][map_name]
+                # check if this measurement contains the selected data channel
+                # and is not a visible image
+                selected_signal = False
+                if b'DF' + hdf5_map.attrs['Channel'] == self.data_signal and hdf5_map.attrs['Units'] != b'':
+                    selected_signal = True
+                if not selected_signal:
+                    continue
+
+                # build wn range array
+                wn = int(hdf5_map.attrs['IRWavenumber'].split()[0].decode('utf-8'))
+                wavenumbers.append(wn)
+
+                # build coord arrays
+                dx = hdf5_map.attrs['SizeWidth']/hdf5_map.shape[1]
+                minx = hdf5_map.attrs['PositionX'] - (hdf5_map.attrs['SizeWidth']/2)
+                maxx = hdf5_map.attrs['PositionX'] + (hdf5_map.attrs['SizeWidth']/2)
+                xtemp = np.arange(minx, maxx, dx)
+                x_locs.append(xtemp)
+                dy = hdf5_map.attrs['SizeHeight']/hdf5_map.shape[0]
+                miny = hdf5_map.attrs['PositionY'] - (hdf5_map.attrs['SizeHeight']/2)
+                maxy = hdf5_map.attrs['PositionY'] + (hdf5_map.attrs['SizeHeight']/2)
+                ytemp = np.arange(maxy, miny, -dy)
+                y_locs.append(ytemp)
+                z_locs.append(np.full((xtemp.shape[0]*ytemp.shape[0]),
+                            hdf5_map.attrs['PositionZ'][0]))
+
+                # load channel
+                intensities.append(hdf5_map[()])
+            intensities = np.array(intensities)
+            intensities = np.moveaxis(intensities, 0, -1)
 
         spectra = np.array(intensities)
         features = np.array(wavenumbers)
         x_locs = np.array(x_locs).flatten()
         y_locs = np.array(y_locs).flatten()
-        z_locs = np.array(z_locs).flatten()
+        if not df:
+            z_locs = np.array(z_locs).flatten()
 
         if hyperspectra:
             features, spectra, additional_table = _spectra_from_image(spectra, features, x_locs, y_locs)
 
             new_attributes = []
             new_columns = []
-            new_attributes.append(ContinuousVariable.make('z-focus'))
-            new_columns.append(np.full((len(z_locs),), z_locs))
+            if not df:
+                new_attributes.append(ContinuousVariable.make('z-focus'))
+                new_columns.append(np.full((len(z_locs),), z_locs))
+            else:
+                for i, j in enumerate(features):
+                    new_attributes.append(ContinuousVariable.make('z-focus ('+str(j)+')'))
+                    new_columns.append(z_locs[i])
 
             domain = Domain(additional_table.domain.attributes,
                             additional_table.domain.class_vars,
