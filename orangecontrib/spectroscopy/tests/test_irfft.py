@@ -5,10 +5,10 @@ import Orange
 
 from orangecontrib.spectroscopy.data import getx
 
-from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
+from orangecontrib.spectroscopy.irfft import (IRFFT, ComplexFFT, zero_fill, PhaseCorrection,
                                               find_zpd, PeakSearch, ApodFunc,
-                                              MultiIRFFT,
-                                             )
+                                              MultiIRFFT, apodize,
+                                              )
 
 dx = 1.0 / 15797.337544 / 2.0
 
@@ -19,6 +19,15 @@ class TestIRFFT(unittest.TestCase):
         self.ifg_single = Orange.data.Table("IFG_single.dpt")
         self.ifg_seq_ref = Orange.data.Table("agilent/background_agg256.seq")
         self.sc_dat_ref = Orange.data.Table("agilent/background_agg256.dat")
+        self.ifgs = {
+            'even_sym': self.ifg_single.X[0],
+            'odd_sym': self.ifg_single.X[0][1:],
+            'even_trunc': self.ifg_seq_ref.X[0][1:],
+            'odd_trunc': self.ifg_seq_ref.X[0],
+            'even_trunc_reverse': self.ifg_seq_ref.X[0][1:][::-1],
+            'odd_trunc_reverse': self.ifg_seq_ref.X[0][::-1],
+            'fake_asym': self.ifg_seq_ref.X[0],
+        }
 
     def test_zero_fill(self):
         N = 1975
@@ -32,8 +41,15 @@ class TestIRFFT(unittest.TestCase):
             # Final array should be >= N * zff
             assert N_zf >= N * zff
 
-    def test_simple_fft(self):
+    def test_simple_fft_even(self):
+        """Even array, symmetric ifg"""
         data = self.ifg_single.X[0]
+        fft = IRFFT(dx=dx)
+        fft(data)
+
+    def test_simple_fft_odd(self):
+        """Odd array, asymmetric ifg"""
+        data = self.ifg_seq_ref.X[0]
         fft = IRFFT(dx=dx)
         fft(data)
 
@@ -62,6 +78,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = IRFFT(dx=dx_ag,
                     apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    apod_asym=False,
                     zff=1,
                     phase_res=None,
                     phase_corr=PhaseCorrection.MERTZ,
@@ -82,6 +99,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = IRFFT(dx=dx_ag,
                     apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                    apod_asym=False,
                     zff=1,
                     phase_res=None,
                     phase_corr=PhaseCorrection.MERTZ,
@@ -96,13 +114,14 @@ class TestIRFFT(unittest.TestCase):
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
-        # NB 4 mAbs error
-        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, atol=0.004)
+        # NB 0.4 mAbs max error
+        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, rtol=2.5e-04)
 
     def test_multi(self):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = MultiIRFFT(dx=dx_ag,
                          apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         apod_asym=False,
                          zff=1,
                          phase_res=None,
                          phase_corr=PhaseCorrection.MERTZ,
@@ -118,6 +137,7 @@ class TestIRFFT(unittest.TestCase):
         dx_ag = (1 / 1.57980039e+04 / 2) * 4
         fft = MultiIRFFT(dx=dx_ag,
                          apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+                         apod_asym=False,
                          zff=1,
                          phase_res=None,
                          phase_corr=PhaseCorrection.MERTZ,
@@ -133,5 +153,35 @@ class TestIRFFT(unittest.TestCase):
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
-        # NB 4 mAbs error
-        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)
+        # NB 0.4 mAbs max error
+        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, rtol=2.5e-04)
+
+    def test_apodization(self):
+        for apod_func in ApodFunc:
+            if apod_func == ApodFunc.BOXCAR:
+                ifg = self.ifgs['even_sym']
+                zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
+                out = apodize(ifg, zpd, apod_func, False)
+                np.testing.assert_array_equal(ifg, out)
+                continue
+            for k, ifg in self.ifgs.items():
+                if 'asym' in k:
+                    # Test asymmetric ifgs
+                    apod_asym = True
+                    ramp_value = 1
+                else:
+                    # Test symmetric and truncated ifgs
+                    apod_asym = False
+                    ramp_value = 0.5
+                with self.subTest(apod_func=apod_func.name, ifg=k, asym=apod_asym):
+                    zpd = find_zpd(ifg, PeakSearch.ABSOLUTE)
+                    out = apodize(ifg, zpd, apod_func, apod_asym)
+                    # Apodization should not change value at zpd
+                    # Ramp should reduce zpd value by half
+                    self.assertAlmostEqual(ifg[zpd] * ramp_value, out[zpd])
+
+    def test_apod_asym_warning(self):
+        for FFT in IRFFT, MultiIRFFT, ComplexFFT:
+            with self.assertWarns(FutureWarning):
+                fft = FFT(dx=dx)
+            self.assertTrue(fft.apod_asym)
