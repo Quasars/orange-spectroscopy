@@ -5,9 +5,9 @@ from os import walk, path
 import subprocess
 import sys
 
-from setuptools import setup, find_packages, Command
+from setuptools import setup, find_namespace_packages, Command
 
-PACKAGES = find_packages()
+PACKAGES = find_namespace_packages(where="", include=['orangecontrib.spectroscopy'])
 
 PACKAGE_DATA = {}
 
@@ -125,8 +125,6 @@ if __name__ == '__main__':
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
         install_requires=[
-            'setuptools>=51.0.0',  # same as the last one needed for Orange3
-            'pip>=19.3',  # same as for Orange 3.38
             'numpy>=1.24.0',
             'Orange3>=3.38.0',
             'orange-canvas-core>=0.2.4',
@@ -154,7 +152,6 @@ if __name__ == '__main__':
         },
         entry_points=ENTRY_POINTS,
         keywords=KEYWORDS,
-        namespace_packages=['orangecontrib'],
         test_suite=TEST_SUITE,
         include_package_data=True,
         zip_safe=False,
