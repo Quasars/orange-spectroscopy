@@ -243,8 +243,8 @@ class IRFFT():
         self.wavenumbers = np.fft.rfftfreq(Nzff, self.dx)
 
         if self.phase_corr == PhaseCorrection.NONE:
-            self.spectrum = ifg.real
-            self.phase = ifg.imag
+            self.spectrum = ifg
+            self.phase = None
         else:
             try:
                 self.spectrum = np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
@@ -328,8 +328,8 @@ class MultiIRFFT(IRFFT):
         self.wavenumbers = np.fft.rfftfreq(Nzff, self.dx)
 
         if self.phase_corr == PhaseCorrection.NONE:
-            self.spectrum = ifg.real
-            self.phase = ifg.imag
+            self.spectrum = ifg
+            self.phase = None
         else:
             try:
                 self.spectrum = np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
