@@ -89,3 +89,73 @@ class HDF5Reader_SGM(FileFormat, SpectralFileFormat):
             meta_table = meta_table.concatenate(meta_table_entries)
 
             return features_entries[0], X, meta_table
+
+
+class HDF5Reader_BioXASImaging(FileFormat, SpectralFileFormat):
+    """ A very case specific reader for interpolated XRF mapping HDF5
+    files from the BioXAS-Imaging beamline at the CLS"""
+    EXTENSIONS = ('.hdf',)
+    DESCRIPTION = 'HDF5 file @BioXAS-Imaging/CLS'
+
+    @staticmethod
+    def detector_group_map():
+        """Return map of detector group name to entries"""
+        return {
+            "Macro_dtc (sum)": [f"vortex_{i}_dtc" for i in [0, 1, 2, 3]],
+            "Micro_dtc (sum)": [f"vortex_{i}_dtc" for i in [4, 5, 6]],
+            "Single_dtc": ["vortex_7_dtc"],
+            "Macro (sum)": [f"vortex_{i}" for i in [0, 1, 2, 3]],
+            "Micro (sum)": [f"vortex_{i}" for i in [4, 5, 6]],
+            "Single": ["vortex_7"],
+        }
+
+    @property
+    def sheets(self) -> list:
+        vortex = []
+        scalar = []
+        with h5py.File(self.filename, 'r') as h5:
+            entries = list(h5['/mono_0'].keys())
+            for entry in entries:
+                if entry.startswith('vortex_') and not entry.endswith('meta'):
+                    vortex.append(entry)
+                elif entry.startswith('scalar_'):
+                    scalar.append(entry + "/after_float")
+
+        groups = []
+        for group, detectors in self.detector_group_map().items():
+            if all(det in entries for det in detectors):
+                groups.append(group)
+
+        # Sort sheets
+        default = []
+        default_entry = "vortex_sum_dtc"
+        if default_entry in vortex:
+            vortex.pop(vortex.index(default_entry))
+            default.append(default_entry)
+
+        return default + groups + vortex + scalar
+
+    def read_spectra(self):
+        if self.sheet is None:
+            self.sheet = self.sheets[0]
+
+        entries = [self.sheet]
+        detector_groups = self.detector_group_map()
+        if entries[0] in detector_groups:
+            entries = detector_groups[entries[0]]
+        entries = ["/mono_0/" + entry for entry in entries]
+
+        with h5py.File(self.filename, "r") as h5:
+            features = np.array(h5['/dark_current/data/energies'])
+            data = None
+            for entry in entries:
+                if data is None:
+                    data = np.array(h5[entry])
+                else:
+                    data = np.sum([data, np.array(h5[entry])], axis=0)
+            if data is None:
+                return [], [], None
+            y_locs = np.arange(data.shape[0])
+            x_locs = np.arange(data.shape[1])
+
+        return _spectra_from_image(data, features, x_locs, y_locs)
