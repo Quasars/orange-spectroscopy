@@ -18,7 +18,8 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         Integrate(methods=Integrate.PeakBaseline, limits=[[1100, 1200]]),
         Integrate(methods=Integrate.PeakAt, limits=[[1100]]),
         Integrate(methods=Integrate.PeakX, limits=[[1100, 1200]]),
-        Integrate(methods=Integrate.PeakXBaseline, limits=[[1100, 1200]])
+        Integrate(methods=Integrate.PeakXBaseline, limits=[[1100, 1200]]),
+        Integrate(methods=Integrate.BaselineAbsolute, limits=[[900, 1200]])
     ]
     data = SMALL_COLLAGEN
 
@@ -113,6 +114,24 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         np.testing.assert_equal(bx, [0, 1, 2, 3])
         np.testing.assert_equal(by, [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]])
 
+    def test_absolute_integral(self):
+        data_neg = Table.from_numpy(None, [[-1, -2, -3, -1, -1, -1],
+                                       [-1, -2, -3, -1, np.nan, -1],
+                                       [-1, -2, -3, -1, -1, np.nan]])
+        data_pos = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1],
+                                       [1, 2, 3, 1, np.nan, 1],
+                                       [1, 2, 3, 1, 1, np.nan]])
+        i = Integrate(methods=Integrate.BaselineAbsolute, limits=[[0, 5]])(data_neg)
+        j = Integrate(methods=Integrate.BaselineAbsolute, limits=[[0, 5]])(data_pos)
+        self.assertEqual(i[0][0], j[0][0])
+        self.assertEqual(i[1][0], j[1][0])
+        self.assertEqual(i[2][0], j[2][0])
+        self.assertEqual(i[0][0], 3)
+        self.assertEqual(i[1][0], 3)
+        self.assertEqual(i[2][0], 3)
+        np.testing.assert_equal(i.domain[0].compute_value.baseline(data_neg)[1], -1)
+        np.testing.assert_equal(i.domain[0].compute_value.baseline(data_pos)[1], 1)
+
     def test_empty_interval(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
         i = Integrate(methods=Integrate.Simple, limits=[[10, 16]])(data)
@@ -126,6 +145,8 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         i = Integrate(methods=Integrate.PeakAt, limits=[[10, 16]])(data)
         self.assertEqual(i[0][0], 1)  # get the rightmost one
         i = Integrate(methods=Integrate.Separate, limits=[[10, 16, 10, 16]])(data)
+        self.assertEqual(i[0][0], 0)
+        i = Integrate(methods=Integrate.BaselineAbsolute, limits=[[10, 16]])(data)
         self.assertEqual(i[0][0], 0)
 
     def test_different_integrals(self):
