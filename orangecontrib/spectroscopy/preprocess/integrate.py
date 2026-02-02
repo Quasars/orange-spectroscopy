@@ -330,7 +330,7 @@ class Integrate(Preprocess):
             names = self.names
             if not names:
                 names = []
-                for l, m in zip(self.limits, methods):
+                for l, m in zip(self.limits, methods, strict=False):
                     if m in [IntegrateFeatureSeparateBaseline]:
                         names.append("{0} - {1} [baseline {2} - {3}]".format(*l))
                     else:
@@ -341,7 +341,7 @@ class Integrate(Preprocess):
                 n = get_unique_names(used_names, n)
                 names[i] = n
                 used_names.append(n)
-            for limits, method, name in zip(self.limits, methods, names):
+            for limits, method, name in zip(self.limits, methods, names, strict=False):
                 atts.append(Orange.data.ContinuousVariable(
                     name=name,
                     compute_value=method(limits, common)))

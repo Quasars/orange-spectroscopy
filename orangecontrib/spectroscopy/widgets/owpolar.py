@@ -398,7 +398,7 @@ def process_polar_abs(images, alphas, feature, map_x, map_y, invert, polangles, 
         for t in threads:
             t.join(0)
 
-        while any([i.exitcode == None for i in threads]):
+        while any([i.exitcode is None for i in threads]):
             if state.is_interruption_requested():
                 svars[1] = 2
             time.sleep(0.10)
@@ -625,15 +625,15 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
 
     def sort_row(self, unsorted):
-        row, feats, alphas = list(zip(*[unsorted]))
+        row, feats, alphas = list(zip(*[unsorted]))  # noqa: B905
         return row
 
     def sort_feats(self):
         model = self.feat_view.model()
         rows = [model.indexOf(row) for row in self.feats]
-        featalphas = list(zip(rows, self.feats, self.alphas))
+        featalphas = list(zip(rows, self.feats, self.alphas))  # noqa: B905
         temp = sorted(featalphas, key=self.sort_row)
-        rows, feats, alphas = list(zip(*temp))
+        rows, feats, alphas = list(zip(*temp))  # noqa: B905
         self.feats = list(feats)
         self.alphas = list(alphas)
 
@@ -973,5 +973,5 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    import orangecontrib.spectroscopy  # so that can be loaded
+    import orangecontrib.spectroscopy  # so that can be loaded  # noqa: F401
     WidgetPreview(OWPolar).run(insert_data=[(0, Orange.data.Table("polar/4-angle-ftir_multifile.tab"))])

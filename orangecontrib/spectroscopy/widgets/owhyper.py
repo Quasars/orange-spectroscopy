@@ -292,7 +292,7 @@ bins = [
 def palette_gradient(colors):
     n = len(colors)
     stops = np.linspace(0.0, 1.0, n, endpoint=True)
-    gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
+    gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]  # noqa: B905
     grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
     grad.setStops(gradstops)
     return grad
@@ -313,7 +313,7 @@ def palette_pixmap(colors, size):
     return img
 
 
-def color_palette_model(palettes, iconsize=QSize(64, 16)):
+def color_palette_model(palettes, iconsize=QSize(64, 16)):  # noqa: B008
     model = QStandardItemModel()
     for name, palette in palettes:
         _, colors = max(palette.items())
@@ -1085,7 +1085,7 @@ class ImageColorLegend(GraphicsWidget):
             self.colors = np.round(self.colors).astype(int)
             positions = np.linspace(0, 1, len(self.colors))
             stops = []
-            for p, c in zip(positions, self.colors):
+            for p, c in zip(positions, self.colors):  #noqa: B905
                 stops.append((p, QColor(*c)))
             self.gradient.setStops(stops)
         self.update_rect()
@@ -1364,7 +1364,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         prepared = []
         if sel is not None:
             data, vals, points = self.data[sel], self.data_values[sel], self.data_points[sel]
-            for d, v, p in zip(data, vals, points):
+            for d, v, p in zip(data, vals, points):  # noqa: B905
                 basic = "({}, {}): {}".format(p[0], p[1], v)
                 variables = [v for v in self.data.domain.metas + self.data.domain.class_vars
                              if v not in [self.attr_x, self.attr_y]]
@@ -1670,7 +1670,7 @@ class ScatterPlotMixin:
         colors[nans] = [np.array(NAN_COLOR)]  # replace unknown values with a color
 
         selection_colors = color_with_selections(colors, self.selection_group, None)
-        have_selection = not selection_colors is colors
+        have_selection = selection_colors is not colors
 
         @cache
         def mk_color(*args):
@@ -1835,7 +1835,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             # delete the saved attr_value to prevent crashes
             try:
                 del settings_["context_settings"][0].values["attr_value"]
-            except:  # pylint: disable=bare-except
+            except:  # pylint: disable=bare-except  # noqa: E722
                 pass
 
         # migrate selection
@@ -1846,7 +1846,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                 if selection is not None:
                     selection = [(i, 1) for i in np.flatnonzero(np.array(selection))]
                     settings_.setdefault("imageplot", {})["selection_group_saved"] = selection
-            except:  # pylint: disable=bare-except
+            except:  # noqa: E722 pylint: disable=bare-except
                 pass
 
         if version < 6:
@@ -2101,7 +2101,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             self.visbox.setEnabled(True)
             for img in data.attributes['visible_images']:
                 if not isinstance(img, VisibleImage):
-                    warnings.warn("Visible images need to subclass VisibleImage; "
+                    warnings.warn("Visible images need to subclass VisibleImage; "  # noqa: B028
                                   "Backward compatibility will be removed in the future.",
                                   OrangeDeprecationWarning)
                 self.visible_image_model.append(img)

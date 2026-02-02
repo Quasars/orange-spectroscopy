@@ -167,5 +167,5 @@ if __name__ == '__main__':
     data = Orange.data.Table('housing')
     learners = [PLSRegressionLearner(n_components=2, max_iter=100)]
     res = Orange.evaluation.CrossValidation()(data, learners)
-    for l, ca in zip(learners, Orange.evaluation.RMSE(res)):
+    for l, ca in zip(learners, Orange.evaluation.RMSE(res), strict=True):
         print("learner: {}\nRMSE: {}\n".format(l, ca))

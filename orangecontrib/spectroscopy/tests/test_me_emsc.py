@@ -6,7 +6,7 @@ import Orange
 from Orange.data import FileFormat, dataset_dirs
 
 from orangecontrib.spectroscopy.preprocess.me_emsc import ME_EMSC
-from orangecontrib.spectroscopy.preprocess.emsc import SelectionFunction, SmoothedSelectionFunction
+from orangecontrib.spectroscopy.preprocess.emsc import SmoothedSelectionFunction
 from orangecontrib.spectroscopy.preprocess.npfunc import Sum
 from orangecontrib.spectroscopy.tests.test_preprocess import TestCommonIndpSamplesMixin, \
     SMALLER_COLLAGEN, add_edge_case_data_parameter
@@ -32,7 +32,7 @@ def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
     wn < 1900 go towards 1, but for (4 points) they go towards 0 when wn < 1000.
     """
     # Hyperbolic tangent function
-    hypTan = lambda x_range, kap: 0.5 * (np.tanh(kap * x_range) + 1)
+    hypTan = lambda x_range, kap: 0.5 * (np.tanh(kap * x_range) + 1)  # noqa: E731
 
     # Calculate position of inflection points
     p1 = np.argmin(np.abs(wavenumbers - points[2]))

@@ -4,7 +4,6 @@ import unittest
 import Orange
 import numpy as np
 from Orange.data import Table
-from Orange.data.io import FileFormat
 from Orange.preprocess.preprocess import PreprocessorList
 from Orange.widgets.tests.base import WidgetTest
 
@@ -14,7 +13,6 @@ from orangecontrib.spectroscopy.preprocess import Interpolate, SavitzkyGolayFilt
 from orangecontrib.spectroscopy.widgets.owintegrate import OWIntegrate
 from orangecontrib.spectroscopy.widgets.owpreprocess import OWPreprocess, \
     create_preprocessor
-
 from orangecontrib.spectroscopy.widgets.owtilefile import OWTilefile
 
 AGILENT_TILE = "agilent/5_mosaic_agg1024.dmt"

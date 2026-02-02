@@ -47,7 +47,7 @@ class HDF5Reader_SGM(FileFormat, SpectralFileFormat):
                 d = NXdata[i]
 
                 if len(axes[i]) == 1:
-                    warnings.warn(f"1D datasets not yet implemented: {d} not loaded.")
+                    warnings.warn(f"1D datasets not yet implemented: {d} not loaded.") # noqa: B028
                 x_locs = h5[d][axes[i][0]]
                 y_locs = h5[d][axes[i][1]]
                 en = h5[d]['en']
@@ -80,11 +80,11 @@ class HDF5Reader_SGM(FileFormat, SpectralFileFormat):
                 meta_table_entries.append(meta_table)
 
             if not all(np.array_equal(f, features_entries[0]) for f in features_entries):
-                warnings.warn("Multiple NXdata entries with incompatible shape.")
+                warnings.warn("Multiple NXdata entries with incompatible shape.") # noqa: B028
             try:
                 X = np.vstack(X_entries)
-            except:
-                warnings.warn("Multiple NXdata entries with incompatible shape.\nLoading first entry only.")
+            except:  # noqa: E722
+                warnings.warn("Multiple NXdata entries with incompatible shape.\nLoading first entry only.") # noqa: B028
                 return features_entries[0], X_entries[0], meta_table_entries[0]
             meta_table = meta_table.concatenate(meta_table_entries)
 

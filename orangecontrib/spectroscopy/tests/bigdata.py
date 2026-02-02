@@ -3,7 +3,7 @@ import os
 import serverfiles
 from Orange.misc.environ import data_dir
 
-import orangecontrib.spectroscopy  # loads file readers
+import orangecontrib.spectroscopy  # loads file readers  # noqa: F401
 
 
 server = serverfiles.ServerFiles("http://193.2.72.57/infrared-data/")

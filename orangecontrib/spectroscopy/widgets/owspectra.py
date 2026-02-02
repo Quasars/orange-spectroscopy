@@ -244,7 +244,7 @@ class PlotCurvesItem(GraphicsObject):
     def boundingRect(self):
         # replace undefined (NaN) elements with defaults
         bounds = [d if np.isnan(b) else b \
-                  for b, d in zip(self.bounds, self.default_bounds)]
+                  for b, d in zip(self.bounds, self.default_bounds)]  # noqa: B905
         return QRectF(bounds[0], bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1])
 
 
@@ -1132,7 +1132,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         choose_color_action.setDefaultWidget(choose_color_box)
         view_menu.addAction(choose_color_action)
 
-        cycle_colors = QShortcut(Qt.Key_C, self, self.cycle_color_attr, context=Qt.WidgetWithChildrenShortcut)
+        cycle_colors = QShortcut(Qt.Key_C, self, self.cycle_color_attr, context=Qt.WidgetWithChildrenShortcut)  # noqa: F841
 
         self.waterfall_apply()
         self.grid_apply()
@@ -1329,7 +1329,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
 
         try:
             vr = self.plot.vb.viewRect()
-        except:
+        except:  # noqa: E722
             return
 
         if self.invertX:
@@ -1422,7 +1422,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
             posx, posy = mousePoint.x(), mousePoint.y()
 
             labels = []
-            for a, vs in sorted(self.reports.items()):
+            for _a, vs in sorted(self.reports.items()):
                 for v in vs:
                     if isinstance(v, tuple) and len(v) == 2:
                         if v[0] == "x":

@@ -1,4 +1,5 @@
 # pylint: disable=unused-import
+# ruff: noqa: F401
 
 # import for compatibility before the restructure
 import Orange.data.io  # legacy import so that file readers are registered

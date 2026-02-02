@@ -192,7 +192,7 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
             imdata = np.ones((lsy[2], lsx[2])) * float("nan")
             xindex = index_values(coorx, lsx)
             yindex = index_values(wavenumbers, lsy)
-            for xind, d in zip(xindex, self.data.X):
+            for xind, d in zip(xindex, self.data.X, strict=False):
                 imdata[yindex, xind] = d
 
             self.data_imagepixels = xindex

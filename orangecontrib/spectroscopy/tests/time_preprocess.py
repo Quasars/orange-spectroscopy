@@ -3,9 +3,8 @@ import time
 import numpy as np
 from Orange.data import Table
 
-from orangecontrib.spectroscopy.tests.bigdata import dust, spectra20nea
 from orangecontrib.spectroscopy.preprocess import Normalize
-from orangecontrib.spectroscopy.data import getx
+from orangecontrib.spectroscopy.tests.bigdata import dust, spectra20nea
 
 
 def test_normalization_vector():

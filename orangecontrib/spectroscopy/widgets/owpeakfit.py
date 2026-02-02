@@ -4,7 +4,7 @@ import concurrent.futures
 import multiprocessing
 import os
 
-from lmfit import Parameters, Model
+from lmfit import Parameters
 from lmfit.model import ModelResult
 import numpy as np
 

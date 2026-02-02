@@ -15,7 +15,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from Orange.widgets.tests.base import WidgetTest
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable
 
 from orangecontrib.spectroscopy.widgets.owspectra import OWSpectra, MAX_INSTANCES_DRAWN, \
     PlotCurvesItem, NoSuchCurve, MAX_THICK_SELECTED, CurvePlot
@@ -390,7 +390,7 @@ class TestOWSpectra(WidgetTest):
         # resending the exact same data should not change the selection
         self.send_signal("Data", self.iris)
         wait_for_graph(self.widget)
-        out2 = self.get_output("Selection")
+        out2 = self.get_output("Selection")  # noqa: F841
         self.assertEqual(len(out), 1)
         # while resending the same data as a different object should
         self.send_signal("Data", self.iris.copy())

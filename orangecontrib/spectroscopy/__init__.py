@@ -1,7 +1,7 @@
 import Orange.data
 import os.path
 
-from . import io  # register file formats
+from . import io  # register file formats # noqa: F401
 
 
 def get_sample_datasets_dir():

@@ -1,9 +1,7 @@
 import unittest
-import array
-
-import numpy as np
 
 import Orange.data
+import numpy as np
 
 from orangecontrib.spectroscopy.data import build_spec_table, getx
 from orangecontrib.spectroscopy.io.util import _spectra_from_image

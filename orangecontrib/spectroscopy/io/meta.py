@@ -38,7 +38,7 @@ class HDF5MetaReader(FileFormat):
         for reader in [HDF5Reader_SGM, HDF5Reader_ROCK]:
             try:
                 sheets.extend(reader(self.filename).sheets)
-            except:
+            except:  # noqa: E722
                 pass
         return sheets
 

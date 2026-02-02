@@ -3,7 +3,7 @@ import scipy.sparse as sp
 
 from Orange.widgets import gui
 from Orange.widgets.widget import Msg
-from Orange.data import Table, Domain, ContinuousVariable, StringVariable
+from Orange.data import Table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output

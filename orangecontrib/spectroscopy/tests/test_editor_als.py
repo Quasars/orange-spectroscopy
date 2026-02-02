@@ -5,7 +5,7 @@ from orangecontrib.spectroscopy.preprocess.als import ALSP, ARPLS, AIRPLS
 from orangecontrib.spectroscopy.widgets.preprocessors.als import ALSEditor
 
 import unittest
-class A(unittest.TestCase): pass
+class A(unittest.TestCase): pass  # noqa: E701
 
 class TestALSEditor(PreprocessorEditorTest):
 

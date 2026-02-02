@@ -30,7 +30,7 @@ def pixel_decimals(viewbox):
     """
     try:
         xpixel, ypixel = viewbox.viewPixelSize()
-    except:
+    except:  # noqa: E722
         xpixel, ypixel = 0, 0
 
     return pixels_to_decimals(xpixel), pixels_to_decimals(ypixel)
@@ -124,7 +124,7 @@ def floatornone(a):
 def decimalornone(a):
     try:  # because also intermediate values are passed forward
         return Decimal(a)
-    except:
+    except:  # noqa: E722
         return None
 
 

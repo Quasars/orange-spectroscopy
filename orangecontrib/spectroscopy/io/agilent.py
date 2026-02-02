@@ -27,7 +27,7 @@ def load_visible_images(vis_img_list: list[dict]) -> list[ConstantBytesVisibleIm
                                                )
             visible_images.append(vimage)
         except (KeyError, OSError) as e:
-            warnings.warn(f"Visible images load failed: {e}")
+            warnings.warn(f"Visible images load failed: {e}")  # noqa: B028
     return visible_images
 
 

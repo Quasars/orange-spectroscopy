@@ -101,7 +101,7 @@ class ParamHintBox(QWidget):
         self.vary_e.currentTextChanged.connect(self._changed_vary)
         self.expr_e.textChanged.connect(self._changed_expr)
 
-        for name, widget in self.edits:
+        for _name, widget in self.edits:
             layout.addWidget(widget)
             widget.focusIn = self.focusIn
 

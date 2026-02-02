@@ -46,7 +46,7 @@ def calculate_Qext_curves(nprs, nkks, alpha0, gamma, wavenumbers):
     rho = np.array(
         [alpha0val * (1 + gammaval * nkks) * (wavenumbers * 100) for alpha0val in alpha0 for gammaval in gamma])
     tanbeta = [nprs / (1 / gammaval + nkks) for _ in alpha0 for gammaval in gamma]
-    Qext = np.array([mie_hulst_extinction(rhoval, tanbetaval) for rhoval, tanbetaval in zip(rho, tanbeta)])
+    Qext = np.array([mie_hulst_extinction(rhoval, tanbetaval) for rhoval, tanbetaval in zip(rho, tanbeta)])  # noqa: B905
     return Qext
 
 
@@ -219,7 +219,7 @@ class _ME_EMSC(CommonDomainOrderUnknowns, CommonDomainRef):
                         residuals[i, :] = res
                         RMSEall[i] = RMSE[-1]
                         break
-                    elif iterationNumber > 2 and self.fixedNiter == False:
+                    elif iterationNumber > 2 and not self.fixedNiter:
                         if (rmse == RMSE[-2] and rmse == RMSE[-3]) or rmse > RMSE[-2]:
                             newspectra[i, :] = corrSpec
                             numberOfIterations[i] = iterationNumber
@@ -302,7 +302,7 @@ class MissingReferenceException(Exception):
 
 class ME_EMSC(Preprocess):
 
-    def __init__(self, reference=None, weights=None, ncomp=False, n0=np.linspace(1.1, 1.4, 10), a=np.linspace(2, 7.1, 10), h=0.25,
+    def __init__(self, reference=None, weights=None, ncomp=False, n0=np.linspace(1.1, 1.4, 10), a=np.linspace(2, 7.1, 10), h=0.25,  # noqa: B008
                  max_iter=30, fixed_iter=False, positive_reference=True, output_model=False, ranges=None):
         # the first non-kwarg can not be a data table (Preprocess limitations)
         # ranges could be a list like this [[800, 1000], [1300, 1500]]

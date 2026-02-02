@@ -202,7 +202,7 @@ class SequenceFlow(SequenceFlow):
         elif index < 0 or index >= len(frames):
             insert_index = layout.count()
         else:
-            assert False
+            raise AssertionError
 
         layout.insertWidget(insert_index, frame)
         frame.installEventFilter(self)
@@ -526,7 +526,7 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         self.button.setMenu(self.preprocessor_menu)
         self.button.setAutoDefault(False)
 
-        self.preprocessorsView = view = QListView(
+        self.preprocessorsView = QListView(
             selectionMode=QListView.SingleSelection,
             dragEnabled=True,
             dragDropMode=QListView.DragOnly
@@ -701,7 +701,7 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
-        name = saved.get("name", "")
+        name = saved.get("name", "")  # noqa: F841
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
@@ -866,7 +866,7 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     @classmethod
     def migrate_preprocessors(cls, preprocessors, version):
-        input = list(zip(preprocessors, [version]*len(preprocessors)))
+        input = list(zip(preprocessors, [version]*len(preprocessors)))  # noqa: B905
         migrated = cls.migrate_preprocessor_list(input)
         return [p[0] for p in migrated], cls.settings_version
 
@@ -939,7 +939,7 @@ class OWPreprocess(SpectralPreprocessReference):
         # happen when adding a preprocessor (there, commit() is called twice).
         # Wait 100 ms before processing - if a new task is started in meanwhile,
         # allow that is easily` cancelled.
-        for i in range(10):
+        for _i in range(10):
             time.sleep(0.010)
             progress_interrupt(0)
 

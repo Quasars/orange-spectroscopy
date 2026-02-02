@@ -7,7 +7,6 @@ from typing import List
 
 import numpy as np
 from AnyQt.QtCore import Qt, QSize
-from AnyQt.QtWidgets import QApplication
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QSizePolicy as Policy, QCompleter

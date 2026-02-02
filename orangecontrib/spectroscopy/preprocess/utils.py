@@ -328,7 +328,7 @@ def replace_infs(array):
 
 def replacex(data: Table, replacement: list):
     assert len(data.domain.attributes) == len(replacement)
-    natts = [at.renamed(str(n)) for n, at in zip(replacement, data.domain.attributes)]
+    natts = [at.renamed(str(n)) for n, at in zip(replacement, data.domain.attributes, strict=True)]
     ndom = Domain(natts, data.domain.class_vars, data.domain.metas)
     return data.transform(ndom)
 

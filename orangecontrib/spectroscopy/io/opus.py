@@ -43,7 +43,6 @@ class OPUSReader(FileFormat):
             db = self.sheets[0]
 
         db = tuple(db.split(" "))
-        dim = db[1]
 
         try:
             data = opusFC.getOpusData(self.filename, db)
@@ -58,7 +57,7 @@ class OPUSReader(FileFormat):
         y_data = None
         meta_data = None
 
-        if type(data) == opusFC.MultiRegionDataReturn:
+        if isinstance(data, opusFC.MultiRegionDataReturn):
             y_data = []
             meta_data = []
             metas.extend([ContinuousVariable.make(MAP_X_VAR),
@@ -77,7 +76,7 @@ class OPUSReader(FileFormat):
             y_data = np.vstack(y_data)
             meta_data = np.vstack(meta_data)
 
-        elif type(data) == opusFC.MultiRegionTRCDataReturn and len(data.regions):
+        elif isinstance(data, opusFC.MultiRegionTRCDataReturn) and len(data.regions):
             y_data = []
             meta_data = []
             metas.extend([ContinuousVariable.make(MAP_X_VAR),
@@ -95,7 +94,7 @@ class OPUSReader(FileFormat):
             y_data = np.vstack(y_data)
             meta_data = np.vstack(meta_data)
 
-        elif type(data) == opusFC.ImageDataReturn:
+        elif isinstance(data, opusFC.ImageDataReturn):
             metas.extend([ContinuousVariable.make(MAP_X_VAR),
                           ContinuousVariable.make(MAP_Y_VAR)])
 
@@ -111,7 +110,7 @@ class OPUSReader(FileFormat):
                     y_data = np.vstack((y_data, data_3D[i]))
                     meta_data = np.vstack((meta_data, coord))
 
-        elif type(data) == opusFC.ImageTRCDataReturn:
+        elif isinstance(data, opusFC.ImageTRCDataReturn):
             metas.extend([ContinuousVariable.make(MAP_X_VAR),
                           ContinuousVariable.make(MAP_Y_VAR)])
 
@@ -129,20 +128,20 @@ class OPUSReader(FileFormat):
                     y_data = np.vstack((y_data, data_3D[i]))
                     meta_data = np.vstack((meta_data, coord))
 
-        elif type(data) == opusFC.TimeResolvedTRCDataReturn:
+        elif isinstance(data, opusFC.TimeResolvedTRCDataReturn):
             y_data = data.traces
 
-        elif type(data) == opusFC.TimeResolvedDataReturn:
+        elif isinstance(data, opusFC.TimeResolvedDataReturn):
             metas.extend([ContinuousVariable.make('z')])
 
             y_data = data.spectra
             meta_data = data.z
 
-        elif type(data) == opusFC.SingleDataReturn:
+        elif isinstance(data, opusFC.SingleDataReturn):
             y_data = data.y[None, :]
 
         else:
-            warnings.warn(f"Empty or unsupported opusFC DataReturn object: {type(data)}")
+            warnings.warn(f"Empty or unsupported opusFC DataReturn object: {type(data)}") # noqa: B028
             return Orange.data.Table()
 
         import_params = ['SRT', 'SNM']
@@ -177,9 +176,9 @@ class OPUSReader(FileFormat):
         try:
             opus_imgs = opusFC.getVisImages(self.filename)
         except Exception as e:
-            warnings.warn(f"Visible images load failed: {e}")
+            warnings.warn(f"Visible images load failed: {e}") # noqa: B028
         else:
-            for index, img in enumerate(opus_imgs):
+            for img in opus_imgs:
                 try:
                     from PIL import Image
                     image_bytes = io.BytesIO(img['image'])

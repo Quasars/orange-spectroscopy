@@ -39,7 +39,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     if not channel_map.keys().__contains__(signal):
                         label = hdf5_chan.attrs['Label']
                         channel_map[signal] = label
-                except:
+                except: # noqa: E722
                     pass
         if len(channel_map) == 0:
             raise IOError("Error reading channels from " + self.filename)
@@ -134,7 +134,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     wn_end = meas_attrs['RangeWavenumberEnd'][0]
                     wn_points = meas_attrs['RangeWavenumberPoints'][0]
                     spec_vals = np.linspace(wn_start, wn_end, wn_points)
-            except:
+            except:  # noqa: E722
                 raise IOError("Error reading wavenumber range from " + self.filename)
 
             pos_vals = []
@@ -161,7 +161,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                         pos_vals = np.array(pos_vals)
                 else:
                     pos_vals = np.array([1])
-            except:
+            except:  # noqa: E722
                 raise IOError("Error reading position data from " + self.filename)
             hyperspectra = pos_vals.shape[0] > 1
 

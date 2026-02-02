@@ -11,7 +11,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QSizePolicy as Policy, QGridLayout, QLabel, \
     QFileDialog, QStyle, QListWidget
 
-from Orange.data import Domain, Table, DiscreteVariable, Variable, ContinuousVariable, StringVariable
+from Orange.data import Domain, Table, Variable, ContinuousVariable, StringVariable
 from Orange.data.io import FileFormat, class_from_qualified_name
 from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.widgets import widget, gui
@@ -126,11 +126,11 @@ def concatenate_data(tables, filenames, label):
 
         data[:, source_var] = np.array(list(
             chain(*(repeat(fn, len(table))
-                    for fn, table in zip(filenames, tables)))
+                    for fn, table in zip(filenames, tables)))  # noqa: B905
         )).reshape(-1, 1)
         data[:, label_var] = np.array(list(
             chain(*(repeat(label, len(table))
-                    for _, table in zip(filenames, tables)))
+                    for _, table in zip(filenames, tables)))  # noqa: B905
         )).reshape(-1, 1)
 
     return data
@@ -367,7 +367,7 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
             try:
                 reader = _get_reader(rp)
                 sheets.update(reader.sheets)
-            except:
+            except:  # noqa: E722
                 pass
 
         sheets = sorted(sheets.items(), key=lambda x: x[0])

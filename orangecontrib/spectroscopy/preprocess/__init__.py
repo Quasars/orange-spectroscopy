@@ -20,9 +20,9 @@ from Orange.widgets.unsupervised.owpca import MAX_COMPONENTS
 from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.preprocess.integrate import Integrate
-from orangecontrib.spectroscopy.preprocess.emsc import EMSC
+from orangecontrib.spectroscopy.preprocess.emsc import EMSC  # noqa: F401
 from orangecontrib.spectroscopy.preprocess.transform import Absorbance, Transmittance, \
-    CommonDomainRef
+    CommonDomainRef  # noqa: F401
 from orangecontrib.spectroscopy.preprocess.utils import SelectColumn, CommonDomain, \
     CommonDomainOrder, CommonDomainOrderUnknowns, nan_extend_edges_and_interpolate, \
     remove_whole_nan_ys, interp1d_with_unknowns_numpy, interp1d_with_unknowns_scipy, \
@@ -205,11 +205,11 @@ class Cut(Preprocess):
     def __call__(self, data):
         x = getx(data)
         if not self.inverse:
-            okattrs = [at for at, v in zip(data.domain.attributes, x)
+            okattrs = [at for at, v in zip(data.domain.attributes, x, strict=True)
                        if (self.lowlim is None or self.lowlim <= v) and
                        (self.highlim is None or v <= self.highlim)]
         else:
-            okattrs = [at for at, v in zip(data.domain.attributes, x)
+            okattrs = [at for at, v in zip(data.domain.attributes, x, strict=True)
                        if (self.lowlim is not None and v <= self.lowlim) or
                        (self.highlim is not None and self.highlim <= v)]
         domain = Orange.data.Domain(okattrs, data.domain.class_vars, metas=data.domain.metas)
@@ -418,7 +418,6 @@ class _NormalizeCommon(CommonDomain):
                     factors = data.transform(ndom)
                     data.X /= factors.X
                     replace_infs(data.X)
-                    nd = data.domain[self.attr]
                 else:  # invalid attribute for normalization
                     data.X *= float("nan")
             elif self.method == Normalize.MinMax:
@@ -758,7 +757,7 @@ class _ExtractEXAFSCommon(CommonDomain):
         except Exception as e:
             # extra_exafs should be fixed to return a specific exception
             if "jump at edge" in e.args[0]:
-                raise EdgeJumpException("Problem with edge jump.")
+                raise EdgeJumpException("Problem with edge jump.") from e
             else:
                 raise
 

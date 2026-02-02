@@ -16,7 +16,7 @@ def pack_selection(selection_group):
     if len(nonzero_indices) == 0:
         return None
     if len(nonzero_indices) < 1000:
-        return [(a, b) for a, b in zip(nonzero_indices, selection_group[nonzero_indices])]
+        return [(a, b) for a, b in zip(nonzero_indices, selection_group[nonzero_indices], strict=True)]
     else:
         # much faster than array.array("B", selection_group)
         a = array.array("B")

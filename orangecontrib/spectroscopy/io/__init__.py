@@ -1,4 +1,5 @@
 # FileFormat readers must be imported here
+# ruff: noqa: F401
 
 # Meta-readers to handle extension conflicts
 from .meta import DatMetaReader, HDRMetaReader, HDF5MetaReader

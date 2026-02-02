@@ -11,7 +11,7 @@ from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
-from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 
 from orangewidget.settings import SettingProvider, ContextSetting
 
@@ -148,8 +148,8 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         gui.comboBox(
             box,
             self,
-            f"attr_x",
-            label=f"Axis X:",
+            "attr_x",
+            label="Axis X:",
             callback=self._attr_changed,
             model=self.xy_model,
             **common_options,
@@ -157,8 +157,8 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         gui.comboBox(
             box,
             self,
-            f"attr_y",
-            label=f"Axis Y:",
+            "attr_y",
+            label="Axis Y:",
             callback=self._attr_changed,
             model=self.xy_model,
             **common_options,

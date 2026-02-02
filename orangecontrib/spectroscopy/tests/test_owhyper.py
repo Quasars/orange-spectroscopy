@@ -345,7 +345,7 @@ class TestOWHyper(WidgetTest):
     def test_color_variable_levels(self):
         class_values = ["a"], ["a", "b", "c"]
         correct_levels = [0, 0], [0, 2]
-        for values, correct in zip(class_values, correct_levels):
+        for values, correct in zip(class_values, correct_levels, strict=True):
             domain = Domain([], DiscreteVariable("c", values=values))
             data = Table.from_numpy(domain, X=[[]], Y=[[0]])
             self.send_signal("Data", data)
@@ -370,7 +370,7 @@ class TestOWHyper(WidgetTest):
 
     def test_migrate_selection(self):
         c = QPointF()  # some we set an attribute to
-        setattr(c, "selection", [False, True, True, False])
+        setattr(c, "selection", [False, True, True, False])  # noqa: B010
         settings = {"context_settings": [c]}
         OWHyper.migrate_settings(settings, 2)
         self.assertEqual(settings["imageplot"]["selection_group_saved"], [(1, 1), (2, 1)])

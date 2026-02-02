@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import Domain, Table
+from Orange.data import Domain
 
 MAP_X_VAR = "map_x"
 MAP_Y_VAR = "map_y"

@@ -8,7 +8,7 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 
-from orangecontrib.spectroscopy.utils import NanInsideHypercube, InvalidAxisException
+from orangecontrib.spectroscopy.utils import InvalidAxisException
 from orangecontrib.spectroscopy.utils.binning import bin_hyperspectra, InvalidBlockShape
 from orangecontrib.spectroscopy.widgets.gui import lineEditIntRange
 

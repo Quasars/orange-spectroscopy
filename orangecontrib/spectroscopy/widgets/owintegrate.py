@@ -44,7 +44,7 @@ class IntegrateOneEditor(BaseEditorOrange):
         self.__editors = {}
         self.__lines = {}
 
-        for name, longname in self.integrator.parameters():
+        for name, _longname in self.integrator.parameters():
             v = 0.
             self.__values[name] = v
 
@@ -104,7 +104,7 @@ class IntegrateOneEditor(BaseEditorOrange):
     def createinstance(cls, params):
         params = dict(params)
         values = []
-        for ind, (name, _) in enumerate(cls.integrator.parameters()):
+        for _ind, (name, _) in enumerate(cls.integrator.parameters()):
             values.append(params.get(name, 0.))
         return Integrate(methods=cls.integrator, limits=[values], metas=True)
 
@@ -283,7 +283,7 @@ class OWIntegrate(SpectralPreprocess):
         # happen when adding a preprocessor (there, commit() is called twice).
         # Wait 100 ms before processing - if a new task is started in meanwhile,
         # allow that is easily` cancelled.
-        for i in range(10):
+        for _i in range(10):
             time.sleep(0.005)
             progress_interrupt(0)
 
