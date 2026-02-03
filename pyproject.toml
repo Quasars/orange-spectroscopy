@@ -73,9 +73,6 @@ spectroscopy = "orangecontrib.spectroscopy"
 [project.entry-points."orange.canvas.help"]
 html-index = "orangecontrib.spectroscopy.widgets:WIDGET_HELP_PATH"
 
-[tool.setuptools]
-namespace-packages = ["orangecontrib"]
-
 [tool.setuptools.packages.find]
 include = ["orangecontrib*"]
 
