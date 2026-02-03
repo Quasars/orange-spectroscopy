@@ -21,7 +21,7 @@ class TestOWBin(WidgetTest):
 
     def test_bin(self):
         self.widget.bin_shape = (2, 2)
-        self.widget._init_bins
+        self.widget._init_bins()
         self.send_signal(self.widget.Inputs.data, self.mosaic)
         m = self.get_output(self.widget.Outputs.bindata)
         np.testing.assert_equal(len(m.X), len(self.mosaic.X) / 2**2)
