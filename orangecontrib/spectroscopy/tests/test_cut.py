@@ -3,12 +3,13 @@ import Orange
 import unittest
 from orangecontrib.spectroscopy.preprocess import Cut
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.tests.test_preprocess import TestCommonIndpSamplesMixin, \
-    SMALL_COLLAGEN
+from orangecontrib.spectroscopy.tests.test_preprocess import (
+    TestCommonIndpSamplesMixin,
+    SMALL_COLLAGEN,
+)
 
 
 class TestCut(unittest.TestCase, TestCommonIndpSamplesMixin):
-
     preprocessors = [Cut(lowlim=1000, highlim=1800)]
     data = SMALL_COLLAGEN
 

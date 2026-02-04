@@ -6,7 +6,6 @@ from orangecontrib.spectroscopy.preprocess.utils import table_eq_x
 
 
 class TestEq(TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.iris = Table("iris")

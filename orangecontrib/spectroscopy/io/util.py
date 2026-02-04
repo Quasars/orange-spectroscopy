@@ -7,9 +7,8 @@ from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 
 class SpectralFileFormat:
-
     def read_spectra(self):
-        """ Fast reading of spectra. Return spectral information
+        """Fast reading of spectra. Return spectral information
         in two arrays (wavelengths and values). Only additional
         attributes (usually metas) are returned as a Table.
 
@@ -25,17 +24,19 @@ class SpectralFileFormat:
 
 
 def _metatable_maplocs(x_locs, y_locs):
-    """ Create an Orange table containing (x,y) map locations as metas. """
+    """Create an Orange table containing (x,y) map locations as metas."""
     x_locs = np.asarray(x_locs)
     y_locs = np.asarray(y_locs)
     metas = np.vstack((x_locs, y_locs)).T
 
-    domain = Domain([], None,
-                    metas=[ContinuousVariable.make(MAP_X_VAR),
-                           ContinuousVariable.make(MAP_Y_VAR)]
-                    )
-    data = Table.from_numpy(domain, X=np.zeros((len(metas), 0)),
-                            metas=np.asarray(metas, dtype=object))
+    domain = Domain(
+        [],
+        None,
+        metas=[ContinuousVariable.make(MAP_X_VAR), ContinuousVariable.make(MAP_Y_VAR)],
+    )
+    data = Table.from_numpy(
+        domain, X=np.zeros((len(metas), 0)), metas=np.asarray(metas, dtype=object)
+    )
     return data
 
 
@@ -49,7 +50,7 @@ def _spectra_from_image(X, features, x_locs, y_locs):
     y_locs = np.asarray(y_locs)
 
     # each spectrum has its own row
-    spectra = X.reshape((X.shape[0]*X.shape[1], X.shape[2]))
+    spectra = X.reshape((X.shape[0] * X.shape[1], X.shape[2]))
 
     # locations
     y_loc = np.repeat(np.arange(X.shape[0]), X.shape[1])
@@ -72,9 +73,9 @@ def _spectra_from_image_2d(X, wn, x_locs, y_locs):
 
 def build_spec_table(domvals, data, additional_table=None):
     """Create a an Orange data table from a triplet:
-        - 1D numpy array defining wavelengths (size m)
-        - 2D numpy array (shape (n, m)) with values
-        - Orange.data.Table with only meta or class attributes (size n)
+    - 1D numpy array defining wavelengths (size m)
+    - 2D numpy array (shape (n, m)) with values
+    - Orange.data.Table with only meta or class attributes (size n)
     """
     data = np.atleast_2d(data)
     features = [ContinuousVariable.make("%f" % f) for f in domvals]
@@ -82,19 +83,24 @@ def build_spec_table(domvals, data, additional_table=None):
         domain = Domain(features, None)
         return Table.from_numpy(domain, X=data)
     else:
-        domain = Domain(features,
-                        class_vars=additional_table.domain.class_vars,
-                        metas=additional_table.domain.metas)
-        ret_data = Table.from_numpy(domain, X=data, Y=additional_table.Y,
-                                    metas=additional_table.metas,
-                                    attributes=additional_table.attributes)
+        domain = Domain(
+            features,
+            class_vars=additional_table.domain.class_vars,
+            metas=additional_table.domain.metas,
+        )
+        ret_data = Table.from_numpy(
+            domain,
+            X=data,
+            Y=additional_table.Y,
+            metas=additional_table.metas,
+            attributes=additional_table.attributes,
+        )
         return ret_data
 
 
 class TileFileFormat:
-
     def read_tile(self):
-        """ Read file in chunks (tiles) to allow preprocessing before combining
+        """Read file in chunks (tiles) to allow preprocessing before combining
         into one large Table.
 
         Return a generator of Tables, where each Table is a chunk of the total.
@@ -116,7 +122,6 @@ class TileFileFormat:
 
 
 class VisibleImage:
-
     def __init__(self, name, pos_x, pos_y, size_x, size_y):
         self.name = name
         self.pos_x = pos_x
@@ -142,6 +147,7 @@ class ConstantBytesVisibleImage(VisibleImage):
     @property
     def image(self):
         from PIL import Image
+
         return Image.open(self._image_bytes)
 
     def __deepcopy__(self, memo):

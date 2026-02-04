@@ -2,17 +2,31 @@ import numpy as np
 import pyqtgraph as pg
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QVBoxLayout, QLabel, QPushButton, QApplication, QStyle, QSizePolicy
+from AnyQt.QtWidgets import (
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QApplication,
+    QStyle,
+    QSizePolicy,
+)
 
 from Orange.widgets import gui
 from orangecontrib.spectroscopy.data import spectra_mean, getx
 from orangecontrib.spectroscopy.preprocess import EMSC
-from orangecontrib.spectroscopy.preprocess.emsc import SelectionFunction, SmoothedSelectionFunction
+from orangecontrib.spectroscopy.preprocess.emsc import (
+    SelectionFunction,
+    SmoothedSelectionFunction,
+)
 from orangecontrib.spectroscopy.preprocess.npfunc import Sum
 from orangecontrib.spectroscopy.widgets.gui import XPosLineEdit, lineEditFloatOrNone
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import BaseEditorOrange, \
-    PreviewMinMaxMixin, layout_widgets, REFERENCE_DATA_PARAM
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditorOrange,
+    PreviewMinMaxMixin,
+    layout_widgets,
+    REFERENCE_DATA_PARAM,
+)
 
 
 class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
@@ -33,18 +47,33 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
 
         self.order = self.ORDER_DEFAULT
 
-        gui.spin(self.controlArea, self, "order", label="Polynomial order", minv=0, maxv=10,
-                 controlWidth=50, callback=self.edited.emit)
+        gui.spin(
+            self.controlArea,
+            self,
+            "order",
+            label="Polynomial order",
+            minv=0,
+            maxv=10,
+            controlWidth=50,
+            callback=self.edited.emit,
+        )
 
         self.scaling = self.SCALING_DEFAULT
-        gui.checkBox(self.controlArea, self, "scaling", "Scaling", callback=self.edited.emit)
+        gui.checkBox(
+            self.controlArea, self, "scaling", "Scaling", callback=self.edited.emit
+        )
 
         self.reference_info = QLabel("", self)
         self.controlArea.layout().addWidget(self.reference_info)
 
         self.output_model = self.OUTPUT_MODEL_DEFAULT
-        gui.checkBox(self.controlArea, self, "output_model", "Output EMSC model as metas",
-                     callback=self.edited.emit)
+        gui.checkBox(
+            self.controlArea,
+            self,
+            "output_model",
+            "Output EMSC model as metas",
+            callback=self.edited.emit,
+        )
 
         self._init_regions()
         self._init_reference_curve()
@@ -59,18 +88,18 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.controlArea.layout().addWidget(self.range_button)
 
         self.weight_curve = pg.PlotCurveItem()
-        self.weight_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=1.))
+        self.weight_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=1.0))
         self.weight_curve.setZValue(11)
 
     def _init_reference_curve(self):
         self.reference_curve = pg.PlotCurveItem()
-        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.))
+        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.0))
         self.reference_curve.setZValue(10)
 
     def _set_button_text(self):
-        self.range_button.setText("Select Region"
-                                  if self.ranges_box.layout().count() == 0
-                                  else "Add Region")
+        self.range_button.setText(
+            "Select Region" if self.ranges_box.layout().count() == 0 else "Add Region"
+        )
 
     def add_range_selection(self):
         pmin, pmax = self.preview_min_max()
@@ -100,7 +129,9 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
 
         remove_button = QPushButton(
             QApplication.style().standardIcon(QStyle.SP_DockWidgetCloseButton),
-            "", autoDefault=False)
+            "",
+            autoDefault=False,
+        )
         remove_button.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed))
         remove_button.clicked.connect(lambda: self.delete_range(linelayout))
         linelayout.layout().addWidget(remove_button)
@@ -177,10 +208,14 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
         parameters = super().parameters()
         parameters["ranges"] = []
         for pair in self._range_widgets():
-            parameters["ranges"].append([pair[0].position,
-                                         pair[1].position,
-                                         1.0,  # for now weight is always 1.0
-                                         pair[2].position])
+            parameters["ranges"].append(
+                [
+                    pair[0].position,
+                    pair[1].position,
+                    1.0,  # for now weight is always 1.0
+                    pair[2].position,
+                ]
+            )
         return parameters
 
     @classmethod
@@ -213,8 +248,13 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
         if reference is None:
             return lambda data: data[:0]  # return an empty data table
         else:
-            return EMSC(reference=reference, weights=weights, order=order,
-                        scaling=scaling, output_model=output_model)
+            return EMSC(
+                reference=reference,
+                weights=weights,
+                order=order,
+                scaling=scaling,
+                output_model=output_model,
+            )
 
     def set_reference_data(self, reference):
         self.reference = reference
@@ -226,8 +266,11 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
             self.reference_info.setText("Reference: missing!")
             self.reference_info.setStyleSheet("color: red")
         else:
-            rinfo = "mean of %d spectra" % len(self.reference) \
-                if len(self.reference) > 1 else "1 spectrum"
+            rinfo = (
+                "mean of %d spectra" % len(self.reference)
+                if len(self.reference) > 1
+                else "1 spectrum"
+            )
             self.reference_info.setText("Reference: " + rinfo)
             self.reference_info.setStyleSheet("color: black")
             X_ref = spectra_mean(self.reference.X)
@@ -242,8 +285,8 @@ class EMSCEditor(BaseEditorOrange, PreviewMinMaxMixin):
             self.weight_curve.hide()
         else:
             pmin, pmax = self.preview_min_max()
-            dist = pmax-pmin
-            xs = np.linspace(pmin-dist/2, pmax+dist/2, 10000)
+            dist = pmax - pmin
+            xs = np.linspace(pmin - dist / 2, pmax + dist / 2, 10000)
             ys = weights(xs)
             self.weight_curve.setData(x=xs, y=ys)
             self.weight_curve.show()

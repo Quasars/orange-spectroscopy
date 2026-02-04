@@ -54,7 +54,6 @@ def round_virtual_pixels(v, range, pixels=10000):
 
 
 class AnyOrEmptyValidator(QValidator):
-
     def __init__(self, parent, allow_empty, bottom, top, default_text):
         super().__init__(parent)
         self.allow_empty = allow_empty
@@ -95,23 +94,43 @@ class AnyOrEmptyValidator(QValidator):
 
 
 class FloatOrEmptyValidator(AnyOrEmptyValidator):
-
-    def __init__(self, parent, allow_empty=False, bottom=float("-inf"), top=float("inf"),
-                 default_text=""):
+    def __init__(
+        self,
+        parent,
+        allow_empty=False,
+        bottom=float("-inf"),
+        top=float("inf"),
+        default_text="",
+    ):
         self.dv = QDoubleValidator(parent)
         self.valid_type = float
-        super().__init__(parent, allow_empty=allow_empty, bottom=bottom, top=top,
-                         default_text=default_text)
+        super().__init__(
+            parent,
+            allow_empty=allow_empty,
+            bottom=bottom,
+            top=top,
+            default_text=default_text,
+        )
 
 
 class IntOrEmptyValidator(AnyOrEmptyValidator):
-
-    def __init__(self, parent, allow_empty=False, bottom=-2147483647, top=2147483647,
-                 default_text=""):
+    def __init__(
+        self,
+        parent,
+        allow_empty=False,
+        bottom=-2147483647,
+        top=2147483647,
+        default_text="",
+    ):
         self.dv = QIntValidator(parent)
         self.valid_type = int
-        super().__init__(parent, allow_empty=allow_empty, bottom=bottom, top=top,
-                         default_text=default_text)
+        super().__init__(
+            parent,
+            allow_empty=allow_empty,
+            bottom=bottom,
+            top=top,
+            default_text=default_text,
+        )
 
 
 def floatornone(a):
@@ -145,7 +164,6 @@ def str_or_empty(val):
 
 
 class CallFrontLineEditCustomConversion(ControlledCallFront):
-
     def __init__(self, control, valToStr):
         super().__init__(control)
         self.valToStr = valToStr
@@ -163,7 +181,6 @@ class LineEditMarkFinished(QLineEdit):
 
 
 class LineEdit(LineEditMarkFinished):
-
     newInput = Signal(str)
     """ Emitted when the editing was finished and contents actually changed"""
 
@@ -194,106 +211,154 @@ class LineEdit(LineEditMarkFinished):
 
     def sizeHint(self):
         sh = super().sizeHint()
-        return QSize(int(sh.width()*self.sizeHintFactor), sh.height())
+        return QSize(int(sh.width() * self.sizeHintFactor), sh.height())
 
 
-def connect_line_edit_finished(lineedit, master, value, valueToStr=str, valueType=str, callback=None):
+def connect_line_edit_finished(
+    lineedit, master, value, valueToStr=str, valueType=str, callback=None
+):
     # callback is only for compatibility with the old code
     update_value = ValueCallback(master, value, valueType)  # save the value
-    update_control = CallFrontLineEditCustomConversion(lineedit, valueToStr)  # update control
+    update_control = CallFrontLineEditCustomConversion(
+        lineedit, valueToStr
+    )  # update control
     update_value.opposite = update_control
     update_control(getdeepattr(master, value))  # set the first value
     master.connect_control(value, update_control)
-    lineedit.newInput.connect(lambda x: (update_value(x),
-                                         callback() if callback is not None else None))
+    lineedit.newInput.connect(
+        lambda x: (update_value(x), callback() if callback is not None else None)
+    )
 
 
-def lineEditUpdateWhenFinished(parent, master, value, valueToStr=str, valueType=str, validator=None, callback=None):
-    """ Line edit that only calls callback when update is finished """
+def lineEditUpdateWhenFinished(
+    parent, master, value, valueToStr=str, valueType=str, validator=None, callback=None
+):
+    """Line edit that only calls callback when update is finished"""
     ledit = LineEdit(parent)
     ledit.setValidator(validator)
     if value:
-        connect_line_edit_finished(ledit, master, value, valueToStr=valueToStr, valueType=valueType, callback=callback)
+        connect_line_edit_finished(
+            ledit,
+            master,
+            value,
+            valueToStr=valueToStr,
+            valueType=valueType,
+            callback=callback,
+        )
     return ledit
 
 
-def lineEditValidator(widget, master, value, validator=None, valueType=None,
-                      valueToStr=str, **kwargs):
-    le = lineEditUpdateWhenFinished(widget, master, value, validator=validator, valueType=valueType,
-                                    valueToStr=valueToStr, **kwargs)
+def lineEditValidator(
+    widget, master, value, validator=None, valueType=None, valueToStr=str, **kwargs
+):
+    le = lineEditUpdateWhenFinished(
+        widget,
+        master,
+        value,
+        validator=validator,
+        valueType=valueType,
+        valueToStr=valueToStr,
+        **kwargs,
+    )
     return le
 
 
 def set_numeric_le(le):
-    """ Smaller line edit that does not expand. """
+    """Smaller line edit that does not expand."""
     le.sizeHintFactor = 0.8
     le.setSizePolicy(QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed))
     return le
 
 
 def lineEditIntOrNone(widget, master, value, **kwargs):
-    le = lineEditValidator(widget, master, value,
-                           validator=IntOrEmptyValidator(master),
-                           valueType=intornone,
-                           valueToStr=str_or_empty,
-                           **kwargs)
+    le = lineEditValidator(
+        widget,
+        master,
+        value,
+        validator=IntOrEmptyValidator(master),
+        valueType=intornone,
+        valueToStr=str_or_empty,
+        **kwargs,
+    )
     return le
 
 
 def lineEditFloatOrNone(widget, master, value, **kwargs):
-    le = lineEditValidator(widget, master, value,
-                           validator=FloatOrEmptyValidator(master, allow_empty=True),
-                           valueType=floatornone,
-                           valueToStr=str_or_empty,
-                           **kwargs)
+    le = lineEditValidator(
+        widget,
+        master,
+        value,
+        validator=FloatOrEmptyValidator(master, allow_empty=True),
+        valueType=floatornone,
+        valueToStr=str_or_empty,
+        **kwargs,
+    )
     set_numeric_le(le)
     return le
 
 
-def lineEditFloatRange(widget, master, value, bottom=float("-inf"), top=float("inf"), default=0., **kwargs):
-    le = lineEditValidator(widget, master, value,
-                           validator=FloatOrEmptyValidator(master, allow_empty=False,
-                                                           bottom=bottom, top=top, default_text=str(default)),
-                           valueType=Decimal,  # every text need to be a valid float before saving setting
-                           valueToStr=str,
-                           **kwargs)
+def lineEditFloatRange(
+    widget, master, value, bottom=float("-inf"), top=float("inf"), default=0.0, **kwargs
+):
+    le = lineEditValidator(
+        widget,
+        master,
+        value,
+        validator=FloatOrEmptyValidator(
+            master, allow_empty=False, bottom=bottom, top=top, default_text=str(default)
+        ),
+        valueType=Decimal,  # every text need to be a valid float before saving setting
+        valueToStr=str,
+        **kwargs,
+    )
     le.set_default = lambda v: le.validator().setDefault(str(v))
     set_numeric_le(le)
     return le
 
 
-def lineEditIntRange(widget, master, value, bottom=-2147483647, top=2147483647,
-                     default=0, **kwargs):
-    le = lineEditValidator(widget, master, value,
-                           validator=IntOrEmptyValidator(master, allow_empty=False,
-                                                         bottom=bottom, top=top,
-                                                         default_text=str(default)),
-                           valueType=int,  # every text need to be a valid before saving
-                           valueToStr=str,
-                           **kwargs)
+def lineEditIntRange(
+    widget, master, value, bottom=-2147483647, top=2147483647, default=0, **kwargs
+):
+    le = lineEditValidator(
+        widget,
+        master,
+        value,
+        validator=IntOrEmptyValidator(
+            master, allow_empty=False, bottom=bottom, top=top, default_text=str(default)
+        ),
+        valueType=int,  # every text need to be a valid before saving
+        valueToStr=str,
+        **kwargs,
+    )
     le.set_default = lambda v: le.validator().setDefault(str(v))
     set_numeric_le(le)
     return le
 
 
-def lineEditDecimalOrNone(widget, master, value, bottom=float("-inf"), top=float("inf"), default=0., **kwargs):
-    le = lineEditValidator(widget, master, value,
-                           validator=FloatOrEmptyValidator(master, allow_empty=True,
-                                                           bottom=bottom, top=top, default_text=str(default)),
-                           valueType=decimalornone,  # every text need to be a valid float before saving setting
-                           valueToStr=str_or_empty,
-                           **kwargs)
+def lineEditDecimalOrNone(
+    widget, master, value, bottom=float("-inf"), top=float("inf"), default=0.0, **kwargs
+):
+    le = lineEditValidator(
+        widget,
+        master,
+        value,
+        validator=FloatOrEmptyValidator(
+            master, allow_empty=True, bottom=bottom, top=top, default_text=str(default)
+        ),
+        valueType=decimalornone,  # every text need to be a valid float before saving setting
+        valueToStr=str_or_empty,
+        **kwargs,
+    )
     le.set_default = lambda v: le.validator().setDefault(str(v))
     set_numeric_le(le)
     return le
 
 
 class MovableVline(pg.UIGraphicsItem):
-
     sigMoveFinished = Signal(object)
     sigMoved = Signal(object)
 
-    def __init__(self, position=0., label="", color=(225, 0, 0), report=None):
+    def __init__(self, position=0.0, label="", color=(225, 0, 0), report=None):
         pg.UIGraphicsItem.__init__(self)
         self.moving = False
         self.mouseHovering = False
@@ -315,7 +380,9 @@ class MovableVline(pg.UIGraphicsItem):
         self.setLabel(label)
 
         self.line.sigPositionChangeFinished.connect(self._moveFinished)
-        self.line.sigPositionChanged.connect(lambda: (self._moved(), self.sigMoved.emit(self.value())))
+        self.line.sigPositionChanged.connect(
+            lambda: (self._moved(), self.sigMoved.emit(self.value()))
+        )
 
         self._lastTransform = None
 
@@ -334,8 +401,8 @@ class MovableVline(pg.UIGraphicsItem):
         return self.line.value()
 
     def rounded_value(self):
-        """ Round the value according to current view on the graph.
-        Return a decimal.Decimal object """
+        """Round the value according to current view on the graph.
+        Return a decimal.Decimal object"""
         v = self.value()
         dx, dy = pixel_decimals(self.getViewBox())
         if v is not None:
@@ -394,13 +461,11 @@ class MovableVline(pg.UIGraphicsItem):
 
 
 class LineCallFront(ControlledCallFront):
-
     def action(self, value):
         self.control.setValue(floatornone(value))
 
 
 class ValueTransform(metaclass=ABCMeta):
-
     @abstractmethod
     def transform(self, v):
         """Transform the argument"""
@@ -411,7 +476,6 @@ class ValueTransform(metaclass=ABCMeta):
 
 
 class ValueCallbackTransform(ControlledCallback):
-
     def __call__(self, value):
         self.acyclic_setattr(value)
 
@@ -426,10 +490,12 @@ def connect_settings(master, value, value2, transform=None):
     :param value2: name of the second value
     :param transform: a transform from value to value2 (an instance of ValueTransform)
     """
-    update_value = ValueCallbackTransform(master, value,
-                                          f=transform.inverse if transform is not None else None)
-    update_value2 = ValueCallbackTransform(master, value2,
-                                           f=transform.transform if transform is not None else None)
+    update_value = ValueCallbackTransform(
+        master, value, f=transform.inverse if transform is not None else None
+    )
+    update_value2 = ValueCallbackTransform(
+        master, value2, f=transform.transform if transform is not None else None
+    )
     update_value.opposite = update_value2
     update_value2.opposite = update_value
     update_value2(getdeepattr(master, value))
@@ -447,7 +513,6 @@ def connect_line(line, master, value):
 
 
 class XPosLineEdit(QWidget, OWComponent):
-
     edited = Signal()
     focusIn = Signal()
 
@@ -477,7 +542,6 @@ class XPosLineEdit(QWidget, OWComponent):
 
 
 class VerticalPeakLine(pg.InfiniteLine):
-
     sigDeleteRequested = Signal(object)
 
     def __init__(self, pos=None):
@@ -503,8 +567,11 @@ class VerticalPeakLine(pg.InfiniteLine):
     def contextMenuEvent(self, ev):
         menu = QMenu()
         delete = QAction(
-            "Delete", self, shortcut=Qt.Key_Delete, checkable=False,
-            triggered=lambda x: self.request_deletion()
+            "Delete",
+            self,
+            shortcut=Qt.Key_Delete,
+            checkable=False,
+            triggered=lambda x: self.request_deletion(),
         )
         menu.addAction(delete)
         menu.exec(ev.screenPos())

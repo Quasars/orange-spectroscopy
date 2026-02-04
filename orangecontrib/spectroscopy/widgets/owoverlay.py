@@ -213,7 +213,6 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
 
     @staticmethod
     def with_overlay(imageplot, data, maindata, state):
-
         if data is None or maindata is None:
             return None
 
@@ -229,9 +228,7 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
                 break
 
         # the following could raise an InvalidAxisException
-        hypercube, ls = get_ndim_hyperspec(
-            data, (imageplot.attr_x, imageplot.attr_y)
-        )
+        hypercube, ls = get_ndim_hyperspec(data, (imageplot.attr_x, imageplot.attr_y))
 
         # if drawing failed for some reason
         if imageplot.img.image is None:
@@ -260,9 +257,7 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         # Update name
         allnames = []
         if "visible_images" in newmaindata.attributes:
-            allnames = [
-                im.name for im in newmaindata.attributes["visible_images"]
-            ]
+            allnames = [im.name for im in newmaindata.attributes["visible_images"]]
         basename = "Overlay Image"
         name = get_unique_names(names=allnames, proposed=basename)
         # Need to modify the position and the scale since visual imageplot

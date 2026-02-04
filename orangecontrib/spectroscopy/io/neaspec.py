@@ -276,7 +276,10 @@ class NeaReader(FileFormat, SpectralFileFormat):
             # register the calculated spacing in the metadata
             measparams["Calculated Datapoint Spacing (Δx)"] = ["[cm]", dx]
             measparams["Domain Units"] = "[µm]"
-            measparams["Channel Data Type"] = "Polar", "i.e. Amplitude and Phase separated"
+            measparams["Channel Data Type"] = (
+                "Polar",
+                "i.e. Amplitude and Phase separated",
+            )
 
         meta_data.attributes = measparams
 
@@ -284,12 +287,10 @@ class NeaReader(FileFormat, SpectralFileFormat):
 
 
 class NeaReaderGSF(FileFormat, SpectralFileFormat):
-
     EXTENSIONS = (".gsf",)
     DESCRIPTION = 'NeaSPEC legacy spectrum files'
 
     def read_spectra(self):
-
         file_channel = str(self.filename.split(' ')[-2]).strip()
         folder_file = str(self.filename.split(file_channel)[-2]).strip()
 
@@ -320,14 +321,19 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
             data_gsf_a, data_gsf_p, info, channel_a, channel_p
         )
 
-        metas = [Orange.data.ContinuousVariable.make("column"),
-                 Orange.data.ContinuousVariable.make("row"),
-                 Orange.data.ContinuousVariable.make("run"),
-                 Orange.data.StringVariable.make("channel")]
+        metas = [
+            Orange.data.ContinuousVariable.make("column"),
+            Orange.data.ContinuousVariable.make("row"),
+            Orange.data.ContinuousVariable.make("run"),
+            Orange.data.StringVariable.make("channel"),
+        ]
 
         domain = Orange.data.Domain([], None, metas=metas)
-        meta_data = Table.from_numpy(domain, X=np.zeros((len(final_data), 0)),
-                                     metas=np.asarray(final_metas, dtype=object))
+        meta_data = Table.from_numpy(
+            domain,
+            X=np.zeros((len(final_data), 0)),
+            metas=np.asarray(final_metas, dtype=object),
+        )
 
         meta_data.attributes = parameters
 
@@ -336,7 +342,6 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
         return depth, final_data, meta_data
 
     def _format_file(self, gsf_a, gsf_p, parameters, channel_a, channel_p):
-
         info = {}
         for row in parameters:
             key = row[0].strip(':')
@@ -345,7 +350,9 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
                 value = value[0]
             info.update({key: value})
 
-        info.update({'Reader': 'NeaReaderGSF'}) # key used in confirmation for complex fft calculation
+        info.update(
+            {'Reader': 'NeaReaderGSF'}
+        )  # key used in confirmation for complex fft calculation
 
         averaging = int(info['Averaging'])
         px_x = int(info['Pixel Area (X, Y, Z)'][1])
@@ -388,9 +395,7 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
         return np.asarray(data_complete), info, final_metas
 
     def _html_reader(self, path):
-
         class HTMLTableParser(HTMLParser):
-
             def __init__(self):
                 super().__init__()
                 self._current_row = []

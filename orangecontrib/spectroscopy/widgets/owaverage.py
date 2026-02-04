@@ -13,8 +13,7 @@ class OWAverage(OWWidget):
     name = "Average Spectra"
 
     # Short widget description
-    description = (
-        "Calculates averages.")
+    description = "Calculates averages."
 
     icon = "icons/average.svg"
 
@@ -38,11 +37,18 @@ class OWAverage(OWWidget):
         self.data = None
 
         self.group_vars = DomainModel(
-            placeholder="None", separators=False,
-            valid_types=Orange.data.DiscreteVariable)
+            placeholder="None",
+            separators=False,
+            valid_types=Orange.data.DiscreteVariable,
+        )
         self.group_view = gui.listView(
-            self.controlArea, self, "group_var", box="Group by",
-            model=self.group_vars, callback=self.grouping_changed)
+            self.controlArea,
+            self,
+            "group_var",
+            box="Group by",
+            model=self.group_vars,
+            callback=self.grouping_changed,
+        )
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
@@ -70,13 +76,25 @@ class OWAverage(OWWidget):
         """
         if len(table) == 0:
             return table
-        mean = bottleneck.nanmean(table.X, axis=0, ).reshape(1, -1).copy()
-        avg_table = Orange.data.Table.from_numpy(table.domain,
-                                                 X=mean,
-                                                 Y=np.atleast_2d(table.Y[0]).copy(),
-                                                 metas=np.atleast_2d(table.metas[0]).copy())
-        cont_vars = [var for var in table.domain.class_vars + table.domain.metas
-                     if isinstance(var, Orange.data.ContinuousVariable)]
+        mean = (
+            bottleneck.nanmean(
+                table.X,
+                axis=0,
+            )
+            .reshape(1, -1)
+            .copy()
+        )
+        avg_table = Orange.data.Table.from_numpy(
+            table.domain,
+            X=mean,
+            Y=np.atleast_2d(table.Y[0]).copy(),
+            metas=np.atleast_2d(table.metas[0]).copy(),
+        )
+        cont_vars = [
+            var
+            for var in table.domain.class_vars + table.domain.metas
+            if isinstance(var, Orange.data.ContinuousVariable)
+        ]
 
         with avg_table.unlocked():
             for var in cont_vars:
@@ -84,8 +102,11 @@ class OWAverage(OWWidget):
                 col = table.get_column(index)
                 avg_table[0, index] = np.nanmean(col)
 
-            other_vars = [var for var in table.domain.class_vars + table.domain.metas
-                          if not isinstance(var, Orange.data.ContinuousVariable)]
+            other_vars = [
+                var
+                for var in table.domain.class_vars + table.domain.metas
+                if not isinstance(var, Orange.data.ContinuousVariable)
+            ]
             for var in other_vars:
                 index = table.domain.index(var)
                 col = table.get_column(index)
@@ -114,8 +135,9 @@ class OWAverage(OWWidget):
                 # Using "None" as in OWSelectRows
                 # Values is required because FilterDiscrete doesn't have
                 # negate keyword or IsDefined method
-                deffilter = Values(conditions=[FilterDiscrete(self.group_var, None)],
-                                   negate=True)
+                deffilter = Values(
+                    conditions=[FilterDiscrete(self.group_var, None)], negate=True
+                )
                 v_table = self.average_table(deffilter(self.data))
                 parts.append(v_table)
                 averages = Orange.data.Table.concatenate(parts, axis=0)
@@ -124,4 +146,5 @@ class OWAverage(OWWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWAverage).run(Orange.data.Table("iris"))

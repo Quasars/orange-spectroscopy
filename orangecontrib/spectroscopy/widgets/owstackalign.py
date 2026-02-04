@@ -18,10 +18,15 @@ from Orange.widgets.visualize.utils.plotutils import PlotWidget
 from orangecontrib.spectroscopy.data import getx, build_spec_table
 from orangecontrib.spectroscopy.io.util import _spectra_from_image
 from orangecontrib.spectroscopy.widgets.gui import lineEditIntRange
-from orangecontrib.spectroscopy.utils import NanInsideHypercube, InvalidAxisException, \
-    get_hypercube
+from orangecontrib.spectroscopy.utils import (
+    NanInsideHypercube,
+    InvalidAxisException,
+    get_hypercube,
+)
 from orangecontrib.spectroscopy.preprocess.utils import WrongReferenceException
-from orangecontrib.spectroscopy.utils.skimage._phase_cross_correlation import phase_cross_correlation
+from orangecontrib.spectroscopy.utils.skimage._phase_cross_correlation import (
+    phase_cross_correlation,
+)
 from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox
 
 
@@ -46,12 +51,12 @@ def shift_fill(img, sh, fill=np.nan):
     (u, v) = img.shape
 
     shifty = int(round(sh[0]))
-    aligned[:max(0, shifty), :] = fill
-    aligned[min(u, u+shifty):, :] = fill
+    aligned[: max(0, shifty), :] = fill
+    aligned[min(u, u + shifty) :, :] = fill
 
     shiftx = int(round(sh[1]))
-    aligned[:, :max(0, shiftx)] = fill
-    aligned[:, min(v, v+shiftx):] = fill
+    aligned[:, : max(0, shiftx)] = fill
+    aligned[:, min(v, v + shiftx) :] = fill
 
     return aligned
 
@@ -130,15 +135,16 @@ def process_stack(
     ymin, ymax = int(round(ymin)), int(round(ymax))
 
     shape = hypercube.shape
-    slicex = slice(max(xmax, 0), min(shape[1], shape[1]+xmin))
-    slicey = slice(max(ymax, 0), min(shape[0], shape[0]+ymin))
+    slicex = slice(max(xmax, 0), min(shape[1], shape[1] + xmin))
+    slicey = slice(max(ymax, 0), min(shape[0], shape[0] + ymin))
     cropped = np.array(aligned_stack).T[slicey, slicex]
 
     # transform numpy array back to Orange.data.Table
-    return shifts, build_spec_table(*_spectra_from_image(cropped,
-                                                         getx(data),
-                                                         np.linspace(*lsx)[slicex],
-                                                         np.linspace(*lsy)[slicey]))
+    return shifts, build_spec_table(
+        *_spectra_from_image(
+            cropped, getx(data), np.linspace(*lsx)[slicex], np.linspace(*lsy)[slicey]
+        )
+    )
 
 
 class OWStackAlign(OWWidget):
@@ -146,8 +152,7 @@ class OWStackAlign(OWWidget):
     name = "Align Stack"
 
     # Short widget description
-    description = (
-        "Aligns and crops a stack of images using various methods.")
+    description = "Aligns and crops a stack of images using various methods."
 
     icon = "icons/stackalign.svg"
 
@@ -188,16 +193,30 @@ class OWStackAlign(OWWidget):
         # TODO: add input box for selecting which should be the reference frame
         box = gui.widgetBox(self.controlArea, "Axes")
 
-        common_options = dict(labelWidth=50, orientation=Qt.Horizontal,
-                              sendSelectedValue=True)
-        self.xy_model = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                    valid_types=ContinuousVariable)
+        common_options = dict(
+            labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True
+        )
+        self.xy_model = DomainModel(
+            DomainModel.METAS | DomainModel.CLASSES, valid_types=ContinuousVariable
+        )
         self.cb_attr_x = gui.comboBox(
-            box, self, "attr_x", label="Axis x:", callback=self._update_attr,
-            model=self.xy_model, **common_options)
+            box,
+            self,
+            "attr_x",
+            label="Axis x:",
+            callback=self._update_attr,
+            model=self.xy_model,
+            **common_options,
+        )
         self.cb_attr_y = gui.comboBox(
-            box, self, "attr_y", label="Axis y:", callback=self._update_attr,
-            model=self.xy_model, **common_options)
+            box,
+            self,
+            "attr_y",
+            label="Axis y:",
+            callback=self._update_attr,
+            model=self.xy_model,
+            **common_options,
+        )
 
         self.contextAboutToBeOpened.connect(self._init_interface_data)
 
@@ -212,9 +231,13 @@ class OWStackAlign(OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Parameters")
 
-        gui.checkBox(box, self, "sobel_filter",
-                     label="Use sobel filter",
-                     callback=self._sobel_changed)
+        gui.checkBox(
+            box,
+            self,
+            "sobel_filter",
+            label="Use sobel filter",
+            callback=self._sobel_changed,
+        )
         gui.separator(box)
         hbox1 = gui.hBox(box)
         self.le_upscale = lineEditIntRange(
@@ -223,8 +246,14 @@ class OWStackAlign(OWWidget):
         hbox1.layout().addWidget(QLabel("Upscale factor:", self))
         hbox1.layout().addWidget(self.le_upscale)
 
-        self.le1 = lineEditIntRange(box, self, "ref_frame_num", bottom=1, default=1,
-                                    callback=self._ref_frame_changed)
+        self.le1 = lineEditIntRange(
+            box,
+            self,
+            "ref_frame_num",
+            bottom=1,
+            default=1,
+            callback=self._ref_frame_changed,
+        )
         hbox2 = gui.hBox(box)
         hbox2.layout().addWidget(QLabel("Reference frame:", self))
         hbox2.layout().addWidget(self.le1)
@@ -273,8 +302,7 @@ class OWStackAlign(OWWidget):
         domain = data.domain if data is not None else None
         self.xy_model.set_domain(domain)
         self.attr_x = self.xy_model[0] if self.xy_model else None
-        self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
-            else self.attr_x
+        self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 else self.attr_x
 
     def _init_interface_data(self, args):
         data = args[0]
@@ -316,16 +344,27 @@ class OWStackAlign(OWWidget):
         self.Error.wrong_reference.clear()
         self.plotview.plotItem.clear()
 
-        if not (self.data and len(self.data.domain.attributes) and self.attr_x and self.attr_y):
+        if not (
+            self.data
+            and len(self.data.domain.attributes)
+            and self.attr_x
+            and self.attr_y
+        ):
             pass
         elif self.attr_x == self.attr_y:
             self.Error.invalid_axis("same values")
         else:
             try:
                 refdata = self.refdata if self.use_refinput else None
-                shifts, new_stack = process_stack(self.data, self.attr_x, self.attr_y,
-                                                  upsample_factor=self.upscale_factor, use_sobel=self.sobel_filter,
-                                                  ref_frame_num=self.ref_frame_num-1, refdata=refdata)
+                shifts, new_stack = process_stack(
+                    self.data,
+                    self.attr_x,
+                    self.attr_y,
+                    upsample_factor=self.upscale_factor,
+                    use_sobel=self.sobel_filter,
+                    ref_frame_num=self.ref_frame_num - 1,
+                    refdata=refdata,
+                )
             except NanInsideHypercube as e:
                 self.Error.nan_in_image(e.args[0])
             except InvalidAxisException as e:
@@ -334,29 +373,41 @@ class OWStackAlign(OWWidget):
                 self.Error.wrong_reference(e.args[0])
             else:
                 frames = np.linspace(1, shifts.shape[0], shifts.shape[0])
-                self.plotview.plotItem.plot(frames, shifts[:, 0],
-                                            pen=pg.mkPen(color=(255, 40, 0), width=3),
-                                            symbol='o', symbolBrush=(255, 40, 0), symbolPen='w',
-                                            symbolSize=7)
-                self.plotview.plotItem.plot(frames, shifts[:, 1],
-                                            pen=pg.mkPen(color=(0, 139, 139), width=3),
-                                            symbol='o', symbolBrush=(0, 139, 139), symbolPen='w',
-                                            symbolSize=7)
+                self.plotview.plotItem.plot(
+                    frames,
+                    shifts[:, 0],
+                    pen=pg.mkPen(color=(255, 40, 0), width=3),
+                    symbol='o',
+                    symbolBrush=(255, 40, 0),
+                    symbolPen='w',
+                    symbolSize=7,
+                )
+                self.plotview.plotItem.plot(
+                    frames,
+                    shifts[:, 1],
+                    pen=pg.mkPen(color=(0, 139, 139), width=3),
+                    symbol='o',
+                    symbolBrush=(0, 139, 139),
+                    symbolPen='w',
+                    symbolSize=7,
+                )
                 self.plotview.getPlotItem().setLabel('bottom', 'Frame number')
                 self.plotview.getPlotItem().setLabel('left', 'Shift / pixel')
-                self.plotview.getPlotItem().addLine(self.ref_frame_num,
-                                                    pen=pg.mkPen(color=(150, 150, 150), width=3,
-                                                                 style=Qt.DashDotDotLine))
+                self.plotview.getPlotItem().addLine(
+                    self.ref_frame_num,
+                    pen=pg.mkPen(
+                        color=(150, 150, 150), width=3, style=Qt.DashDotDotLine
+                    ),
+                )
 
         self.Outputs.newstack.send(new_stack)
 
     def send_report(self):
-        self.report_items((
-            ("Use sobel filter", str(self.sobel_filter)),
-        ))
+        self.report_items((("Use sobel filter", str(self.sobel_filter)),))
 
 
 if __name__ == "__main__":  # pragma: no cover
     from orangecontrib.spectroscopy.tests.test_owalignstack import stxm_diamond
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWStackAlign).run(set_data=stxm_diamond)

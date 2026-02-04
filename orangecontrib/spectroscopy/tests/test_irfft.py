@@ -5,16 +5,20 @@ import Orange
 
 from orangecontrib.spectroscopy.data import getx
 
-from orangecontrib.spectroscopy.irfft import (IRFFT, zero_fill, PhaseCorrection,
-                                              find_zpd, PeakSearch, ApodFunc,
-                                              MultiIRFFT,
-                                             )
+from orangecontrib.spectroscopy.irfft import (
+    IRFFT,
+    zero_fill,
+    PhaseCorrection,
+    find_zpd,
+    PeakSearch,
+    ApodFunc,
+    MultiIRFFT,
+)
 
 dx = 1.0 / 15797.337544 / 2.0
 
 
 class TestIRFFT(unittest.TestCase):
-
     def setUp(self):
         self.ifg_single = Orange.data.Table("IFG_single.dpt")
         self.ifg_seq_ref = Orange.data.Table("agilent/background_agg256.seq")
@@ -59,18 +63,20 @@ class TestIRFFT(unittest.TestCase):
     def test_agilent_fft_sc(self):
         ifg = self.ifg_seq_ref.X[0]
         # dat = self.sc_dat_ref.X[0]  # TODO scaling diffrences fail
-        dx_ag = (1 / 1.57980039e+04 / 2) * 4
-        fft = IRFFT(dx=dx_ag,
-                    apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                    zff=1,
-                    phase_res=None,
-                    phase_corr=PhaseCorrection.MERTZ,
-                    peak_search=PeakSearch.MINIMUM)
+        dx_ag = (1 / 1.57980039e04 / 2) * 4
+        fft = IRFFT(
+            dx=dx_ag,
+            apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+            zff=1,
+            phase_res=None,
+            phase_corr=PhaseCorrection.MERTZ,
+            peak_search=PeakSearch.MINIMUM,
+        )
         fft(ifg)
         self.assertEqual(fft.zpd, 69)
         dat_x = getx(self.sc_dat_ref)
         limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
-        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        np.testing.assert_allclose(fft.wavenumbers[limits[0] : limits[1]], dat_x)
         # TODO This fails due to scaling differences
         # np.testing.assert_allclose(fft.spectrum[limits[0]:limits[1]], dat)
 
@@ -79,35 +85,39 @@ class TestIRFFT(unittest.TestCase):
         ifg_sam = Orange.data.Table("agilent/4_noimage_agg256.seq").X[0]
         dat_T = Orange.data.Table("agilent/4_noimage_agg256.dat")
         dat = dat_T.X[0]
-        dx_ag = (1 / 1.57980039e+04 / 2) * 4
-        fft = IRFFT(dx=dx_ag,
-                    apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                    zff=1,
-                    phase_res=None,
-                    phase_corr=PhaseCorrection.MERTZ,
-                    peak_search=PeakSearch.MINIMUM)
+        dx_ag = (1 / 1.57980039e04 / 2) * 4
+        fft = IRFFT(
+            dx=dx_ag,
+            apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+            zff=1,
+            phase_res=None,
+            phase_corr=PhaseCorrection.MERTZ,
+            peak_search=PeakSearch.MINIMUM,
+        )
         fft(ifg_ref)
         rsc = fft.spectrum
         fft(ifg_sam)
         ssc = fft.spectrum
         dat_x = getx(dat_T)
         limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
-        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        np.testing.assert_allclose(fft.wavenumbers[limits[0] : limits[1]], dat_x)
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
         # NB 4 mAbs error
-        np.testing.assert_allclose(ab[limits[0]:limits[1]], dat, atol=0.004)
+        np.testing.assert_allclose(ab[limits[0] : limits[1]], dat, atol=0.004)
 
     def test_multi(self):
-        dx_ag = (1 / 1.57980039e+04 / 2) * 4
-        fft = MultiIRFFT(dx=dx_ag,
-                         apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                         zff=1,
-                         phase_res=None,
-                         phase_corr=PhaseCorrection.MERTZ,
-                         peak_search=PeakSearch.MINIMUM)
-        zpd = 69    # from test_agilent_fft_sc(), TODO replace with value read from file
+        dx_ag = (1 / 1.57980039e04 / 2) * 4
+        fft = MultiIRFFT(
+            dx=dx_ag,
+            apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+            zff=1,
+            phase_res=None,
+            phase_corr=PhaseCorrection.MERTZ,
+            peak_search=PeakSearch.MINIMUM,
+        )
+        zpd = 69  # from test_agilent_fft_sc(), TODO replace with value read from file
         fft(self.ifg_seq_ref.X, zpd)
 
     def test_multi_ab(self):
@@ -115,13 +125,15 @@ class TestIRFFT(unittest.TestCase):
         ifg_sam = Orange.data.Table("agilent/4_noimage_agg256.seq").X
         dat_T = Orange.data.Table("agilent/4_noimage_agg256.dat")
         dat = dat_T.X
-        dx_ag = (1 / 1.57980039e+04 / 2) * 4
-        fft = MultiIRFFT(dx=dx_ag,
-                         apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                         zff=1,
-                         phase_res=None,
-                         phase_corr=PhaseCorrection.MERTZ,
-                         peak_search=PeakSearch.MINIMUM)
+        dx_ag = (1 / 1.57980039e04 / 2) * 4
+        fft = MultiIRFFT(
+            dx=dx_ag,
+            apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+            zff=1,
+            phase_res=None,
+            phase_corr=PhaseCorrection.MERTZ,
+            peak_search=PeakSearch.MINIMUM,
+        )
         zpd = 69  # from test_agilent_fft_sc(), TODO replace with value read from file
         fft(ifg_ref, zpd)
         rsc = fft.spectrum
@@ -129,9 +141,9 @@ class TestIRFFT(unittest.TestCase):
         ssc = fft.spectrum
         dat_x = getx(dat_T)
         limits = np.searchsorted(fft.wavenumbers, [dat_x[0] - 1, dat_x[-1]])
-        np.testing.assert_allclose(fft.wavenumbers[limits[0]:limits[1]], dat_x)
+        np.testing.assert_allclose(fft.wavenumbers[limits[0] : limits[1]], dat_x)
         # Calculate absorbance from ssc and rsc
         ab = np.log10(rsc / ssc)
         # Compare to agilent absorbance
         # NB 4 mAbs error
-        np.testing.assert_allclose(ab[:, limits[0]:limits[1]], dat, atol=0.004)
+        np.testing.assert_allclose(ab[:, limits[0] : limits[1]], dat, atol=0.004)

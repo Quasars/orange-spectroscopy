@@ -1,22 +1,34 @@
 import sys
 
 from AnyQt.QtCore import pyqtSignal as Signal, QObject
-from AnyQt.QtWidgets import QVBoxLayout, QFormLayout, QComboBox, QPushButton, \
-    QSizePolicy, QHBoxLayout, QLabel, QApplication, QStyle
+from AnyQt.QtWidgets import (
+    QVBoxLayout,
+    QFormLayout,
+    QComboBox,
+    QPushButton,
+    QSizePolicy,
+    QHBoxLayout,
+    QLabel,
+    QApplication,
+    QStyle,
+)
 
 from Orange.widgets.data.utils.preprocess import blocked
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import Integrate
 from orangecontrib.spectroscopy.widgets.gui import MovableVline
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import \
-    BaseEditor, SetXDoubleSpinBox
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditor,
+    SetXDoubleSpinBox,
+)
 
 
 class IntegrateEditor(BaseEditor):
     """
     Editor to integrate defined regions.
     """
+
     name = "Integrate"
     qualname = "orangecontrib.infrared.integrate"
 
@@ -32,7 +44,9 @@ class IntegrateEditor(BaseEditor):
 
         deprecation_info = QLabel(
             "This preprocessor is deprecated and will be removed in the future. "
-            "Use the Integrate widget instead.", self)
+            "Use the Integrate widget instead.",
+            self,
+        )
         deprecation_info.setWordWrap(True)
         deprecation_info.setStyleSheet("color: red")
         self.layout().addWidget(deprecation_info)
@@ -75,10 +89,10 @@ class IntegrateEditor(BaseEditor):
             try:
                 self._limits.append(self._limits[-1])
             except IndexError:
-                self._limits.append([0., 1.])
-        label = "Region {0}".format(row+1)
+                self._limits.append([0.0, 1.0])
+        label = "Region {0}".format(row + 1)
         limitbox = LimitsBox(limits=self._limits[row], label=label)
-        if self.form_lim.rowCount() < row+1:
+        if self.form_lim.rowCount() < row + 1:
             # new row
             self.form_lim.addRow(limitbox)
         else:
@@ -127,17 +141,18 @@ class IntegrateEditor(BaseEditor):
         if params:  # parameters were manually set somewhere else
             self.user_changed = True
         self.methodcb.setCurrentIndex(
-            params.get("method", self.Integrators_classes.index(Integrate.Baseline)))
-        self.set_all_limits(params.get("limits", [[0., 1.]]), user=False)
+            params.get("method", self.Integrators_classes.index(Integrate.Baseline))
+        )
+        self.set_all_limits(params.get("limits", [[0.0, 1.0]]), user=False)
 
     def parameters(self):
-        return {"method": self.methodcb.currentIndex(),
-                "limits": self._limits}
+        return {"method": self.methodcb.currentIndex(), "limits": self._limits}
 
     @staticmethod
     def createinstance(params):
-        methodindex = params.get("method",
-                                 IntegrateEditor.Integrators_classes.index(Integrate.Baseline))
+        methodindex = params.get(
+            "method", IntegrateEditor.Integrators_classes.index(Integrate.Baseline)
+        )
         method = IntegrateEditor.Integrators_classes[methodindex]
         limits = params.get("limits", None)
         return Integrate(methods=method, limits=limits)
@@ -175,12 +190,12 @@ class LimitsBox(QHBoxLayout):
         if label:
             self.addWidget(QLabel(label))
 
-        self.lowlime = SetXDoubleSpinBox(minimum=minf,
-                                         maximum=maxf, singleStep=0.5,
-                                         value=limits[0], maximumWidth=75)
-        self.highlime = SetXDoubleSpinBox(minimum=minf,
-                                          maximum=maxf, singleStep=0.5,
-                                          value=limits[1], maximumWidth=75)
+        self.lowlime = SetXDoubleSpinBox(
+            minimum=minf, maximum=maxf, singleStep=0.5, value=limits[0], maximumWidth=75
+        )
+        self.highlime = SetXDoubleSpinBox(
+            minimum=minf, maximum=maxf, singleStep=0.5, value=limits[1], maximumWidth=75
+        )
         self.lowlime.setValue(limits[0])
         self.highlime.setValue(limits[1])
         self.addWidget(self.lowlime)
@@ -188,7 +203,8 @@ class LimitsBox(QHBoxLayout):
 
         if delete:
             self.button = QPushButton(
-                QApplication.style().standardIcon(QStyle.SP_DockWidgetCloseButton), "")
+                QApplication.style().standardIcon(QStyle.SP_DockWidgetCloseButton), ""
+            )
             self.addWidget(self.button)
             self.button.clicked.connect(self.selfDelete)
 

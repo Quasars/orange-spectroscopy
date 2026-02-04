@@ -4,12 +4,13 @@ from Orange.data import Table
 import numpy as np
 
 from orangecontrib.spectroscopy.preprocess import Integrate
-from orangecontrib.spectroscopy.tests.test_preprocess import TestCommonIndpSamplesMixin, \
-    SMALL_COLLAGEN
+from orangecontrib.spectroscopy.tests.test_preprocess import (
+    TestCommonIndpSamplesMixin,
+    SMALL_COLLAGEN,
+)
 
 
 class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
-
     preprocessors = [
         Integrate(limits=[[900, 100], [1100, 1200], [1200, 1300]]),
         Integrate(methods=Integrate.Simple, limits=[[1100, 1200]]),
@@ -18,15 +19,14 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         Integrate(methods=Integrate.PeakBaseline, limits=[[1100, 1200]]),
         Integrate(methods=Integrate.PeakAt, limits=[[1100]]),
         Integrate(methods=Integrate.PeakX, limits=[[1100, 1200]]),
-        Integrate(methods=Integrate.PeakXBaseline, limits=[[1100, 1200]])
+        Integrate(methods=Integrate.PeakXBaseline, limits=[[1100, 1200]]),
     ]
     data = SMALL_COLLAGEN
 
-
     def test_simple(self):
-        data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1],
-                                       [1, 2, 3, 1, np.nan, 1],
-                                       [1, 2, 3, 1, 1, np.nan]])
+        data = Table.from_numpy(
+            None, [[1, 2, 3, 1, 1, 1], [1, 2, 3, 1, np.nan, 1], [1, 2, 3, 1, 1, np.nan]]
+        )
         i = Integrate(methods=Integrate.Simple, limits=[[0, 5]])(data)
         self.assertEqual(i[0][0], 8)
         self.assertEqual(i[1][0], 8)
@@ -34,9 +34,9 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1], 0)
 
     def test_baseline(self):
-        data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1],
-                                       [1, 2, 3, 1, np.nan, 1],
-                                       [1, 2, 3, 1, 1, np.nan]])
+        data = Table.from_numpy(
+            None, [[1, 2, 3, 1, 1, 1], [1, 2, 3, 1, np.nan, 1], [1, 2, 3, 1, 1, np.nan]]
+        )
         i = Integrate(methods=Integrate.Baseline, limits=[[0, 5]])(data)
         self.assertEqual(i[0][0], 3)
         self.assertEqual(i[1][0], 3)
@@ -55,15 +55,15 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
         i = Integrate(methods=Integrate.PeakBaseline, limits=[[0, 5]])(data)
         self.assertEqual(i[0][0], 2)
-        np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1],
-                                [[1, 1, 1, 1, 1, 1]])
+        np.testing.assert_equal(
+            i.domain[0].compute_value.baseline(data)[1], [[1, 1, 1, 1, 1, 1]]
+        )
 
     def test_peakat(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
         i = Integrate(methods=Integrate.PeakAt, limits=[[0, 5]])(data)
         self.assertEqual(i[0][0], 1)
-        np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1],
-                                0)
+        np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1], 0)
         i = Integrate(methods=Integrate.PeakAt, limits=[[1.4, None]])(data)
         self.assertEqual(i[0][0], 2)
         i = Integrate(methods=Integrate.PeakAt, limits=[[1.6, None]])(data)
@@ -81,13 +81,14 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
         i = Integrate(methods=Integrate.PeakXBaseline, limits=[[0, 5]])(data)
         self.assertEqual(i[0][0], 2)
-        np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1],
-                                [[1, 1, 1, 1, 1, 1]])
+        np.testing.assert_equal(
+            i.domain[0].compute_value.baseline(data)[1], [[1, 1, 1, 1, 1, 1]]
+        )
 
     def test_separate_baseline(self):
-        data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1],
-                                       [1, 2, 3, 1, np.nan, 1],
-                                       [1, 2, 3, 1, 1, np.nan]])
+        data = Table.from_numpy(
+            None, [[1, 2, 3, 1, 1, 1], [1, 2, 3, 1, np.nan, 1], [1, 2, 3, 1, 1, np.nan]]
+        )
 
         # baseline spans the whole region
         i = Integrate(methods=Integrate.Separate, limits=[[0, 5, 0, 5]])(data)
@@ -130,35 +131,47 @@ class TestIntegrate(unittest.TestCase, TestCommonIndpSamplesMixin):
 
     def test_different_integrals(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
-        i = Integrate(methods=[Integrate.Simple, Integrate.Baseline],
-                      limits=[[0, 5], [0, 5]])(data)
+        i = Integrate(
+            methods=[Integrate.Simple, Integrate.Baseline], limits=[[0, 5], [0, 5]]
+        )(data)
         self.assertEqual(i[0][0], 8)
         np.testing.assert_equal(i.domain[0].compute_value.baseline(data)[1], 0)
         np.testing.assert_equal(i.domain[1].compute_value.baseline(data)[1], 1)
 
     def test_names(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
-        i = Integrate(methods=[Integrate.Simple, Integrate.Baseline, Integrate.Separate],
-                      limits=[[0, 5], [0, 6], [1, 2, 0, 6]])(data)
+        i = Integrate(
+            methods=[Integrate.Simple, Integrate.Baseline, Integrate.Separate],
+            limits=[[0, 5], [0, 6], [1, 2, 0, 6]],
+        )(data)
         self.assertEqual(i.domain[0].name, "0 - 5")
         self.assertEqual(i.domain[1].name, "0 - 6")
         self.assertEqual(i.domain[2].name, "1 - 2 [baseline 0 - 6]")
-        i = Integrate(methods=[Integrate.Simple, Integrate.Baseline],
-                      limits=[[0, 5], [0, 6]], names=["simple", "baseline"])(data)
+        i = Integrate(
+            methods=[Integrate.Simple, Integrate.Baseline],
+            limits=[[0, 5], [0, 6]],
+            names=["simple", "baseline"],
+        )(data)
         self.assertEqual(i.domain[0].name, "simple")
         self.assertEqual(i.domain[1].name, "baseline")
 
     def test_repeated(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
-        i = Integrate(methods=[Integrate.Simple, Integrate.Baseline],
-                      limits=[[0, 5], [0, 6]], names=["int", "int"])(data)
+        i = Integrate(
+            methods=[Integrate.Simple, Integrate.Baseline],
+            limits=[[0, 5], [0, 6]],
+            names=["int", "int"],
+        )(data)
         self.assertEqual(i.domain[0].name, "int")
         self.assertEqual(i.domain[1].name, "int (1)")
 
     def test_metas_output(self):
         data = Table.from_numpy(None, [[1, 2, 3, 1, 1, 1]])
-        i = Integrate(methods=[Integrate.Simple, Integrate.Baseline],
-                      limits=[[0, 5], [0, 6]], metas=True)(data)
+        i = Integrate(
+            methods=[Integrate.Simple, Integrate.Baseline],
+            limits=[[0, 5], [0, 6]],
+            metas=True,
+        )(data)
         metavars = [a.name for a in i.domain.metas]
         self.assertTrue("0 - 5" in metavars and "0 - 6" in metavars)
         self.assertEqual(i[0]["0 - 5"], 8)

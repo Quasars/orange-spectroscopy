@@ -11,7 +11,6 @@ from orangecontrib.spectroscopy.data import getx
 
 
 class BaseEditor(BaseEditor):
-
     name = "Unnamed"
     qualname = None
     icon = None
@@ -34,6 +33,7 @@ class BaseEditorOrange(BaseEditor, OWComponent, WidgetMessagesMixin):
     """
     Base widget for editing preprocessor's parameters that works with Orange settings.
     """
+
     # the following signals need to defined for WidgetMessagesMixin
     messageActivated = Signal(Msg)
     messageDeactivated = Signal(Msg)
@@ -64,11 +64,12 @@ class BaseEditorOrange(BaseEditor, OWComponent, WidgetMessagesMixin):
 
 
 class SetXDoubleSpinBox(DoubleSpinBox):
-
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs,
-                         keyboardTracking=False  # disable valueChanged while typing
-                         )
+        super().__init__(
+            *args,
+            **kwargs,
+            keyboardTracking=False,  # disable valueChanged while typing
+        )
 
     def focusInEvent(self, *e):
         if hasattr(self, "focusIn"):
@@ -87,11 +88,10 @@ class SetXDoubleSpinBox(DoubleSpinBox):
 
 
 class PreviewMinMaxMixin:
-    """ Classes extending the mixin need to set preview_data
-    """
+    """Classes extending the mixin need to set preview_data"""
 
-    MINLIM_DEFAULT = 0.
-    MAXLIM_DEFAULT = 1.
+    MINLIM_DEFAULT = 0.0
+    MAXLIM_DEFAULT = 1.0
 
     def preview_min_max(self):
         if self.preview_data is not None:

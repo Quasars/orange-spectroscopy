@@ -14,11 +14,24 @@ from orangecontrib.spectroscopy.preprocess import Cut, LinearBaseline, Integrate
 from orangecontrib.spectroscopy.tests.spectral_preprocess import wait_for_preview
 from orangecontrib.spectroscopy.widgets.gui import MovableVline
 import orangecontrib.spectroscopy.widgets.owpeakfit as owpeakfit
-from orangecontrib.spectroscopy.widgets.owpeakfit import OWPeakFit, fit_peaks, PREPROCESSORS, \
-    create_model, prepare_params, unique_prefix, create_composite_model, pack_model_editor
-from orangecontrib.spectroscopy.widgets.peak_editors import ParamHintBox, VoigtModelEditor, \
-    PseudoVoigtModelEditor, ExponentialGaussianModelEditor, PolynomialModelEditor, \
-    GaussianModelEditor
+from orangecontrib.spectroscopy.widgets.owpeakfit import (
+    OWPeakFit,
+    fit_peaks,
+    PREPROCESSORS,
+    create_model,
+    prepare_params,
+    unique_prefix,
+    create_composite_model,
+    pack_model_editor,
+)
+from orangecontrib.spectroscopy.widgets.peak_editors import (
+    ParamHintBox,
+    VoigtModelEditor,
+    PseudoVoigtModelEditor,
+    ExponentialGaussianModelEditor,
+    PolynomialModelEditor,
+    GaussianModelEditor,
+)
 import orangecontrib.spectroscopy.widgets.peakfit_compute as peakfit_compute
 
 # shorter initializations in tests
@@ -31,7 +44,6 @@ COLLAGEN_1 = LinearBaseline()(Cut(lowlim=1600, highlim=1700)(COLLAGEN_2))
 
 
 class TestOWPeakFit(WidgetTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPeakFit)
         self.data = COLLAGEN_1
@@ -47,15 +59,24 @@ class TestOWPeakFit(WidgetTest):
                 if p.viewclass == PolynomialModelEditor:
                     self.skipTest("Polynomial Model does not converge on this data")
                 if p.viewclass == ExponentialGaussianModelEditor:
-                    self.skipTest("Exponential Gaussian Model does not converge on this data")
+                    self.skipTest(
+                        "Exponential Gaussian Model does not converge on this data"
+                    )
                 elif p.viewclass == PseudoVoigtModelEditor:
-                    settings = {'storedsettings':
-                                {'name': '',
-                                 'preprocessors':
-                                 [('orangecontrib.spectroscopy.widgets.peak_editors.pv',
-                                   {'center': OrderedDict([('value', 1650.0)]),
-                                    'fraction': OrderedDict([('vary', "fixed")]),
-                                    })]}}
+                    settings = {
+                        'storedsettings': {
+                            'name': '',
+                            'preprocessors': [
+                                (
+                                    'orangecontrib.spectroscopy.widgets.peak_editors.pv',
+                                    {
+                                        'center': OrderedDict([('value', 1650.0)]),
+                                        'fraction': OrderedDict([('vary', "fixed")]),
+                                    },
+                                )
+                            ],
+                        }
+                    }
                 self.widget = self.create_widget(OWPeakFit, stored_settings=settings)
                 self.send_signal("Data", self.data)
                 if settings is None:
@@ -92,7 +113,9 @@ class TestOWPeakFit(WidgetTest):
         self.assertEqual(len(data), len(self.data))
         np.testing.assert_array_equal(data.X, self.data.X)
         np.testing.assert_array_equal(data.Y, self.data.Y)
-        join_metas = np.asarray(np.hstack((self.data.metas, fit_params.X)), dtype=object)
+        join_metas = np.asarray(
+            np.hstack((self.data.metas, fit_params.X)), dtype=object
+        )
         np.testing.assert_array_equal(data.metas, join_metas)
 
     def test_saving_models(self):
@@ -100,27 +123,57 @@ class TestOWPeakFit(WidgetTest):
         self.assertEqual([], settings['storedsettings']['preprocessors'])
         self.widget.add_preprocessor(PREPROCESSORS[0])
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        self.assertEqual(PREPROCESSORS[0].qualname,
-                         settings['storedsettings']['preprocessors'][0][0])
+        self.assertEqual(
+            PREPROCESSORS[0].qualname, settings['storedsettings']['preprocessors'][0][0]
+        )
         self.widget = self.create_widget(OWPeakFit, stored_settings=settings)
         vc = self.widget.preprocessormodel.item(0).data(DescriptionRole).viewclass
         self.assertEqual(PREPROCESSORS[0].viewclass, vc)
 
     def test_migrate_refactor1(self):
-        i1 = ("xyz", {'amplitude': {'value': 42.0, 'vary': False},
-                      'center': {'value': 1349.984, 'min': 1307.984, 'max': 1391.984},
-                      'sigma': {'min': 0, 'value': 1.0}})
-        i2 = ("gam", {'gamma1': {'expr': 'sigma'},
-                      'gamma2': {'expr': '', 'value': 0.0, 'min': -1.0, 'max': 1.0}})
+        i1 = (
+            "xyz",
+            {
+                'amplitude': {'value': 42.0, 'vary': False},
+                'center': {'value': 1349.984, 'min': 1307.984, 'max': 1391.984},
+                'sigma': {'min': 0, 'value': 1.0},
+            },
+        )
+        i2 = (
+            "gam",
+            {
+                'gamma1': {'expr': 'sigma'},
+                'gamma2': {'expr': '', 'value': 0.0, 'min': -1.0, 'max': 1.0},
+            },
+        )
         settings = {"storedsettings": {"preprocessors": [i1, i2]}}
         OWPeakFit.migrate_settings(settings, 1)
-        o1 = ('xyz', {'amplitude': {'value': 42.0, 'vary': 'fixed'},
-                      'center': {'max': 1391.984, 'min': 1307.984,
-                                 'value': 1349.984, 'vary': 'limits'},
-                      'sigma': {'min': 0, 'value': 1.0, 'vary': 'limits'}})
-        o2 = ('gam', {'gamma1': {'expr': 'sigma', 'vary': 'expr'},
-                      'gamma2': {'expr': '', 'max': 1.0, 'min': -1.0,
-                                 'value': 0.0, 'vary': 'limits'}})
+        o1 = (
+            'xyz',
+            {
+                'amplitude': {'value': 42.0, 'vary': 'fixed'},
+                'center': {
+                    'max': 1391.984,
+                    'min': 1307.984,
+                    'value': 1349.984,
+                    'vary': 'limits',
+                },
+                'sigma': {'min': 0, 'value': 1.0, 'vary': 'limits'},
+            },
+        )
+        o2 = (
+            'gam',
+            {
+                'gamma1': {'expr': 'sigma', 'vary': 'expr'},
+                'gamma2': {
+                    'expr': '',
+                    'max': 1.0,
+                    'min': -1.0,
+                    'value': 0.0,
+                    'vary': 'limits',
+                },
+            },
+        )
         self.assertEqual(settings["storedsettings"]["preprocessors"], [o1, o2])
 
     def test_bug_iris_crash(self):
@@ -143,14 +196,12 @@ class TestOWPeakFit(WidgetTest):
         assert self.widget.sample_data(self.data).ids == subset.ids
         assert self.widget.preview_runner.preview_data.ids == subset.ids
 
-
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
 
 
 class TestPeakFit(unittest.TestCase):
-
     def setUp(self):
         self.data = COLLAGEN_2
 
@@ -175,7 +226,7 @@ class TestPeakFit(unittest.TestCase):
         for i, center in enumerate(pcs):
             p = f"v{i}_"
             dx = 20
-            params[p + "center"].set(value=center, min=center-dx, max=center+dx)
+            params[p + "center"].set(value=center, min=center - dx, max=center + dx)
             params[p + "sigma"].set(max=50)
             params[p + "amplitude"].set(min=0.0001)
         out_result = model.fit(self.data.X[0], params, x=getx(self.data))
@@ -185,15 +236,18 @@ class TestPeakFit(unittest.TestCase):
         attrs = [a.name for a in out_table.domain.attributes[:4]]
         self.assertEqual(attrs, ["v0 area", "v0 amplitude", "v0 center", "v0 sigma"])
         self.assertNotEqual(0, out_row["v0 area"].value)
-        self.assertEqual(out_result.best_values["v0_amplitude"], out_row["v0 amplitude"].value)
-        self.assertEqual(out_result.best_values["v0_center"], out_row["v0 center"].value)
+        self.assertEqual(
+            out_result.best_values["v0_amplitude"], out_row["v0 amplitude"].value
+        )
+        self.assertEqual(
+            out_result.best_values["v0_center"], out_row["v0 center"].value
+        )
         self.assertEqual(out_result.best_values["v0_sigma"], out_row["v0 sigma"].value)
         self.assertEqual(out_result.redchi, out_row["Reduced chi-square"].value)
         self.assertEqual(out_row.id, self.data.ids[0])
 
 
 class TestBuildModel(GuiTest):
-
     def test_model_from_editor(self):
         self.editor = VoigtModelEditor()
         self.editor.set_hint('center', 'value', 1655)
@@ -223,8 +277,9 @@ class ModelEditorTest(WidgetTest):
                 self.add_editor(p.viewclass, self.widget)
 
     def wait_until_finished(self, widget=None, timeout=None):
-        super().wait_until_finished(widget,
-                                    timeout=timeout if timeout is not None else 10000)
+        super().wait_until_finished(
+            widget, timeout=timeout if timeout is not None else 10000
+        )
 
     def wait_for_preview(self):
         wait_for_preview(self.widget, timeout=10000)
@@ -287,8 +342,11 @@ class TestVoigtEditor(ModelEditorTest):
     def test_only_spec_lines(self):
         self.editor.activateOptions()
         model_lines = self.editor.model_lines()
-        lines = [l.label.toPlainText().strip() for l in self.widget.curveplot.markings
-                 if isinstance(l, MovableVline)]
+        lines = [
+            l.label.toPlainText().strip()
+            for l in self.widget.curveplot.markings
+            if isinstance(l, MovableVline)
+        ]
         for ml in model_lines:
             self.assertIn(ml, lines)
         no_lines = [p for p in self.editor.model_parameters() if p not in model_lines]
@@ -305,12 +363,12 @@ class TestVoigtEditor(ModelEditorTest):
 
 
 class TestVoigtEditorMulti(ModelEditorTest):
-
     def setUp(self):
         self.pcs = [1547, 1655]
         self.widget = self.create_widget(OWPeakFit)
-        self.editors = [self.add_editor(VoigtModelEditor, self.widget)
-                        for _ in range(len(self.pcs))]
+        self.editors = [
+            self.add_editor(VoigtModelEditor, self.widget) for _ in range(len(self.pcs))
+        ]
         self.data = COLLAGEN_2
         self.send_signal(self.widget.Inputs.data, self.data)
         self.model, self.params = self.matched_models()
@@ -332,7 +390,9 @@ class TestVoigtEditorMulti(ModelEditorTest):
             # Set editor to same values
             e = self.editors[i]
             e_params = e.parameters()
-            e_params['center'].update({'value': center, 'min': center - dx, 'max': center + dx})
+            e_params['center'].update(
+                {'value': center, 'min': center - dx, 'max': center + dx}
+            )
             e_params['sigma']['max'] = 50
             e_params['amplitude']['min'] = 0.0001
             e.setParameters(e_params)
@@ -340,8 +400,10 @@ class TestVoigtEditorMulti(ModelEditorTest):
         return model, params
 
     def test_same_params(self):
-        m_def = [self.widget.preprocessormodel.item(i)
-                 for i in range(self.widget.preprocessormodel.rowCount())]
+        m_def = [
+            self.widget.preprocessormodel.item(i)
+            for i in range(self.widget.preprocessormodel.rowCount())
+        ]
         ed_model, ed_params = create_composite_model(m_def)
 
         self.assertEqual(self.model.name, ed_model.name)
@@ -359,19 +421,23 @@ class TestVoigtEditorMulti(ModelEditorTest):
     def test_saving_model_params(self):
         settings = self.widget.settingsHandler.pack_data(self.widget)
         restored_widget = self.create_widget(OWPeakFit, stored_settings=settings)
-        m_def = [restored_widget.preprocessormodel.item(i)
-                 for i in range(restored_widget.preprocessormodel.rowCount())]
+        m_def = [
+            restored_widget.preprocessormodel.item(i)
+            for i in range(restored_widget.preprocessormodel.rowCount())
+        ]
         sv_model, sv_params = create_composite_model(m_def)
 
         self.assertEqual(self.model.name, sv_model.name)
         self.assertEqual(set(self.params), set(sv_params))
 
     def test_total_area(self):
-        """ Test v0 + v1 area == total fit area """
+        """Test v0 + v1 area == total fit area"""
         fit_params = self.get_output(self.widget.Outputs.fit_params, wait=10000)
         fits = self.get_output(self.widget.Outputs.fits)
         xs = getx(fits)
-        total_areas = Integrate(methods=Integrate.Simple, limits=[[xs.min(), xs.max()]])(fits)
+        total_areas = Integrate(
+            methods=Integrate.Simple, limits=[[xs.min(), xs.max()]]
+        )(fits)
         total_area = total_areas.X[0, 0]
         v0_area = fit_params[0]["v0 area"].value
         v1_area = fit_params[0]["v1 area"].value
@@ -379,7 +445,6 @@ class TestVoigtEditorMulti(ModelEditorTest):
 
 
 class TestParamHintBox(GuiTest):
-
     def test_defaults(self):
         defaults = {
             'value': 0,

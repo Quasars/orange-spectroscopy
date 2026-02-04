@@ -8,8 +8,11 @@ from Orange.widgets import gui, settings
 from AnyQt.QtWidgets import QFormLayout, QWidget
 
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.preprocess import Interpolate, InterpolateToDomain, \
-    NotAllContinuousException
+from orangecontrib.spectroscopy.preprocess import (
+    Interpolate,
+    InterpolateToDomain,
+    NotAllContinuousException,
+)
 from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone
 
 
@@ -33,7 +36,7 @@ class OWInterpolate(OWWidget):
     # specification of linear space
     xmin = settings.Setting(None)
     xmax = settings.Setting(None)
-    dx = settings.Setting(10.)
+    dx = settings.Setting(10.0)
 
     autocommit = settings.Setting(True)
 
@@ -56,8 +59,7 @@ class OWInterpolate(OWWidget):
 
         dbox = gui.widgetBox(self.controlArea, "Interpolation")
 
-        rbox = gui.radioButtons(
-            dbox, self, "input_radio", callback=self._change_input)
+        rbox = gui.radioButtons(dbox, self, "input_radio", callback=self._change_input)
 
         gui.appendRadioButton(rbox, "Enable automatic interpolation")
 
@@ -70,11 +72,17 @@ class OWInterpolate(OWWidget):
         form.setLayout(formlayout)
         ibox.layout().addWidget(form)
 
-        self.xmin_edit = lineEditFloatOrNone(ibox, self, "xmin", callback=self.commit.deferred)
+        self.xmin_edit = lineEditFloatOrNone(
+            ibox, self, "xmin", callback=self.commit.deferred
+        )
         formlayout.addRow("Min", self.xmin_edit)
-        self.xmax_edit = lineEditFloatOrNone(ibox, self, "xmax", callback=self.commit.deferred)
+        self.xmax_edit = lineEditFloatOrNone(
+            ibox, self, "xmax", callback=self.commit.deferred
+        )
         formlayout.addRow("Max", self.xmax_edit)
-        self.dx_edit = lineEditFloatOrNone(ibox, self, "dx", callback=self.commit.deferred)
+        self.dx_edit = lineEditFloatOrNone(
+            ibox, self, "dx", callback=self.commit.deferred
+        )
         formlayout.addRow("Δ", self.dx_edit)
 
         gui.appendRadioButton(rbox, "Reference data")
@@ -101,7 +109,7 @@ class OWInterpolate(OWWidget):
                     xmin = self.xmin if self.xmin is not None else np.min(xs)
                     xmax = self.xmax if self.xmax is not None else np.max(xs)
                     xmin, xmax = min(xmin, xmax), max(xmin, xmax)
-                    reslength = abs(math.ceil((xmax - xmin)/self.dx))
+                    reslength = abs(math.ceil((xmax - xmin) / self.dx))
                     if reslength < 10002:
                         points = np.arange(xmin, xmax, self.dx)
                         out = Interpolate(points)(self.data)
@@ -152,6 +160,7 @@ class OWInterpolate(OWWidget):
         self.commit.now()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWInterpolate).run(Orange.data.Table("collagen"))

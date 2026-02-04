@@ -15,7 +15,6 @@ NAN = float("nan")
 
 
 class TestOWSpectralSeries(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -34,14 +33,15 @@ class TestOWSpectralSeries(WidgetTest):
         irisunknown = Interpolate(np.arange(20))(cls.iris)
         # dataset without any attributes, but XY
         whitelight0 = cls.whitelight.transform(
-            Orange.data.Domain([], None, metas=cls.whitelight.domain.metas))
+            Orange.data.Domain([], None, metas=cls.whitelight.domain.metas)
+        )
         cls.strange_data = [None, cls.iris1, iris0, empty, irisunknown, whitelight0]
 
     def setUp(self):
         self.widget = self.create_widget(OWSpectralSeries)
 
     def try_big_selection(self):
-        all_select = None if self.widget.data is None else [1]*len(self.widget.data)
+        all_select = None if self.widget.data is None else [1] * len(self.widget.data)
         self.widget.imageplot.make_selection(all_select)
         self.widget.imageplot.make_selection(None)
 
@@ -87,8 +87,9 @@ class TestOWSpectralSeries(WidgetTest):
         self.widget.imageplot.select_by_click(QPointF(53.1, 1))
         out = self.get_output("Selection")
         np.testing.assert_almost_equal(out.metas[:, 0], 53.099327, decimal=3)
-        np.testing.assert_almost_equal(out.metas[:, 1],
-                                       self.whitelight[::200].metas[:, 1], decimal=3)
+        np.testing.assert_almost_equal(
+            out.metas[:, 1], self.whitelight[::200].metas[:, 1], decimal=3
+        )
         np.testing.assert_equal(out.Y, 0)  # selection group
 
     def test_single_update_view(self):
@@ -102,14 +103,16 @@ class TestOWSpectralSeries(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
 
         event = MagicMock()
-        with patch.object(self.widget.imageplot.plot.vb, "mapSceneToView"), \
-                patch.object(QToolTip, "showText") as show_text:
-
+        with (
+            patch.object(self.widget.imageplot.plot.vb, "mapSceneToView"),
+            patch.object(QToolTip, "showText") as show_text,
+        ):
             sel = np.zeros(len(data), dtype="bool")
 
             sel[3] = 1  # a single instance
-            with patch.object(self.widget.imageplot, "_points_at_pos",
-                              return_value=(sel, 2)):
+            with patch.object(
+                self.widget.imageplot, "_points_at_pos", return_value=(sel, 2)
+            ):
                 self.assertTrue(self.widget.imageplot.help_event(event))
                 (_, text), _ = show_text.call_args
                 self.assertIn("iris = {}".format(data[3, "iris"]), text)
@@ -117,8 +120,9 @@ class TestOWSpectralSeries(WidgetTest):
                 self.assertEqual(1, text.count("iris ="))
 
             sel[51] = 1  # add a data point
-            with patch.object(self.widget.imageplot, "_points_at_pos",
-                              return_value=(sel, 2)):
+            with patch.object(
+                self.widget.imageplot, "_points_at_pos", return_value=(sel, 2)
+            ):
                 self.assertTrue(self.widget.imageplot.help_event(event))
                 (_, text), _ = show_text.call_args
                 self.assertIn("iris = {}".format(data[3, "iris"]), text)

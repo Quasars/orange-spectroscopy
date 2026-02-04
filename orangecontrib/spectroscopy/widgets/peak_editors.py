@@ -6,15 +6,24 @@ import numpy as np
 from AnyQt.QtCore import Signal
 from Orange.widgets.data.utils.preprocess import blocked
 from AnyQt.QtCore import QSize, QObject
-from AnyQt.QtWidgets import \
-    QWidget, QHBoxLayout, QSizePolicy, QComboBox, QLineEdit, QGridLayout, QLabel, \
-    QAbstractSpinBox
+from AnyQt.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QSizePolicy,
+    QComboBox,
+    QLineEdit,
+    QGridLayout,
+    QLabel,
+    QAbstractSpinBox,
+)
 from orangewidget.widget import Msg
 
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.widgets.gui import MovableVline
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import \
-    SetXDoubleSpinBox, BaseEditorOrange
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    SetXDoubleSpinBox,
+    BaseEditorOrange,
+)
 
 
 DEFAULT_DELTA = 1
@@ -23,10 +32,8 @@ UNUSED_VALUE = float('-inf')
 
 
 class CompactDoubleSpinBox(SetXDoubleSpinBox):
-
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs,
-                         buttonSymbols=QAbstractSpinBox.NoButtons)
+        super().__init__(*args, **kwargs, buttonSymbols=QAbstractSpinBox.NoButtons)
 
     def sizeHint(self) -> QSize:
         sh = super().sizeHint()
@@ -35,6 +42,7 @@ class CompactDoubleSpinBox(SetXDoubleSpinBox):
 
     def minimumSizeHint(self) -> QSize:
         return self.sizeHint()
+
 
 class ParamHintBox(QWidget):
     """
@@ -62,42 +70,69 @@ class ParamHintBox(QWidget):
 
         minf, maxf = -sys.float_info.max, sys.float_info.max
 
-        self._defaults = {'min': UNUSED_VALUE,
-                          'value': DEFAULT_VALUE,
-                          'max': UNUSED_VALUE,
-                          'delta': DEFAULT_DELTA,
-                          'expr': ''}
+        self._defaults = {
+            'min': UNUSED_VALUE,
+            'value': DEFAULT_VALUE,
+            'max': UNUSED_VALUE,
+            'delta': DEFAULT_DELTA,
+            'expr': '',
+        }
 
-        self.min_e = CompactDoubleSpinBox(minimum=UNUSED_VALUE, maximum=maxf, singleStep=0.5,
-                                          value=self.hints.get('min', self._defaults["min"]),
-                                          specialValueText="None")
-        self.val_e = CompactDoubleSpinBox(minimum=minf, maximum=maxf, singleStep=0.5,
-                                          value=self.hints.get('value', self._defaults["value"]))
-        self.max_e = CompactDoubleSpinBox(minimum=UNUSED_VALUE, maximum=maxf, singleStep=0.5,
-                                          value=self.hints.get('max', self._defaults["min"]),
-                                          specialValueText="None")
-        self.delta_e = CompactDoubleSpinBox(minimum=minf, maximum=maxf, singleStep=0.5,
-                                            value=self.hints.get('delta', self._defaults["delta"]),
-                                            prefix="±", visible=False)
+        self.min_e = CompactDoubleSpinBox(
+            minimum=UNUSED_VALUE,
+            maximum=maxf,
+            singleStep=0.5,
+            value=self.hints.get('min', self._defaults["min"]),
+            specialValueText="None",
+        )
+        self.val_e = CompactDoubleSpinBox(
+            minimum=minf,
+            maximum=maxf,
+            singleStep=0.5,
+            value=self.hints.get('value', self._defaults["value"]),
+        )
+        self.max_e = CompactDoubleSpinBox(
+            minimum=UNUSED_VALUE,
+            maximum=maxf,
+            singleStep=0.5,
+            value=self.hints.get('max', self._defaults["min"]),
+            specialValueText="None",
+        )
+        self.delta_e = CompactDoubleSpinBox(
+            minimum=minf,
+            maximum=maxf,
+            singleStep=0.5,
+            value=self.hints.get('delta', self._defaults["delta"]),
+            prefix="±",
+            visible=False,
+        )
         self.vary_e = QComboBox()
-        v_opt = ('fixed', 'limits', 'delta', 'expr') if 'expr' in self.hints \
+        v_opt = (
+            ('fixed', 'limits', 'delta', 'expr')
+            if 'expr' in self.hints
             else ('fixed', 'limits', 'delta')
+        )
         self.vary_e.insertItems(0, v_opt)
         with blocked(self.vary_e):
             self.vary_e.setCurrentText(self.hints['vary'])
 
-        self.expr_e = QLineEdit(visible=False, enabled=False,
-                                text=self.hints.get('expr', ""))
+        self.expr_e = QLineEdit(
+            visible=False, enabled=False, text=self.hints.get('expr', "")
+        )
 
-        self.edits = [("min", self.min_e),
-                      ("value", self.val_e),
-                      ("max", self.max_e),
-                      ("delta", self.delta_e),
-                      ("vary", self.vary_e),
-                      ("expr", self.expr_e)]
+        self.edits = [
+            ("min", self.min_e),
+            ("value", self.val_e),
+            ("max", self.max_e),
+            ("delta", self.delta_e),
+            ("vary", self.vary_e),
+            ("expr", self.expr_e),
+        ]
 
         for name, widget in self.edits[:4]:  # float fields
-            widget.valueChanged[float].connect(lambda x, name=name: self._changed_float(x, name))
+            widget.valueChanged[float].connect(
+                lambda x, name=name: self._changed_float(x, name)
+            )
         self.vary_e.currentTextChanged.connect(self._changed_vary)
         self.expr_e.textChanged.connect(self._changed_expr)
 
@@ -223,6 +258,7 @@ class ModelEditor(BaseEditorOrange):
             def change_hint(name=name):
                 self.edited.emit()
                 self.changed_param_hints(name)
+
             e.valueChanged.connect(change_hint)
             self.__editors[name] = e
             layout.addWidget(QLabel(name), row, 0)
@@ -235,6 +271,7 @@ class ModelEditor(BaseEditorOrange):
                     self.set_hint(name, "value", float(line.rounded_value()))
                     self.__editors[name].update_min_max_for_delta()
                     self.edited.emit()
+
                 l.sigMoved.connect(change_value)
                 self.__lines[name] = l
 
@@ -296,8 +333,9 @@ class ModelEditor(BaseEditorOrange):
             if len(xs):
                 minx = np.min(xs)
                 maxx = np.max(xs)
-                limits = [(name, self.__values.get(name, {}))
-                          for name in self.model_lines()]
+                limits = [
+                    (name, self.__values.get(name, {})) for name in self.model_lines()
+                ]
                 for name, h in limits:
                     v = h.get('value', None)
                     if v is not None and (v < minx or v > maxx):
@@ -410,7 +448,7 @@ class PeakModelEditor(ModelEditor):
         if not self.user_changed:
             x = getx(data)
             if len(x):
-                self.set_hint('center', 'value', x[int(len(x)/2)])
+                self.set_hint('center', 'value', x[int(len(x) / 2)])
                 self.edited.emit()
         super().set_preview_data(data)
 
@@ -544,7 +582,10 @@ class SkewedVoigtModelEditor(PeakModelEditor):
 
     @classmethod
     def model_parameters(cls):
-        return super().model_parameters() + ('gamma', 'skew',)
+        return super().model_parameters() + (
+            'gamma',
+            'skew',
+        )
 
 
 class ThermalDistributionModelEditor(PeakModelEditor):

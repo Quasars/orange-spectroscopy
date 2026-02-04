@@ -7,19 +7,32 @@ from typing import List
 
 import numpy as np
 from AnyQt.QtCore import Qt, QSize
-from AnyQt.QtWidgets import \
-    QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
-    QSizePolicy as Policy, QCompleter
+from AnyQt.QtWidgets import (
+    QStyle,
+    QComboBox,
+    QMessageBox,
+    QGridLayout,
+    QLabel,
+    QSizePolicy as Policy,
+    QCompleter,
+)
 
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.data.table import Table
 from Orange.preprocess.preprocess import Preprocess, PreprocessorList
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owfile import NamedURLModel, LineEditSelectOnFocus, add_origin
-from Orange.widgets.settings import Setting, ContextSetting, \
-    PerfectDomainContextHandler, SettingProvider
+from Orange.widgets.settings import (
+    Setting,
+    ContextSetting,
+    PerfectDomainContextHandler,
+    SettingProvider,
+)
 from Orange.widgets.utils.domaineditor import DomainEditor
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, open_filename_dialog
+from Orange.widgets.utils.filedialogs import (
+    RecentPathsWComboMixin,
+    open_filename_dialog,
+)
 from Orange.widgets.widget import MultiInput, Msg, Output
 
 # Backward compatibility (from owfile): class RecentPath used to be defined in this module,
@@ -32,12 +45,15 @@ from orangecontrib.spectroscopy import get_sample_datasets_dir
 
 log = logging.getLogger(__name__)
 
+
 class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
     name = "Tile File"
     id = "orangecontrib.spectroscopy.widgets.tilefile"
     icon = "icons/tilefile.svg"
-    description = "Read data tile-by-tile from input files, " \
-                  "preprocess, and send a data table to the output."
+    description = (
+        "Read data tile-by-tile from input files, "
+        "preprocess, and send a data table to the output."
+    )
     priority = 10000
     replaces = ["orangecontrib.protospec.widgets.owtilefile.OWTilefile"]
 
@@ -45,8 +61,9 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
         preprocessor = MultiInput("Preprocessor", Preprocess)
 
     class Outputs:
-        data = Output("Data", Table,
-                      doc="Preprocessed dataset read from the input files.")
+        data = Output(
+            "Data", Table, doc="Preprocessed dataset read from the input files."
+        )
 
     want_main_area = False
 
@@ -65,9 +82,11 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
     variables: list
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
-    recent_paths = Setting([
-        RecentPath("", "sample-datasets", "agilent/5_mosaic_agg1024.dmt"),
-    ])
+    recent_paths = Setting(
+        [
+            RecentPath("", "sample-datasets", "agilent/5_mosaic_agg1024.dmt"),
+        ]
+    )
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
     xls_sheet = ContextSetting("")
@@ -79,15 +98,15 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
     domain_editor = SettingProvider(DomainEditor)
 
     class Warning(widget.OWWidget.Warning):
-        no_preprocessor = Msg("No preprocessor on input."
-                              " Press Reload to load anyway.")
-        new_preprocessor = Msg("Preprocessor has changed."
-                               " Press Reload to apply.")
-        file_too_big = widget.Msg("The file is too large to load automatically."
-                                  " Press Reload to load.")
+        no_preprocessor = Msg("No preprocessor on input. Press Reload to load anyway.")
+        new_preprocessor = Msg("Preprocessor has changed. Press Reload to apply.")
+        file_too_big = widget.Msg(
+            "The file is too large to load automatically. Press Reload to load."
+        )
         load_warning = widget.Msg("Read warning:\n{}")
         performance_warning = widget.Msg(
-            "Categorical variables with >100 values may decrease performance.")
+            "Categorical variables with >100 values may decrease performance."
+        )
 
     class Error(widget.OWWidget.Error):
         missing_reader = Msg("No tile-by-tile reader for this file.")
@@ -100,9 +119,9 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 
     UserAdviceMessages = [
         widget.Message(
-            "Connect a Preprocessor "
-            "which results in data-reduction ",
-            "to best make use of this widget."),
+            "Connect a Preprocessor which results in data-reduction ",
+            "to best make use of this widget.",
+        ),
     ]
 
     def __init__(self):
@@ -117,8 +136,15 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 
         layout = QGridLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
-        vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
-                                callback=self.load_data, addToLayout=False)
+        vbox = gui.radioButtons(
+            None,
+            self,
+            "source",
+            box=True,
+            addSpace=True,
+            callback=self.load_data,
+            addToLayout=False,
+        )
 
         rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
         layout.addWidget(rb_button, 0, 0, Qt.AlignVCenter)
@@ -131,32 +157,33 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
         layout.addWidget(box, 0, 1)
 
         file_button = gui.button(
-            None, self, '...', callback=self.browse_file, autoDefault=False)
+            None, self, '...', callback=self.browse_file, autoDefault=False
+        )
         file_button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
         layout.addWidget(file_button, 0, 2)
 
         reload_button = gui.button(
-            None, self, "Reload", callback=self.load_data, autoDefault=False)
-        reload_button.setIcon(self.style().standardIcon(
-            QStyle.SP_BrowserReload))
+            None, self, "Reload", callback=self.load_data, autoDefault=False
+        )
+        reload_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
         layout.addWidget(reload_button, 0, 3)
 
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
-        self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
-                                        callback=self.select_sheet,
-                                        sendSelectedValue=True,)
-        self.sheet_combo.setSizePolicy(
-            Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_combo = gui.comboBox(
+            None,
+            self,
+            "xls_sheet",
+            callback=self.select_sheet,
+            sendSelectedValue=True,
+        )
+        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QLabel()
         self.sheet_label.setText('Sheet')
-        self.sheet_label.setSizePolicy(
-            Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_box.layout().addWidget(
-            self.sheet_label, Qt.AlignLeft)
-        self.sheet_box.layout().addWidget(
-            self.sheet_combo, Qt.AlignVCenter)
+        self.sheet_label.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_box.layout().addWidget(self.sheet_label, Qt.AlignLeft)
+        self.sheet_box.layout().addWidget(self.sheet_combo, Qt.AlignVCenter)
         layout.addWidget(self.sheet_box, 2, 1)
         self.sheet_box.hide()
 
@@ -194,18 +221,23 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.hBox(self.controlArea)
         gui.button(
-            box, self, "Browse documentation datasets",
-            callback=lambda: self.browse_file(True), autoDefault=False)
+            box,
+            self,
+            "Browse documentation datasets",
+            callback=lambda: self.browse_file(True),
+            autoDefault=False,
+        )
         gui.rubber(box)
 
-        gui.button(
-            box, self, "Reset", callback=self.reset_domain_edit)
+        gui.button(box, self, "Reset", callback=self.reset_domain_edit)
         self.apply_button = gui.button(
-            box, self, "Apply", callback=self.apply_domain_edit)
+            box, self, "Apply", callback=self.apply_domain_edit
+        )
         self.apply_button.setEnabled(False)
         self.apply_button.setFixedWidth(170)
         self.editor_model.dataChanged.connect(
-            lambda: self.apply_button.setEnabled(True))
+            lambda: self.apply_button.setEnabled(True)
+        )
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
@@ -339,8 +371,7 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
         text = ""
 
         attrs = getattr(table, "attributes", {})
-        descs = [attrs[desc]
-                 for desc in ("Name", "Description") if desc in attrs]
+        descs = [attrs[desc] for desc in ("Name", "Description") if desc in attrs]
         if len(descs) == 2:
             descs[0] = f"<b>{descs[0]}</b>"
         if descs:
@@ -348,20 +379,26 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 
         text += f"<p>{len(table)} instance(s)"
 
-        missing_in_attr = missing_prop(table.has_missing_attribute()
-                                       and table.get_nan_frequency_attribute())
-        missing_in_class = missing_prop(table.has_missing_class()
-                                        and table.get_nan_frequency_class())
+        missing_in_attr = missing_prop(
+            table.has_missing_attribute() and table.get_nan_frequency_attribute()
+        )
+        missing_in_class = missing_prop(
+            table.has_missing_class() and table.get_nan_frequency_class()
+        )
         text += f"<br/>{len(domain.attributes)} feature(s) {missing_in_attr}"
         if domain.has_continuous_class:
             text += f"<br/>Regression; numerical class {missing_in_class}"
         elif domain.has_discrete_class:
-            text += "<br/>Classification; categorical class " \
+            text += (
+                "<br/>Classification; categorical class "
                 f"with {len(domain.class_var.values)} values {missing_in_class}"
+            )
         elif table.domain.class_vars:
-            text += "<br/>Multi-target; " \
-                f"{len(table.domain.class_vars)} target variables " \
+            text += (
+                "<br/>Multi-target; "
+                f"{len(table.domain.class_vars)} target variables "
                 f"{missing_in_class}"
+            )
         else:
             text += "<br/>Data has no target variable."
         text += f"<br/>{len(domain.metas)} meta attribute(s)"
@@ -369,8 +406,10 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 
         if 'Timestamp' in table.domain:
             # Google Forms uses this header to timestamp responses
-            text += f"<p>First entry: {table[0, 'Timestamp']}<br/>" \
+            text += (
+                f"<p>First entry: {table[0, 'Timestamp']}<br/>"
                 f"Last entry: {table[-1, 'Timestamp']}</p>"
+            )
         return text
 
     def storeSpecificSettings(self):
@@ -429,17 +468,22 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
             home = os.path.expanduser("~")
             if self.loaded_file.startswith(home):
                 # os.path.join does not like ~
-                name = "~" + os.path.sep + \
-                       self.loaded_file[len(home):].lstrip("/").lstrip("\\")
+                name = (
+                    "~"
+                    + os.path.sep
+                    + self.loaded_file[len(home) :].lstrip("/").lstrip("\\")
+                )
             else:
                 name = self.loaded_file
             if self.sheet_combo.isVisible():
                 name += f" ({self.sheet_combo.currentText()})"
-            self.report_items("File", [("File name", name),
-                                       ("Format", get_ext_name(name))])
+            self.report_items(
+                "File", [("File name", name), ("Format", get_ext_name(name))]
+            )
         else:
-            self.report_items("Data", [("Resource", self.url),
-                                       ("Format", get_ext_name(self.url))])
+            self.report_items(
+                "Data", [("Resource", self.url), ("Format", get_ext_name(self.url))]
+            )
 
         self.report_data("Data", self.data)
 
@@ -469,15 +513,17 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
         (e.g. relative file paths are changed)
         """
         self.update_file_list(key, value, oldvalue)
-    #### End code copy ####
 
+    #### End code copy ####
 
     @staticmethod
     def _is_preproc(p):
         """
         Tests that a preprocessor is not None or empty PreprocessorList
         """
-        return not(p is None or (isinstance(p, PreprocessorList) and len(p.preprocessors) == 0))
+        return not (
+            p is None or (isinstance(p, PreprocessorList) and len(p.preprocessors) == 0)
+        )
 
     @staticmethod
     def _format_preproc_str(preprocessor):
@@ -497,8 +543,10 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
             self.info_preproc.setText("No preprocessor on input.")
             self.Warning.no_preprocessor()
             return True
-        self.info_preproc.setText("New preprocessor, reload file to use.\n" +
-                                  self._format_preproc_str(self.preprocessor))
+        self.info_preproc.setText(
+            "New preprocessor, reload file to use.\n"
+            + self._format_preproc_str(self.preprocessor)
+        )
         self.Warning.new_preprocessor()
         return False
 
@@ -525,14 +573,19 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
                 QMessageBox.information(
-                    None, "File",
-                    "Cannot find the directory with documentation datasets")
+                    None,
+                    "File",
+                    "Cannot find the directory with documentation datasets",
+                )
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        readers = [f for f in FileFormat.formats
-                   if getattr(f, 'read_tile', None) and getattr(f, "EXTENSIONS", None)]
+        readers = [
+            f
+            for f in FileFormat.formats
+            if getattr(f, 'read_tile', None) and getattr(f, "EXTENSIONS", None)
+        ]
         filename, reader, _ = open_filename_dialog(start_file, None, readers)
         if not filename:
             return
@@ -558,8 +611,11 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
         -------
         FileFormat
         """
-        readers = [f for f in FileFormat.formats
-                   if getattr(f, 'read_tile', None) and getattr(f, "EXTENSIONS", None)]
+        readers = [
+            f
+            for f in FileFormat.formats
+            if getattr(f, 'read_tile', None) and getattr(f, "EXTENSIONS", None)
+        ]
         for reader in readers:
             if os.path.splitext(filename)[1] in reader.EXTENSIONS:
                 return reader(filename)
@@ -587,7 +643,8 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
                 reader.set_preprocessor(self.preprocessor)
                 if self.preprocessor is not None:
                     self.info_preproc.setText(
-                        self._format_preproc_str(self.preprocessor))
+                        self._format_preproc_str(self.preprocessor)
+                    )
             else:
                 # only allow readers with tile-by-tile support to run.
                 reader = None
@@ -601,5 +658,6 @@ class OWTilefile(widget.OWWidget, RecentPathsWComboMixin):
 if __name__ == "__main__":
     from Orange.widgets.utils.widgetpreview import WidgetPreview
     from orangecontrib.spectroscopy.preprocess import Cut, LinearBaseline
+
     preproc = PreprocessorList([LinearBaseline(), Cut(lowlim=2000, highlim=2006)])
     WidgetPreview(OWTilefile).run(insert_preprocessor=(0, preproc))

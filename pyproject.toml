@@ -83,5 +83,9 @@ force-exclude = true
 select = ["E4", "E7", "E9", "F", "B"]
 ignore = ["E741", "B904"]
 
+[tool.ruff.lint.per-file-ignores]
+# allow unused imports
+"__init__.py" = ["F401"]
+
 [tool.ruff.format]
 quote-style = "preserve"
