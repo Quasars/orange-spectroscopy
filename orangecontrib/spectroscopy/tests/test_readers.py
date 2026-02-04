@@ -9,7 +9,11 @@ from Orange.data.io import FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
-from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannel
+from orangecontrib.spectroscopy.io.neaspec import (
+    NeaReader,
+    NeaReaderGSF,
+    NeaReaderMultiChannel,
+)
 from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
@@ -43,7 +47,6 @@ def check_attributes(table):
 
 
 class TestReaders(unittest.TestCase):
-
     def test_autointerpolate(self):
         d2 = Orange.data.Table("collagen.csv")
         d2x = getx(d2)
@@ -53,7 +56,6 @@ class TestReaders(unittest.TestCase):
 
 
 class TestDat(unittest.TestCase):
-
     @unittest.skipIf(opusFC is None, "opusFC module not installed")
     def test_peach_juice(self):
         d1 = Orange.data.Table("peach_juice.dpt")
@@ -79,43 +81,47 @@ class TestDat(unittest.TestCase):
     def test_semicolon_comments(self):
         with named_file("15 500;comment1\n30 650; comment2\n", suffix=".dpt") as fn:
             d = Orange.data.Table(fn)
-            np.testing.assert_equal(d.X, [[500., 650.]])
+            np.testing.assert_equal(d.X, [[500.0, 650.0]])
 
     def test_semicolon_delimiter(self):
         with named_file("15;500\n30;650\n", suffix=".dpt") as fn:
             d = Orange.data.Table(fn)
-            np.testing.assert_equal(d.X, [[500., 650.]])
+            np.testing.assert_equal(d.X, [[500.0, 650.0]])
 
     def test_comma_delim(self):
         with named_file("15,500\n30,650\n", suffix=".dpt") as fn:
             d = Orange.data.Table(fn)
-            np.testing.assert_equal(d.X, [[500., 650.]])
+            np.testing.assert_equal(d.X, [[500.0, 650.0]])
 
     def test_unlabeled_comment_row(self):
-        with named_file("Wavenumber,Intensity\n650.4205,39.928503\n651.3523,40.086846", suffix=".dpt") as fn:
+        with named_file(
+            "Wavenumber,Intensity\n650.4205,39.928503\n651.3523,40.086846",
+            suffix=".dpt",
+        ) as fn:
             d = Orange.data.Table(fn)
             np.testing.assert_equal(d.X, [[39.928503, 40.086846]])
 
 
 try:
-    no_visible_image = FileFormat.locate("opus/no_visible_images.0",
-                                         Orange.data.table.dataset_dirs)
+    no_visible_image = FileFormat.locate(
+        "opus/no_visible_images.0", Orange.data.table.dataset_dirs
+    )
 except OSError:
     no_visible_image = False
 
 try:
-    one_visible_image = FileFormat.locate("opus/one_visible_image.0",
-                                          Orange.data.table.dataset_dirs)
+    one_visible_image = FileFormat.locate(
+        "opus/one_visible_image.0", Orange.data.table.dataset_dirs
+    )
 except OSError:
     one_visible_image = False
 
 
 @unittest.skipIf(opusFC is None, "opusFC module not installed")
 class TestOpusReader(unittest.TestCase):
-
     def test_read(self):
         juice = Orange.data.Table("peach_juice.0")
-        self.assertAlmostEqual(juice.X[0,3], 0.90655535)
+        self.assertAlmostEqual(juice.X[0, 3], 0.90655535)
         self.assertEqual(juice.domain.attributes[3].name, "3994.330014648437")
 
     @unittest.skipIf(no_visible_image is False, "Missing opus/no_visible_images.0")
@@ -135,10 +141,8 @@ class TestOpusReader(unittest.TestCase):
         img_info = d.attributes["visible_images"][0]
         self.assertIsInstance(img_info, ConstantBytesVisibleImage)
         self.assertEqual(img_info.name, "Image 01")
-        self.assertAlmostEqual(img_info.pos_x,
-                               43552.0 * 0.9008849859237671)
-        self.assertAlmostEqual(img_info.pos_y,
-                               20727.0 * 0.8928490281105042)
+        self.assertAlmostEqual(img_info.pos_x, 43552.0 * 0.9008849859237671)
+        self.assertAlmostEqual(img_info.pos_y, 20727.0 * 0.8928490281105042)
         self.assertAlmostEqual(img_info.size_x, 600, places=0)
         self.assertAlmostEqual(img_info.size_y, 480, places=0)
 
@@ -148,10 +152,8 @@ class TestOpusReader(unittest.TestCase):
 
 
 class TestHermesHDF5Reader(unittest.TestCase):
-
     def test_read(self):
-        reader = initialize_reader(HDF5Reader_HERMES,
-                                   "Hermes_HDF5/small_OK.hdf5")
+        reader = initialize_reader(HDF5Reader_HERMES, "Hermes_HDF5/small_OK.hdf5")
         d = reader.read()
         self.assertEqual(d[0, 0], 1000.1)
         self.assertEqual(d[1, 0], 2000.1)
@@ -162,7 +164,6 @@ class TestHermesHDF5Reader(unittest.TestCase):
 
 
 class TestNXS_STXM_Diamond_I08(unittest.TestCase):
-
     def test_read(self):
         d = Orange.data.Table("small_diamond_nxs.nxs")
         self.assertAlmostEqual(d[0]['map_x'], -1.77900021)
@@ -171,7 +172,6 @@ class TestNXS_STXM_Diamond_I08(unittest.TestCase):
 
 
 class TestOmnicMapReader(unittest.TestCase):
-
     def test_read(self):
         d = Orange.data.Table("small_Omnic.map")
         self.assertAlmostEqual(d[1, 0], 4.01309, places=5)
@@ -183,7 +183,6 @@ class TestOmnicMapReader(unittest.TestCase):
 
 
 class TestAsciiMapReader(unittest.TestCase):
-
     def test_read(self):
         d = Orange.data.Table("map_test.xyz")
         self.assertEqual(len(d), 16)
@@ -212,7 +211,6 @@ class TestAsciiMapReader(unittest.TestCase):
 
 
 class TestRenishawReader(unittest.TestCase):
-
     def test_single_sp_reader(self):
         d = Orange.data.Table("renishaw_test_files/sp.wdf")
         self.assertEqual(d.X[0][4], 52.4945182800293)
@@ -236,7 +234,6 @@ class TestRenishawReader(unittest.TestCase):
 
 
 class TestPerkinElmerReader(unittest.TestCase):
-
     def test_single_sp_reader(self):
         d = Orange.data.Table("perkinelmer/single_PE_spectrum.sp")
         self.assertEqual(d.X[0][4], 100.65028381347656)
@@ -256,15 +253,12 @@ class TestPerkinElmerReader(unittest.TestCase):
 
 
 class TestAgilentReader(unittest.TestCase):
-
     def test_image_read(self):
         d = Orange.data.Table("agilent/4_noimage_agg256.dat")
         self.assertEqual(len(d), 64)
         # Pixel sizes are 5.5 * 16 = 88.0 (binning to reduce test data)
-        self.assertAlmostEqual(
-            d[1]["map_x"] - d[0]["map_x"], 88.0)
-        self.assertAlmostEqual(
-            d[8]["map_y"] - d[7]["map_y"], 88.0)
+        self.assertAlmostEqual(d[1]["map_x"] - d[0]["map_x"], 88.0)
+        self.assertAlmostEqual(d[8]["map_y"] - d[7]["map_y"], 88.0)
         # Last pixel should start at (8 - 1) * 88.0 = 616.0
         self.assertAlmostEqual(d[-1]["map_x"], 616.0)
         self.assertAlmostEqual(d[-1]["map_y"], 616.0)
@@ -277,10 +271,8 @@ class TestAgilentReader(unittest.TestCase):
         d = Orange.data.Table("agilent/5_mosaic_agg1024.dmt")
         self.assertEqual(len(d), 32)
         # Pixel sizes are 5.5 * 32 = 176.0 (binning to reduce test data)
-        self.assertAlmostEqual(
-            d[1]["map_x"] - d[0]["map_x"], 176.0)
-        self.assertAlmostEqual(
-            d[4]["map_y"] - d[3]["map_y"], 176.0)
+        self.assertAlmostEqual(d[1]["map_x"] - d[0]["map_x"], 176.0)
+        self.assertAlmostEqual(d[4]["map_y"] - d[3]["map_y"], 176.0)
         # Last pixel should start at (4 - 1) * 176.0 = 528.0
         self.assertAlmostEqual(d[-1]["map_x"], 528.0)
         # 1 x 2 mosiac, (8 - 1) * 176.0 = 1232.0
@@ -297,11 +289,15 @@ class TestAgilentReader(unittest.TestCase):
         # visible_images is not a permanent key
         self.assertNotIn("visible_images", d.attributes)
 
-    @unittest.skipIf(not hasattr(resources, "files"),
-                     "importlib.resources.files requires python>=3.9")
+    @unittest.skipIf(
+        not hasattr(resources, "files"),
+        "importlib.resources.files requires python>=3.9",
+    )
     def test_visible_image_read(self):
         # Test file in agilent_format has 2 visible images
-        vis_mosaic = resources.files("agilent_format") / "datasets" / "5_mosaic_agg1024.dmt"
+        vis_mosaic = (
+            resources.files("agilent_format") / "datasets" / "5_mosaic_agg1024.dmt"
+        )
         d = Orange.data.Table.from_file(vis_mosaic)
 
         self.assertIn("visible_images", d.attributes)
@@ -310,10 +306,8 @@ class TestAgilentReader(unittest.TestCase):
         img_info = d.attributes["visible_images"][0]
         self.assertIsInstance(img_info, ConstantBytesVisibleImage)
         self.assertEqual(img_info.name, "IR Cutout")
-        self.assertAlmostEqual(img_info.pos_x,
-                               0)
-        self.assertAlmostEqual(img_info.pos_y,
-                               0)
+        self.assertAlmostEqual(img_info.pos_x, 0)
+        self.assertAlmostEqual(img_info.pos_y, 0)
         self.assertAlmostEqual(img_info.size_x, 701, places=0)
         self.assertAlmostEqual(img_info.size_y, 1444, places=0)
 
@@ -339,30 +333,27 @@ class TestAgilentReader(unittest.TestCase):
         self.assertEqual(len(d), 64)
         self.assertEqual(len(d.domain.attributes), 311)
         # Pixel sizes are 5.5 * 16 = 88.0 (binning to reduce test data)
-        self.assertAlmostEqual(
-            d[1]["map_x"] - d[0]["map_x"], 88.0)
-        self.assertAlmostEqual(
-            d[8]["map_y"] - d[7]["map_y"], 88.0)
+        self.assertAlmostEqual(d[1]["map_x"] - d[0]["map_x"], 88.0)
+        self.assertAlmostEqual(d[8]["map_y"] - d[7]["map_y"], 88.0)
         self.assertAlmostEqual(d[-1]["map_x"], 616.0)
         self.assertAlmostEqual(d[-1]["map_y"], 616.0)
         self.assertAlmostEqual(d[9][0], 0.64558595)
         self.assertAlmostEqual(d[18][0], 0.5792696)
         # Metadata
-        self.assertEqual(d.metas[0, 2], 1.57980039e+04)
+        self.assertEqual(d.metas[0, 2], 1.57980039e04)
         self.assertEqual(d.metas[0, 3], 4)
 
     def test_mosaic_ifg_read(self):
         # This reader will only be selected manually due to shared .dmt extension
-        reader = initialize_reader(agilentMosaicIFGReader,
-                                   "agilent/5_mosaic_agg1024.dmt")
+        reader = initialize_reader(
+            agilentMosaicIFGReader, "agilent/5_mosaic_agg1024.dmt"
+        )
         d = reader.read()
         self.assertEqual(len(d), 32)
         self.assertEqual(len(d.domain.attributes), 311)
         # Pixel sizes are 5.5 * 32 = 176.0 (binning to reduce test data)
-        self.assertAlmostEqual(
-            d[1]["map_x"] - d[0]["map_x"], 176.0)
-        self.assertAlmostEqual(
-            d[4]["map_y"] - d[3]["map_y"], 176.0)
+        self.assertAlmostEqual(d[1]["map_x"] - d[0]["map_x"], 176.0)
+        self.assertAlmostEqual(d[4]["map_y"] - d[3]["map_y"], 176.0)
         # Last pixel should start at (4 - 1) * 176.0 = 528.0
         self.assertAlmostEqual(d[-1]["map_x"], 528.0)
         # 1 x 2 mosiac, (8 - 1) * 176.0 = 1232.0
@@ -370,15 +361,15 @@ class TestAgilentReader(unittest.TestCase):
         self.assertAlmostEqual(d[21][0], 0.7116039)
         self.assertAlmostEqual(d[26][0], 0.48532167)
         # Metadata
-        self.assertEqual(d.metas[0, 2], 1.57980039e+04)
+        self.assertEqual(d.metas[0, 2], 1.57980039e04)
         self.assertEqual(d.metas[0, 3], 4)
 
 
 class TestPTIRFileReader(unittest.TestCase):
-
     def test_get_channels(self):
-        reader = initialize_reader(PTIRFileReader,
-                                   "photothermal/Nodax_Spectral_Array.ptir")
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/Nodax_Spectral_Array.ptir"
+        )
         channel_map = reader.get_channels()
         signal = b'//ZI/*/DEMODS/0/R'
         label = b'OPTIR (mV)'
@@ -386,8 +377,9 @@ class TestPTIRFileReader(unittest.TestCase):
         self.assertEqual(channel_map[signal], label)
 
     def test_array_read(self):
-        reader = initialize_reader(PTIRFileReader,
-                                   "photothermal/Nodax_Spectral_Array.ptir")
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/Nodax_Spectral_Array.ptir"
+        )
         reader.data_signal = b'//ZI/*/DEMODS/0/R'
         d = reader.read()
         self.assertAlmostEqual(d[0][0], 0.21426094)
@@ -398,8 +390,7 @@ class TestPTIRFileReader(unittest.TestCase):
         self.assertAlmostEqual(d[0]["map_y"], -500.1499938964844)
 
     def test_hyperspectral_read(self):
-        reader = initialize_reader(PTIRFileReader,
-                                   "photothermal/Hyper_Sample.ptir")
+        reader = initialize_reader(PTIRFileReader, "photothermal/Hyper_Sample.ptir")
         reader.data_signal = b'//ZI/*/DEMODS/0/R'
         d = reader.read()
         self.assertEqual(len(d), 35)
@@ -412,8 +403,7 @@ class TestPTIRFileReader(unittest.TestCase):
         self.assertAlmostEqual(d[0]["map_y"], -886.1981201171875)
 
     def test_image_read(self):
-        reader = initialize_reader(PTIRFileReader,
-                                   "photothermal/Spectra_w_Image.ptir")
+        reader = initialize_reader(PTIRFileReader, "photothermal/Spectra_w_Image.ptir")
         reader.data_signal = b'//ZI/*/DEMODS/0/R'
         d = reader.read()
         self.assertAlmostEqual(d[0][0], -74.8579711914063)
@@ -427,7 +417,6 @@ class TestPTIRFileReader(unittest.TestCase):
 
 
 class TestGSF(unittest.TestCase):
-
     def test_open_line(self):
         data = Orange.data.Table("Au168mA_nodisplacement.gsf")
         self.assertEqual(data.X.shape, (20480, 1))
@@ -436,21 +425,17 @@ class TestGSF(unittest.TestCase):
         data = Orange.data.Table("whitelight.gsf")
         self.assertEqual(data.X.shape, (20000, 1))
         # check some pixel vaules
-        self.assertAlmostEqual(data.X[235,0], 1.2788502, 7)
-        np.testing.assert_almost_equal(data.metas[235],
-                                       [53.2443, 30.6984], decimal=3)
+        self.assertAlmostEqual(data.X[235, 0], 1.2788502, 7)
+        np.testing.assert_almost_equal(data.metas[235], [53.2443, 30.6984], decimal=3)
 
-        self.assertAlmostEqual(data.X[1235,0], 1.2770579, 7)
-        np.testing.assert_almost_equal(data.metas[1235],
-                                       [53.2443, 30.6484], decimal=3)
+        self.assertAlmostEqual(data.X[1235, 0], 1.2770579, 7)
+        np.testing.assert_almost_equal(data.metas[1235], [53.2443, 30.6484], decimal=3)
 
-        self.assertAlmostEqual(data.X[11235,0], 1.2476133, 7)
-        np.testing.assert_almost_equal(data.metas[11235],
-                                       [53.2443, 30.1484], decimal=3)
+        self.assertAlmostEqual(data.X[11235, 0], 1.2476133, 7)
+        np.testing.assert_almost_equal(data.metas[11235], [53.2443, 30.1484], decimal=3)
 
 
 class TestNea(unittest.TestCase):
-
     def test_open_v1(self):
         data = Orange.data.Table("spectra20_small.nea")
         self.assertEqual(len(data), 260)
@@ -471,7 +456,7 @@ class TestNea(unittest.TestCase):
         data = reader.read()
         self.assertEqual(len(data), 12)
         self.assertEqual("channel", data.domain.metas[2].name)
-        np.testing.assert_almost_equal(getx(data), [15., 89.])
+        np.testing.assert_almost_equal(getx(data), [15.0, 89.0])
         self.assertEqual("O0A", data.metas[0][2])
         np.testing.assert_almost_equal(data.X[0, 0], 92.0)
         self.assertEqual("O0A", data.metas[6][2])
@@ -496,15 +481,17 @@ class TestNea(unittest.TestCase):
         data = NeaReader(absolute_filename).read()
         self.assertEqual(len(data), 30)
         self.assertEqual("channel", data.domain.metas[3].name)
-        self.assertEqual("O0A", data.metas[2][3]) # New reader has more channels
+        self.assertEqual("O0A", data.metas[2][3])  # New reader has more channels
         self.assertEqual("O0P", data.metas[3][3])
         self.assertEqual(data.attributes['Channel Data Type'][0], 'Polar')
-        self.assertEqual(data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]')
+        self.assertEqual(
+            data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]'
+        )
         self.assertEqual(data.attributes['Scan'], 'Fourier Scan')
         check_attributes(data)
 
-class TestNeaGSF(unittest.TestCase):
 
+class TestNeaGSF(unittest.TestCase):
     def test_read(self):
         fn = 'NeaReaderGSF_test/NeaReaderGSF_test O2P raw.gsf'
         absolute_filename = FileFormat.locate(fn, dataset_dirs)
@@ -519,11 +506,13 @@ class TestNeaGSF(unittest.TestCase):
         self.assertEqual(n_ifg, 1024)
         self.assertEqual(n_ifg, len(data.domain.attributes))
         self.assertEqual(data.attributes['Channel Data Type'][0], 'Polar')
-        self.assertEqual(data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]')
+        self.assertEqual(
+            data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]'
+        )
         check_attributes(data)
 
-class TestNeaImageGSF(unittest.TestCase):
 
+class TestNeaImageGSF(unittest.TestCase):
     def test_type_detect(self):
         # For Phase
         fn = 'NeaReaderGSF_test O2P raw.gsf'
@@ -558,20 +547,18 @@ class TestNeaImageGSF(unittest.TestCase):
         fn = "whitelight.gsf"
         absolute_filename = FileFormat.locate(fn, dataset_dirs)
         data = NeaReader(absolute_filename).read()
-        self.assertEqual(data.attributes["measurement.signaltype"],'Topography')
+        self.assertEqual(data.attributes["measurement.signaltype"], 'Topography')
         self.assertEqual(data.X.shape, (20000, 1))
         # check some pixel vaules
-        self.assertAlmostEqual(data.X[235,0], 1.2788502, 7)
-        np.testing.assert_almost_equal(data.metas[235],
-                                       [53.2443, 29.7284], decimal=3)
+        self.assertAlmostEqual(data.X[235, 0], 1.2788502, 7)
+        np.testing.assert_almost_equal(data.metas[235], [53.2443, 29.7284], decimal=3)
 
-        self.assertAlmostEqual(data.X[1235,0], 1.2770579, 7)
-        np.testing.assert_almost_equal(data.metas[1235],
-                                       [53.2443, 29.77848], decimal=3)
+        self.assertAlmostEqual(data.X[1235, 0], 1.2770579, 7)
+        np.testing.assert_almost_equal(data.metas[1235], [53.2443, 29.77848], decimal=3)
 
-        self.assertAlmostEqual(data.X[11235,0], 1.2476133, 7)
-        np.testing.assert_almost_equal(data.metas[11235],
-                                       [53.2443, 30.2784], decimal=3)
+        self.assertAlmostEqual(data.X[11235, 0], 1.2476133, 7)
+        np.testing.assert_almost_equal(data.metas[11235], [53.2443, 30.2784], decimal=3)
+
 
 class TestNeaMultiChannel(unittest.TestCase):
     def test_read(self):
@@ -583,12 +570,14 @@ class TestNeaMultiChannel(unittest.TestCase):
         self.assertEqual("O0A", data.metas[0][3])
         self.assertEqual("O0P", data.metas[1][3])
         self.assertEqual(data.attributes['Channel Data Type'][0], 'Polar')
-        self.assertEqual(data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]')
+        self.assertEqual(
+            data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]'
+        )
         self.assertEqual(data.attributes['Scan'], 'Fourier Scan')
         check_attributes(data)
 
-class TestEnvi(unittest.TestCase):
 
+class TestEnvi(unittest.TestCase):
     def test_read(self):
         data = Orange.data.Table("agilent/4_noimage_agg256.hdr")
         self.assertEqual(len(data), 64)
@@ -601,7 +590,6 @@ class TestEnvi(unittest.TestCase):
 
 
 class TestSpa(unittest.TestCase):
-
     def test_open(self):
         _ = Orange.data.Table("sample1.spa")
 
@@ -613,7 +601,6 @@ class TestSpa(unittest.TestCase):
 
 
 class TestSpc(unittest.TestCase):
-
     def test_multiple_x(self):
         data = Orange.data.Table("m_xyxy.spc")
         self.assertEqual(len(data), 512)
@@ -622,7 +609,6 @@ class TestSpc(unittest.TestCase):
 
 
 class TestMatlab(unittest.TestCase):
-
     def test_simple(self):
         """
         octave --eval "A = [ 5:7; 4:6 ]; save -6 simple.mat A"
@@ -704,7 +690,6 @@ class TestMatlab(unittest.TestCase):
 
 
 class TestDataUtil(unittest.TestCase):
-
     def test_build_spec_table_not_copy(self):
         """build_spec_table should not copy tables if not neccessary"""
         xs = np.arange(3)
@@ -719,7 +704,6 @@ class TestDataUtil(unittest.TestCase):
 
 
 class TestSelectColumn(unittest.TestCase):
-
     def test_select_column(self):
         # explicit reader selection because of shared extension
         reader = initialize_reader(SelectColumnReader, "rock.txt")
@@ -729,18 +713,17 @@ class TestSelectColumn(unittest.TestCase):
 
         reader.sheet = "3"
         d = reader.read()
-        np.testing.assert_equal(d.X,
-                                [[0.91213142, 0.89539732, 0.87925428, 0.86225812]])
+        np.testing.assert_equal(d.X, [[0.91213142, 0.89539732, 0.87925428, 0.86225812]])
         np.testing.assert_equal(getx(d), [6870, 6880, 6890, 6900])
 
 
 class TestStxmHdrXim(unittest.TestCase):
-
     def test_read(self):
         data = Orange.data.Table("max_iv.hdr")
         self.assertEqual(len(data), 100)
         self.assertAlmostEqual(float(data.domain.attributes[0].name), 698)
         self.assertAlmostEqual(float(data.domain.attributes[-1].name), 700)
+
 
 if __name__ == "__main__":
     unittest.main()

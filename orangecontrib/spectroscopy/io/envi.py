@@ -16,7 +16,7 @@ class EnviMapReader(FileFormat, SpectralFileFormat):
             lv = a.metadata["wavelength"]
             features = np.array(list(map(float, lv)))
         except KeyError:
-            #just start counting from 0 when nothing is known
+            # just start counting from 0 when nothing is known
             features = np.arange(X.shape[-1])
 
         x_locs = np.arange(X.shape[1])

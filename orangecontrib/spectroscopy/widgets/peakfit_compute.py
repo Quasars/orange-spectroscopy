@@ -29,7 +29,8 @@ def best_fit_results(model_result, x, shape):
     for comp in out.model.components:
         # Peak area
         output[col] = scipy.integrate.trapezoid(
-            np.broadcast_to(comps[comp.prefix], x.shape), sorted_x)
+            np.broadcast_to(comps[comp.prefix], x.shape), sorted_x
+        )
         col += 1
         for param in [n for n in out.var_names if n.startswith(comp.prefix)]:
             output[col] = best_values[param]
@@ -59,10 +60,7 @@ def pool_fit(v):
     bpar = best_fit_results(model_result, x, shape)
     fitted = np.broadcast_to(model_result.eval(x=x), x.shape)
 
-    return model_result.dumps(), \
-           bpar, \
-           fitted, \
-           model_result.residual
+    return model_result.dumps(), bpar, fitted, model_result.residual
 
 
 def pool_fit2(v, model, parameters, x):

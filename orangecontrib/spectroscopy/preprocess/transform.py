@@ -5,14 +5,19 @@ import Orange.data
 from Orange.preprocess.preprocess import Preprocess
 
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.preprocess.utils import SelectColumn, CommonDomainRef,\
-    WrongReferenceException, replace_infs
+from orangecontrib.spectroscopy.preprocess.utils import (
+    SelectColumn,
+    CommonDomainRef,
+    WrongReferenceException,
+    replace_infs,
+)
 
 
 class SpecTypes(Enum):
     """
     Spectral types possibly supported by spectral transforms
     """
+
     ABSORBANCE = "Absorbance"
     TRANSMITTANCE = "Transmittance"
     SINGLECHANNEL = "Single Channel"
@@ -23,7 +28,6 @@ class AbsorbanceFeature(SelectColumn):
 
 
 class _AbsorbanceCommon(CommonDomainRef):
-
     def transformed(self, data):
         if self.reference is not None:
             # Calculate from single-channel data
@@ -50,7 +54,6 @@ class _AbsorbanceCommon(CommonDomainRef):
 
 
 class TransformOptionalReference(Preprocess):
-
     def __init__(self, reference=None):
         if reference is not None and len(reference) != 1:
             raise WrongReferenceException("Reference data should have length 1")
@@ -58,11 +61,13 @@ class TransformOptionalReference(Preprocess):
 
     def __call__(self, data):
         common = self._cl_common(self.reference, data.domain)
-        newattrs = [Orange.data.ContinuousVariable(
-            name=var.name, compute_value=self._cl_feature(i, common))
-            for i, var in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(
-            newattrs, data.domain.class_vars, data.domain.metas)
+        newattrs = [
+            Orange.data.ContinuousVariable(
+                name=var.name, compute_value=self._cl_feature(i, common)
+            )
+            for i, var in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -88,7 +93,6 @@ class TransmittanceFeature(SelectColumn):
 
 
 class _TransmittanceCommon(CommonDomainRef):
-
     def transformed(self, data):
         if self.reference is not None:
             # Calculate from single-channel data

@@ -5,10 +5,12 @@ from orangecontrib.spectroscopy.tests.test_preprocess import SMALL_COLLAGEN
 from orangecontrib.spectroscopy.widgets.owpreprocess import OWPreprocess
 from orangecontrib.spectroscopy.widgets.preprocessors.normalize import NormalizeEditor
 
-NORMALIZE_REFERENCE_INDEX = NormalizeEditor.Normalizers.index(("Normalize by Reference", 42))
+NORMALIZE_REFERENCE_INDEX = NormalizeEditor.Normalizers.index(
+    ("Normalize by Reference", 42)
+)
+
 
 class TestNormalizeEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(NormalizeEditor, self.widget)

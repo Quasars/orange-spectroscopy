@@ -22,8 +22,10 @@ def add_meta_to_table(data, var, values):
         newtable[:, var] = np.atleast_1d(values).reshape(-1, 1)
     return newtable
 
+
 DEFAULT_HENE = 15797.337544
 CHUNK_SIZE = 100
+
 
 class OWFFT(OWWidget):
     # Widget's name as displayed in the canvas
@@ -32,7 +34,8 @@ class OWFFT(OWWidget):
     # Short widget description
     description = (
         "Performs Fast Fourier Transform on an interferogram, including "
-        "zero filling, apodization and phase correction.")
+        "zero filling, apodization and phase correction."
+    )
 
     # An icon resource file path for this widget
     # (a path relative to the module where this widget is defined)
@@ -61,7 +64,9 @@ class OWFFT(OWWidget):
     zpd1 = settings.Setting(0)
     zpd2 = settings.Setting(0)
     apod_func = settings.Setting(1)
-    zff = settings.Setting(1)  # an exponent for zero-filling factor, IRFFT() needs 2**zff
+    zff = settings.Setting(
+        1
+    )  # an exponent for zero-filling factor, IRFFT() needs 2**zff
     phase_corr = settings.Setting(0)
     phase_res_limit = settings.Setting(True)
     phase_resolution = settings.Setting(32)
@@ -71,22 +76,26 @@ class OWFFT(OWWidget):
     autocommit = settings.Setting(False)
     complexfft = settings.Setting(False)
 
-    sweep_opts = ("Single",
-                  "Forward-Backward",
-                  "Forward",
-                  "Backward",
-                 )
+    sweep_opts = (
+        "Single",
+        "Forward-Backward",
+        "Forward",
+        "Backward",
+    )
 
-    apod_opts = ("Boxcar (None)",               # <irfft.ApodFunc.BOXCAR: 0>
-                 "Blackman-Harris (3-term)",    # <irfft.ApodFunc.BLACKMAN_HARRIS_3: 1>
-                 "Blackman-Harris (4-term)",    # <irfft.ApodFunc.BLACKMAN_HARRIS_4: 2>
-                 "Blackman Nuttall (EP)")       # <irfft.ApodFunc.BLACKMAN_NUTTALL: 3>
+    apod_opts = (
+        "Boxcar (None)",  # <irfft.ApodFunc.BOXCAR: 0>
+        "Blackman-Harris (3-term)",  # <irfft.ApodFunc.BLACKMAN_HARRIS_3: 1>
+        "Blackman-Harris (4-term)",  # <irfft.ApodFunc.BLACKMAN_HARRIS_4: 2>
+        "Blackman Nuttall (EP)",
+    )  # <irfft.ApodFunc.BLACKMAN_NUTTALL: 3>
 
-    phase_opts = ("Mertz",              # <irfft.PhaseCorrection.MERTZ: 0>
-                  "Mertz Signed",       # <irfft.PhaseCorrection.MERTZSIGNED: 1>
-                  "Stored Phase",       # <irfft.PhaseCorrection.STORED: 2>
-                  "None (real/imag)",   # <irfft.PhaseCorrection.NONE: 3>
-                 )
+    phase_opts = (
+        "Mertz",  # <irfft.PhaseCorrection.MERTZ: 0>
+        "Mertz Signed",  # <irfft.PhaseCorrection.MERTZSIGNED: 1>
+        "Stored Phase",  # <irfft.PhaseCorrection.STORED: 2>
+        "None (real/imag)",  # <irfft.PhaseCorrection.NONE: 3>
+    )
 
     # GUI definition:
     #   a simple 'single column' GUI layout
@@ -97,7 +106,9 @@ class OWFFT(OWWidget):
     class Warning(OWWidget.Warning):
         # This is not actuully called anywhere at the moment
         phase_res_limit_low = Msg("Phase resolution limit too low")
-        complex_data_phase_zero = Msg("Phase data is not connected, thus it is considered zero.")
+        complex_data_phase_zero = Msg(
+            "Phase data is not connected, thus it is considered zero."
+        )
 
     class Error(OWWidget.Error):
         fft_error = Msg("FFT error:\n{}")
@@ -134,12 +145,16 @@ class OWFFT(OWWidget):
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         self.dx_auto_cb = gui.checkBox(
-            self.dataBox, self, "dx_auto",
+            self.dataBox,
+            self,
+            "dx_auto",
             label="Auto",
             callback=self.dx_auto_changed,
-            )
+        )
         self.dx_edit = gui.lineEdit(
-            self.dataBox, self, "dx",
+            self.dataBox,
+            self,
+            "dx",
             callback=self.setting_changed,
             valueType=float,
             disabled=self.dx_auto,
@@ -152,45 +167,57 @@ class OWFFT(OWWidget):
 
         wl = gui.widgetLabel(self.dataBox, "Sweep Direction:")
         box = gui.comboBox(
-            self.dataBox, self, "sweeps",
+            self.dataBox,
+            self,
+            "sweeps",
             label=None,
             items=self.sweep_opts,
             callback=self.sweeps_changed,
-            disabled=self.auto_sweeps
-            )
+            disabled=self.auto_sweeps,
+        )
         cb2 = gui.checkBox(
-            self.dataBox, self, "auto_sweeps",
+            self.dataBox,
+            self,
+            "auto_sweeps",
             label="Auto",
             callback=self.sweeps_changed,
-            )
+        )
         grid.addWidget(wl, 1, 0, 1, 3)
         grid.addWidget(cb2, 2, 0)
         grid.addWidget(box, 2, 1, 1, 2)
 
         wl = gui.widgetLabel(self.dataBox, "ZPD Peak Search:")
         box = gui.comboBox(
-            self.dataBox, self, "peak_search",
+            self.dataBox,
+            self,
+            "peak_search",
             label=None,
             items=[name.title() for name, _ in irfft.PeakSearch.__members__.items()],
             callback=self.peak_search_changed,
             enabled=self.peak_search_enable,
-            )
+        )
         le1 = gui.lineEdit(
-            self.dataBox, self, "zpd1",
+            self.dataBox,
+            self,
+            "zpd1",
             callback=self.peak_search_changed,
             valueType=int,
             controlWidth=50,
             disabled=self.peak_search_enable,
-            )
+        )
         le2 = gui.lineEdit(
-            self.dataBox, self, "zpd2",
+            self.dataBox,
+            self,
+            "zpd2",
             callback=self.peak_search_changed,
             valueType=int,
             controlWidth=50,
             disabled=self.peak_search_enable,
-            )
+        )
         cb = gui.checkBox(
-            self.dataBox, self, "peak_search_enable",
+            self.dataBox,
+            self,
+            "peak_search_enable",
             label=None,
             callback=self.peak_search_changed,
         )
@@ -208,46 +235,59 @@ class OWFFT(OWWidget):
         layout.addWidget(self.optionsBox, 0, 1, 3, 1)
 
         self.complexfft_cb = gui.checkBox(
-            self.optionsBox, self, "complexfft",
+            self.optionsBox,
+            self,
+            "complexfft",
             label="Complex FFT",
-            callback=self.complex_fft_changed
-            )
+            callback=self.complex_fft_changed,
+        )
 
         box = gui.comboBox(
-            self.optionsBox, self, "apod_func",
+            self.optionsBox,
+            self,
+            "apod_func",
             label="Apodization function:",
             items=self.apod_opts,
-            callback=self.setting_changed
-            )
+            callback=self.setting_changed,
+        )
 
         box = gui.comboBox(
-            self.optionsBox, self, "zff",
+            self.optionsBox,
+            self,
+            "zff",
             label="Zero Filling Factor:",
             items=(2**n for n in range(10)),
-            callback=self.setting_changed
-            )
+            callback=self.setting_changed,
+        )
 
         box = gui.comboBox(
-            self.optionsBox, self, "phase_corr",
+            self.optionsBox,
+            self,
+            "phase_corr",
             label="Phase Correction:",
             items=self.phase_opts,
-            callback=self.setting_changed
-            )
+            callback=self.setting_changed,
+        )
 
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
 
         le1 = gui.lineEdit(
-            self.optionsBox, self, "phase_resolution",
+            self.optionsBox,
+            self,
+            "phase_resolution",
             callback=self.setting_changed,
-            valueType=int, controlWidth=30
-            )
+            valueType=int,
+            controlWidth=30,
+        )
         cb1 = gui.checkBox(
-            self.optionsBox, self, "phase_res_limit",
+            self.optionsBox,
+            self,
+            "phase_res_limit",
             label="Limit phase resolution to ",
             callback=self.setting_changed,
-            disables=le1
-            )
+            disables=le1,
+        )
         lb1 = gui.widgetLabel(self.optionsBox, "cm<sup>-1<sup>")
 
         grid.addWidget(cb1, 0, 0)
@@ -263,21 +303,29 @@ class OWFFT(OWWidget):
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         le2 = gui.lineEdit(
-            self.outputBox, self, "out_limit1",
+            self.outputBox,
+            self,
+            "out_limit1",
             callback=self.out_limit_changed,
-            valueType=float, controlWidth=50
-            )
+            valueType=float,
+            controlWidth=50,
+        )
         le3 = gui.lineEdit(
-            self.outputBox, self, "out_limit2",
+            self.outputBox,
+            self,
+            "out_limit2",
             callback=self.out_limit_changed,
-            valueType=float, controlWidth=50
-            )
+            valueType=float,
+            controlWidth=50,
+        )
         cb2 = gui.checkBox(
-            self.outputBox, self, "limit_output",
+            self.outputBox,
+            self,
+            "limit_output",
             label="Limit spectral region:",
             callback=self.setting_changed,
-            disables=[le2, le3]
-            )
+            disables=[le2, le3],
+        )
         lb2 = gui.widgetLabel(self.outputBox, "-")
         lb3 = gui.widgetLabel(self.outputBox, "cm<sup>-1</sup>")
         grid.addWidget(cb2, 0, 0, 1, 6)
@@ -300,9 +348,13 @@ class OWFFT(OWWidget):
         if dataset and dataset.X.size:
             self.data = dataset
             self.determine_sweeps()
-            self.info_type.setText('%d %s interferogram(s)' %
-                                   (dataset.X.shape[0],
-                                (["Single"] + 3*["Forward-Backward"])[self.sweeps]))
+            self.info_type.setText(
+                '%d %s interferogram(s)'
+                % (
+                    dataset.X.shape[0],
+                    (["Single"] + 3 * ["Forward-Backward"])[self.sweeps],
+                )
+            )
             self.info_pts.setText('%d points each' % dataset.X.shape[1])
             self.check_metadata()
         else:
@@ -392,13 +444,14 @@ class OWFFT(OWWidget):
         self.Error.clear()
         self.Warning.clear()
 
-        fft_single = irfft.IRFFT(dx=self.dx,
-                                 apod_func=self.apod_func,
-                                 zff=2**self.zff,
-                                 phase_res=self.phase_resolution if self.phase_res_limit else None,
-                                 phase_corr=self.phase_corr,
-                                 peak_search=self.peak_search,
-                                )
+        fft_single = irfft.IRFFT(
+            dx=self.dx,
+            apod_func=self.apod_func,
+            zff=2**self.zff,
+            phase_res=self.phase_resolution if self.phase_res_limit else None,
+            phase_corr=self.phase_corr,
+            peak_search=self.peak_search,
+        )
 
         ifg_data = self.data.X
         stored_phase = self.stored_phase
@@ -414,7 +467,7 @@ class OWFFT(OWWidget):
                 stored_zpd_back = int(stored_phase["zpd_back"].value)
             except ValueError:
                 stored_zpd_back = None
-            stored_phase = stored_phase.x # lowercase x for RowInstance
+            stored_phase = stored_phase.x  # lowercase x for RowInstance
         # Use manual zpd value(s) if specified and enable batch processing
         elif not self.peak_search_enable:
             stored_zpd_fwd = self.zpd1
@@ -443,7 +496,8 @@ class OWFFT(OWWidget):
             if self.sweeps in [0, 2, 3]:
                 try:
                     spectrum_out, phase_out, wavenumbers = fft_single(
-                        row, zpd=stored_zpd_fwd, phase=stored_phase)
+                        row, zpd=stored_zpd_fwd, phase=stored_phase
+                    )
                     zpd_fwd.append(fft_single.zpd)
                 except ValueError as e:
                     self.Error.fft_error(e)
@@ -464,10 +518,12 @@ class OWFFT(OWWidget):
                 # Calculate spectrum for both forward and backward sweeps
                 try:
                     spectrum_fwd, phase_fwd, wavenumbers = fft_single(
-                        fwd, zpd=stored_zpd_fwd, phase=stored_phase)
+                        fwd, zpd=stored_zpd_fwd, phase=stored_phase
+                    )
                     zpd_fwd.append(fft_single.zpd)
                     spectrum_back, phase_back, wavenumbers = fft_single(
-                        back, zpd=stored_zpd_back, phase=stored_phase)
+                        back, zpd=stored_zpd_back, phase=stored_phase
+                    )
                     zpd_back.append(fft_single.zpd)
                 except ValueError as e:
                     self.Error.fft_error(e)
@@ -485,32 +541,32 @@ class OWFFT(OWWidget):
         spectra = np.vstack(spectra)
         phases = np.vstack(phases)
 
-        self.phases_table = build_spec_table(wavenumbers, phases,
-                                            additional_table=self.data)
+        self.phases_table = build_spec_table(
+            wavenumbers, phases, additional_table=self.data
+        )
         if not self.peak_search_enable:
             # All zpd values are equal by definition
             zpd_fwd = zpd_fwd[:1]
-        self.phases_table = add_meta_to_table(self.phases_table,
-                                            ContinuousVariable.make("zpd_fwd"),
-                                            zpd_fwd)
+        self.phases_table = add_meta_to_table(
+            self.phases_table, ContinuousVariable.make("zpd_fwd"), zpd_fwd
+        )
         if zpd_back:
             if not self.peak_search_enable:
                 zpd_back = zpd_back[:1]
-            self.phases_table = add_meta_to_table(self.phases_table,
-                                                ContinuousVariable.make("zpd_back"),
-                                                zpd_back)
+            self.phases_table = add_meta_to_table(
+                self.phases_table, ContinuousVariable.make("zpd_back"), zpd_back
+            )
 
         if self.limit_output is True:
             wavenumbers, spectra = self.limit_range(wavenumbers, spectra)
 
-        self.spectra_table = build_spec_table(wavenumbers, spectra,
-                                            additional_table=self.data)
+        self.spectra_table = build_spec_table(
+            wavenumbers, spectra, additional_table=self.data
+        )
         self.Outputs.spectra.send(self.spectra_table)
         self.Outputs.phases.send(self.phases_table)
 
-
     def calculate_complex_FFT(self):
-
         # Reset info, error and warning dialogs
         self.Error.clear()
         self.Warning.clear()
@@ -566,7 +622,7 @@ class OWFFT(OWWidget):
             )
         else:
             self.spectra_table = Table.from_numpy(
-            wavenumbers_domain, X=spectra, metas=self.data.metas
+                wavenumbers_domain, X=spectra, metas=self.data.metas
             )
             phases_table = Table.from_numpy(
                 wavenumbers_domain, X=phases, metas=self.data.metas
@@ -646,7 +702,9 @@ class OWFFT(OWWidget):
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
 
-            self.info_dx.setText("Using Calculated Datapoint Spacing (Δx) from metadata.")
+            self.info_dx.setText(
+                "Using Calculated Datapoint Spacing (Δx) from metadata."
+            )
             return
         except KeyError:
             pass
@@ -666,20 +724,20 @@ class OWFFT(OWWidget):
             lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
             self.info_dx.setText("")
 
-        self.info_dx.setText(self.info_dx.text() + f"{lwn} cm⁻¹ laser \n{udr} sampling interval")
+        self.info_dx.setText(
+            self.info_dx.text() + f"{lwn} cm⁻¹ laser \n{udr} sampling interval"
+        )
         if self.dx_auto:
-            self.dx = (1 / lwn / 2 ) * udr
+            self.dx = (1 / lwn / 2) * udr
 
     def limit_range(self, wavenumbers, spectra):
-
-        limits = np.searchsorted(wavenumbers,
-                                [self.out_limit1, self.out_limit2])
-        wavenumbers = wavenumbers[limits[0]:limits[1]]
+        limits = np.searchsorted(wavenumbers, [self.out_limit1, self.out_limit2])
+        wavenumbers = wavenumbers[limits[0] : limits[1]]
         # Handle 1D array if necessary
         if spectra.ndim == 1:
-            spectra = spectra[None, limits[0]:limits[1]]
+            spectra = spectra[None, limits[0] : limits[1]]
         else:
-            spectra = spectra[:, limits[0]:limits[1]]
+            spectra = spectra[:, limits[0] : limits[1]]
 
         return wavenumbers, spectra
 
@@ -716,7 +774,9 @@ def load_test_gsf() -> Orange.data.Table:
     absolute_filename = FileFormat.locate(fn, dataset_dirs)
     return NeaReaderGSF(absolute_filename).read()
 
+
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWFFT).run(load_test_gsf())

@@ -7,14 +7,18 @@ from Orange.widgets import gui
 from orangecontrib.spectroscopy.preprocess import LinearBaseline, RubberbandBaseline
 from orangecontrib.spectroscopy.widgets.gui import XPosLineEdit
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import BaseEditorOrange, \
-    PreviewMinMaxMixin, layout_widgets
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditorOrange,
+    PreviewMinMaxMixin,
+    layout_widgets,
+)
 
 
 class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
     """
     Baseline subtraction.
     """
+
     name = "Baseline Correction"
     qualname = "orangecontrib.infrared.baseline"
 
@@ -28,15 +32,27 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.peak_dir = 0
         self.sub = 0
 
-        self.baselinecb = gui.comboBox(None, self, "baseline_type",
-                                       items=["Linear", "Rubber band"],
-                                       callback=self.edited.emit)
-        self.peakcb = gui.comboBox(None, self, "peak_dir",
-                                   items=["Positive", "Negative"],
-                                   callback=self.edited.emit)
-        self.subcb = gui.comboBox(None, self, "sub",
-                                  items=["Subtract", "Calculate"],
-                                  callback=self.edited.emit)
+        self.baselinecb = gui.comboBox(
+            None,
+            self,
+            "baseline_type",
+            items=["Linear", "Rubber band"],
+            callback=self.edited.emit,
+        )
+        self.peakcb = gui.comboBox(
+            None,
+            self,
+            "peak_dir",
+            items=["Positive", "Negative"],
+            callback=self.edited.emit,
+        )
+        self.subcb = gui.comboBox(
+            None,
+            self,
+            "sub",
+            items=["Subtract", "Calculate"],
+            callback=self.edited.emit,
+        )
 
         form.addRow("Baseline Type", self.baselinecb)
         form.addRow("Peak Direction", self.peakcb)
@@ -51,7 +67,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.controlArea.layout().addWidget(self.range_button)
 
         self.reference_curve = pg.PlotCurveItem()
-        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.))
+        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.0))
         self.reference_curve.setZValue(10)
 
         self.preview_data = None
@@ -70,9 +86,9 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
                     self.parent_widget.curveplot.add_marking(w.line)
 
     def _set_button_text(self):
-        self.range_button.setText("Select point"
-                                  if self.ranges_box.layout().count() == 0
-                                  else "Add point")
+        self.range_button.setText(
+            "Select point" if self.ranges_box.layout().count() == 0 else "Add point"
+        )
 
     def _range_widgets(self):
         for b in layout_widgets(self.ranges_box):
@@ -80,7 +96,9 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
 
     def add_point(self):
         pmin, pmax = self.preview_min_max()
-        if len(list(self._range_widgets())) == 0:  # if empty, add two points at the same time
+        if (
+            len(list(self._range_widgets())) == 0
+        ):  # if empty, add two points at the same time
             lwmin = self.add_range_selection_ui()
             lwmax = self.add_range_selection_ui()
             self._extract_pair(lwmin)[0].position = pmin
@@ -97,14 +115,16 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         linelayout = gui.hBox(self)
         pmin, pmax = self.preview_min_max()
         e = XPosLineEdit(label="")
-        e.set_default((pmin+pmax)/2)
+        e.set_default((pmin + pmax) / 2)
         linelayout.layout().addWidget(e)
         e.edited.connect(self.edited)
         e.focusIn.connect(self.activateOptions)
 
         remove_button = QPushButton(
             QApplication.style().standardIcon(QStyle.SP_DockWidgetCloseButton),
-            "", autoDefault=False)
+            "",
+            autoDefault=False,
+        )
         remove_button.clicked.connect(lambda: self.delete_range(linelayout))
         linelayout.layout().addWidget(remove_button)
 

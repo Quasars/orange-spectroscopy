@@ -6,7 +6,6 @@ from orangecontrib.spectroscopy.preprocess import Cut
 
 
 class TestCutEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(CutEditor, self.widget)

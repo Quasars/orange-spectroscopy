@@ -9,7 +9,6 @@ from orangecontrib.spectroscopy.widgets.preprocessors.utils import layout_widget
 
 
 class TestBaselineEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(BaselineEditor, self.widget)
@@ -40,7 +39,7 @@ class TestBaselineEditor(PreprocessorEditorTest):
         # the second addition adds one limit
         self.editor.range_button.click()
         p = self.commit_get_preprocessor()
-        self.assertEqual(p.zero_points, [dmin, dmax, (dmin + dmax)/2])
+        self.assertEqual(p.zero_points, [dmin, dmax, (dmin + dmax) / 2])
 
     def test_remove_limit(self):
         dmin, dmax = min(getx(self.data)), max(getx(self.data))
@@ -50,7 +49,7 @@ class TestBaselineEditor(PreprocessorEditorTest):
         button = list(layout_widgets(second))[1]
         button.click()
         p = self.commit_get_preprocessor()
-        self.assertEqual(p.zero_points, [dmin, (dmin + dmax)/2])
+        self.assertEqual(p.zero_points, [dmin, (dmin + dmax) / 2])
         # if there are two entries, remove both
         second = list(layout_widgets(self.editor.ranges_box))[1]
         button = list(layout_widgets(second))[1]

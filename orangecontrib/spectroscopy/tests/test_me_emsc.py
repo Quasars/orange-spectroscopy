@@ -6,14 +6,17 @@ import Orange
 from Orange.data import FileFormat, dataset_dirs
 
 from orangecontrib.spectroscopy.preprocess.me_emsc import ME_EMSC
-from orangecontrib.spectroscopy.preprocess.emsc import SelectionFunction, SmoothedSelectionFunction
+from orangecontrib.spectroscopy.preprocess.emsc import SmoothedSelectionFunction
 from orangecontrib.spectroscopy.preprocess.npfunc import Sum
-from orangecontrib.spectroscopy.tests.test_preprocess import TestCommonIndpSamplesMixin, \
-    SMALLER_COLLAGEN, add_edge_case_data_parameter
+from orangecontrib.spectroscopy.tests.test_preprocess import (
+    TestCommonIndpSamplesMixin,
+    SMALLER_COLLAGEN,
+    add_edge_case_data_parameter,
+)
 
 
 def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
-    """ As ported from the original Matlab code.
+    """As ported from the original Matlab code.
 
     BUG: results are shifted for 1 wavenumber positions-wise
 
@@ -32,7 +35,7 @@ def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
     wn < 1900 go towards 1, but for (4 points) they go towards 0 when wn < 1000.
     """
     # Hyperbolic tangent function
-    hypTan = lambda x_range, kap: 0.5 * (np.tanh(kap * x_range) + 1)
+    hypTan = lambda x_range, kap: 0.5 * (np.tanh(kap * x_range) + 1)  # noqa: E731
 
     # Calculate position of inflection points
     p1 = np.argmin(np.abs(wavenumbers - points[2]))
@@ -47,12 +50,16 @@ def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
 
     xp1 = np.hstack([x1, x2])
 
-    x3 = np.linspace(-(np.ceil((p2 - p1) / 2) - 1) * dx, 0, int((np.ceil((p2 - p1) / 2))))
+    x3 = np.linspace(
+        -(np.ceil((p2 - p1) / 2) - 1) * dx, 0, int((np.ceil((p2 - p1) / 2)))
+    )
     x4 = np.linspace(dx, np.floor((p3 - p2) / 2) * dx, int(np.floor((p3 - p2) / 2)))
 
     xp2 = np.hstack([x3, x4])
 
-    x5 = np.linspace(-(np.ceil((p3 - p2) / 2) - 1) * dx, 0, int((np.ceil((p3 - p2) / 2))))
+    x5 = np.linspace(
+        -(np.ceil((p3 - p2) / 2) - 1) * dx, 0, int((np.ceil((p3 - p2) / 2)))
+    )
     x6 = np.linspace(dx, (len(wavenumbers) - p3) * dx, int(len(wavenumbers) - p3))
 
     xp3 = np.hstack([x5, x6])
@@ -67,8 +74,12 @@ def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
         p0 = np.argmin(np.abs(wavenumbers - points[3]))
 
         x1a = np.linspace(-(p0 - 1) * dx, 0, p0)
-        x2a = np.linspace(dx, np.floor((p1 - p0) / 2) * dx, int(np.floor((p1 - p0) / 2)))
-        x3a = np.linspace(-(np.ceil((p1 - p0) / 2) - 1) * dx, 0, int((np.ceil((p1 - p0) / 2))))
+        x2a = np.linspace(
+            dx, np.floor((p1 - p0) / 2) * dx, int(np.floor((p1 - p0) / 2))
+        )
+        x3a = np.linspace(
+            -(np.ceil((p1 - p0) / 2) - 1) * dx, 0, int((np.ceil((p1 - p0) / 2)))
+        )
 
         xp0 = np.hstack([x1a, x2a])
         xp1 = np.hstack([x3a, x2])
@@ -79,15 +90,18 @@ def weights_from_inflection_points_legacy(points, kappa, wavenumbers):
 
     wei_X = wei_X.reshape(1, -1)
     dom = Orange.data.Domain(
-        [Orange.data.ContinuousVariable(name=str(float(a))) for a in wavenumbers])
+        [Orange.data.ContinuousVariable(name=str(float(a))) for a in wavenumbers]
+    )
     data = Orange.data.Table.from_numpy(dom, wei_X)
     return data
 
 
 class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
-
     preprocessors = list(
-        add_edge_case_data_parameter(ME_EMSC, "reference", SMALLER_COLLAGEN[0:1], max_iter=4))
+        add_edge_case_data_parameter(
+            ME_EMSC, "reference", SMALLER_COLLAGEN[0:1], max_iter=4
+        )
+    )
     data = SMALLER_COLLAGEN
 
     @classmethod
@@ -128,16 +142,22 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         cls.res_14ncomp_20th_elem = v[1]
         cls.res_fixed_iter3_20th_elem = v[2]
 
-        cls.numiter_std = np.loadtxt(path2data6, usecols=(1,), delimiter=",", dtype="int64")
+        cls.numiter_std = np.loadtxt(
+            path2data6, usecols=(1,), delimiter=",", dtype="int64"
+        )
 
-        cls.RMSE_std = np.loadtxt(path2data7, usecols=(1,), delimiter=",", dtype="float")
+        cls.RMSE_std = np.loadtxt(
+            path2data7, usecols=(1,), delimiter=",", dtype="float"
+        )
 
-        domain_reference = Orange.data.Domain([Orange.data.ContinuousVariable(str(w))
-                                         for w in cls.wnM])
+        domain_reference = Orange.data.Domain(
+            [Orange.data.ContinuousVariable(str(w)) for w in cls.wnM]
+        )
         cls.reference = Orange.data.Table(domain_reference, cls.Matrigel)
 
-        domain_spectra = Orange.data.Domain([Orange.data.ContinuousVariable(str(w))
-                                         for w in cls.wnS])
+        domain_spectra = Orange.data.Domain(
+            [Orange.data.ContinuousVariable(str(w)) for w in cls.wnS]
+        )
         cls.spectra = Orange.data.Table(domain_spectra, cls.Spectra)
 
         # inflPoints = [3700, 2550, 1900, 0]
@@ -145,13 +165,23 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         #
         # weights = weights_from_inflection_points(inflPoints, kappa, self.wnS)
 
-        f = ME_EMSC(reference=cls.reference, ncomp=False, weights=False, max_iter=45, output_model=True)
+        f = ME_EMSC(
+            reference=cls.reference,
+            ncomp=False,
+            weights=False,
+            max_iter=45,
+            output_model=True,
+        )
         cls.f1data = f(cls.spectra)
 
-        f2 = ME_EMSC(reference=cls.reference, ncomp=14, output_model=True)  # With weights
+        f2 = ME_EMSC(
+            reference=cls.reference, ncomp=14, output_model=True
+        )  # With weights
         cls.f2data = f2(cls.spectra)
 
-        f3 = ME_EMSC(reference=cls.reference, ncomp=False, fixed_iter=1, output_model=True)
+        f3 = ME_EMSC(
+            reference=cls.reference, ncomp=False, fixed_iter=1, output_model=True
+        )
         cls.f3data = f3(cls.spectra)
 
     def disabled_test_plotting(self):
@@ -161,7 +191,11 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         plt.figure()
         plt.plot(self.wnS[0::20], self.f1data[0, 0::20].X.T, label='python')
         plt.plot(self.wnS[0::20], self.corr_default_20th_elem, label='matlab')
-        plt.plot(self.wnS[0::20], self.f1data[0, 0::20].X.T[:, 0] - self.corr_default_20th_elem, label='diff')
+        plt.plot(
+            self.wnS[0::20],
+            self.f1data[0, 0::20].X.T[:, 0] - self.corr_default_20th_elem,
+            label='diff',
+        )
         plt.legend()
         plt.title('Comparison Matlab/Python - default parameters')
 
@@ -169,7 +203,11 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         plt.figure()
         plt.plot(self.wnS[0::20], self.f2data[0, 0::20].X.T, label='python')
         plt.plot(self.wnS[0::20], self.corr_14ncomp_20th_elem, label='matlab')
-        plt.plot(self.wnS[0::20], self.f2data[0, 0::20].X.T[:, 0]-self.corr_14ncomp_20th_elem, label='diff')
+        plt.plot(
+            self.wnS[0::20],
+            self.f2data[0, 0::20].X.T[:, 0] - self.corr_14ncomp_20th_elem,
+            label='diff',
+        )
         plt.legend()
         plt.title('Comparison Matlab/Python - 14 principal components')
 
@@ -177,27 +215,55 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         plt.figure()
         plt.plot(self.wnS[0::20], self.f3data[0, 0::20].X.T, label='python')
         plt.plot(self.wnS[0::20], self.corr_fixed_iter3_20th_elem, label='matlab')
-        plt.plot(self.wnS[0::20], self.f3data[0, 0::20].X.T[:, 0]-self.corr_fixed_iter3_20th_elem, label='diff')
+        plt.plot(
+            self.wnS[0::20],
+            self.f3data[0, 0::20].X.T[:, 0] - self.corr_fixed_iter3_20th_elem,
+            label='diff',
+        )
         plt.legend()
         plt.title('Comparison Matlab/Python - fixed iterations 3')
         plt.show()
 
     def test_correction_output(self):
-        np.testing.assert_almost_equal(self.corr_default_20th_elem, self.f1data[0, 0::20].X.T[:, 0])
-        np.testing.assert_almost_equal(self.corr_14ncomp_20th_elem, self.f2data[0, 0::20].X.T[:, 0])
-        np.testing.assert_almost_equal(self.corr_fixed_iter3_20th_elem, self.f3data[0, 0::20].X.T[:, 0])
+        np.testing.assert_almost_equal(
+            self.corr_default_20th_elem, self.f1data[0, 0::20].X.T[:, 0]
+        )
+        np.testing.assert_almost_equal(
+            self.corr_14ncomp_20th_elem, self.f2data[0, 0::20].X.T[:, 0]
+        )
+        np.testing.assert_almost_equal(
+            self.corr_fixed_iter3_20th_elem, self.f3data[0, 0::20].X.T[:, 0]
+        )
 
     def test_EMSC_parameters(self):
-        np.testing.assert_almost_equal(abs(self.f1data.metas[0, :-2]), abs(self.param_default_20th_elem))
-        np.testing.assert_almost_equal(abs(self.f2data.metas[0, :-2]), abs(self.param_14ncomp_20th_elem))
-        np.testing.assert_almost_equal(abs(self.f3data.metas[0, :-2]), abs(self.param_fixed_iter3_20th_elem))
+        np.testing.assert_almost_equal(
+            abs(self.f1data.metas[0, :-2]), abs(self.param_default_20th_elem)
+        )
+        np.testing.assert_almost_equal(
+            abs(self.f2data.metas[0, :-2]), abs(self.param_14ncomp_20th_elem)
+        )
+        np.testing.assert_almost_equal(
+            abs(self.f3data.metas[0, :-2]), abs(self.param_fixed_iter3_20th_elem)
+        )
 
     def test_number_iterations(self):
-        numiter = np.array([self.f1data.metas[0, -2], self.f2data.metas[0, -2], self.f3data.metas[0, -2]])
+        numiter = np.array(
+            [
+                self.f1data.metas[0, -2],
+                self.f2data.metas[0, -2],
+                self.f3data.metas[0, -2],
+            ]
+        )
         np.testing.assert_equal(numiter, self.numiter_std)
 
     def test_RMSE(self):
-        RMSE = np.array([self.f1data.metas[0, -1], self.f2data.metas[0, -1], self.f3data.metas[0, -1]])
+        RMSE = np.array(
+            [
+                self.f1data.metas[0, -1],
+                self.f2data.metas[0, -1],
+                self.f3data.metas[0, -1],
+            ]
+        )
         np.testing.assert_equal(RMSE, self.RMSE_std)
 
     def test_same_data_reference(self):
@@ -208,8 +274,9 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         wnMshort = self.wnM[0::30]
         Matrigelshort = self.Matrigel[0, 0::30]
         Matrigelshort = Matrigelshort.reshape(-1, 1).T
-        domain_reference = Orange.data.Domain([Orange.data.ContinuousVariable(str(w))
-                                               for w in wnMshort])
+        domain_reference = Orange.data.Domain(
+            [Orange.data.ContinuousVariable(str(w)) for w in wnMshort]
+        )
         reference = Orange.data.Table(domain_reference, Matrigelshort)
         # it was crashing before
         ME_EMSC(reference=reference)(self.spectra)
@@ -226,9 +293,14 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         self.assertNotEqual(d1.domain, d2.domain)
         self.assertNotEqual(hash(d1.domain), hash(d2.domain))
 
-        d2 = ME_EMSC(reference=ref, ncomp=False, weights=False, max_iter=1,
-                     n0=np.linspace(1.1, 1.4, 11),
-                     a=np.linspace(2, 7.1, 11))(spectra)
+        d2 = ME_EMSC(
+            reference=ref,
+            ncomp=False,
+            weights=False,
+            max_iter=1,
+            n0=np.linspace(1.1, 1.4, 11),
+            a=np.linspace(2, 7.1, 11),
+        )(spectra)
         self.assertNotEqual(d1.domain, d2.domain)
         self.assertNotEqual(hash(d1.domain), hash(d2.domain))
 
@@ -249,7 +321,6 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
 
 
 class TestInflectionPointWeighting(unittest.TestCase):
-
     def test_weights_from_inflection_points_old_use(self):
         ws = 5  # spacing between wavenumbers
         dx = 0.094  # hardcoded constant from weights_from_inflection_points_legacy
@@ -257,19 +328,27 @@ class TestInflectionPointWeighting(unittest.TestCase):
         wns = np.arange(0, 5000, ws)
 
         # at > 3700 towards 0, at > 1900 towards 1
-        weights = weights_from_inflection_points_legacy([3700, 2800, 1900, 0], [1, 1, 1, 1], wns)
+        weights = weights_from_inflection_points_legacy(
+            [3700, 2800, 1900, 0], [1, 1, 1, 1], wns
+        )
         oldx = wns + ws  # shift due to a bug in weights_from_inflection_points_legacy
         oldy = weights.X[0]
-        new = Sum(SmoothedSelectionFunction(2800, 3700, ws / dx, 1),
-                  SmoothedSelectionFunction(-1000, 1900, ws / dx, 1))
+        new = Sum(
+            SmoothedSelectionFunction(2800, 3700, ws / dx, 1),
+            SmoothedSelectionFunction(-1000, 1900, ws / dx, 1),
+        )
         newy = new(oldx)
-        self.assertLess(np.max(np.abs(newy-oldy)), 1e-7)
+        self.assertLess(np.max(np.abs(newy - oldy)), 1e-7)
 
         # at > 3700 towards 0, at > 1000 towards 0
-        weights = weights_from_inflection_points_legacy([3700, 2800, 1900, 1000], [1, 1, 1, 1], wns)
+        weights = weights_from_inflection_points_legacy(
+            [3700, 2800, 1900, 1000], [1, 1, 1, 1], wns
+        )
         oldx = wns + ws  # shift due to a bug in weights_from_inflection_points_legacy
         oldy = weights.X[0]
-        new = Sum(SmoothedSelectionFunction(2800, 3700, ws / dx, 1),
-                  SmoothedSelectionFunction(1000, 1900, ws / dx, 1))
+        new = Sum(
+            SmoothedSelectionFunction(2800, 3700, ws / dx, 1),
+            SmoothedSelectionFunction(1000, 1900, ws / dx, 1),
+        )
         newy = new(oldx)
-        self.assertLess(np.max(np.abs(newy-oldy)), 1e-7)
+        self.assertLess(np.max(np.abs(newy - oldy)), 1e-7)

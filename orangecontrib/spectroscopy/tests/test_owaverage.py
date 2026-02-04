@@ -5,7 +5,6 @@ from orangecontrib.spectroscopy.widgets.owaverage import OWAverage
 
 
 class TestOWAverage(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -59,9 +58,11 @@ class TestOWAverage(WidgetTest):
         c_domain = self.collagen.domain
         str_var = Orange.data.StringVariable.make(name="stringtest")
         time_var = Orange.data.TimeVariable.make(name="timetest")
-        n_domain = Orange.data.Domain(c_domain.attributes,
-                                      c_domain.class_vars,
-                                      [Orange.data.ContinuousVariable("con"), str_var, time_var])
+        n_domain = Orange.data.Domain(
+            c_domain.attributes,
+            c_domain.class_vars,
+            [Orange.data.ContinuousVariable("con"), str_var, time_var],
+        )
         collagen = self.collagen.transform(n_domain)
         with collagen.unlocked(collagen.metas):
             collagen.metas[:, 0] = np.atleast_2d(collagen.X[:, 0])
@@ -118,9 +119,9 @@ class TestOWAverage(WidgetTest):
         gvar = self.collagen.domain.class_var
         c_domain = self.collagen.domain
         str_var = Orange.data.StringVariable.make(name="stringtest")
-        n_domain = Orange.data.Domain(c_domain.attributes,
-                                      None,
-                                      [c_domain.class_var, str_var])
+        n_domain = Orange.data.Domain(
+            c_domain.attributes, None, [c_domain.class_var, str_var]
+        )
         collagen = self.collagen.transform(n_domain)
         # collagen.metas[:, 1] = np.atleast_2d(self.collagen.Y)
         self.send_signal("Data", collagen)

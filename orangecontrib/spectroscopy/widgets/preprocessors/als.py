@@ -8,13 +8,14 @@ from orangecontrib.spectroscopy.preprocess.als import ALSP, ARPLS, AIRPLS
 
 class ALSEditor(BaseEditorOrange):
     """
-       Asymmetric least squares subtraction.
+    Asymmetric least squares subtraction.
     """
+
     name = "Asymmetric Least Squares Smoothing"
     qualname = "preprocessors.ALS"
 
     ALS_TYPE = 0
-    LAM = 1E+6
+    LAM = 1e6
     ITERMAX = 10
     P = 0.1
     RATIO = 0.05
@@ -30,34 +31,62 @@ class ALSEditor(BaseEditorOrange):
         self.p = self.P
         self.ratio = self.RATIO
         self.porder = self.PORDER
-        self.alst_combo = gui.comboBox(None, self, "als_type",
-                                       items=["Asymmetric",
-                                              "Asymmetrically Reweighted",
-                                              "Adaptive Iteratively Reweighted"],
-                                       callback=self.edited.emit)
+        self.alst_combo = gui.comboBox(
+            None,
+            self,
+            "als_type",
+            items=[
+                "Asymmetric",
+                "Asymmetrically Reweighted",
+                "Adaptive Iteratively Reweighted",
+            ],
+            callback=self.edited.emit,
+        )
         self.controlArea.layout().addLayout(form)
-        self.itermaxspin = gui.spin(None, self, "itermax",
-                                    label="Max. iterations",
-                                    minv=1, maxv=100000, controlWidth=100,
-                                    callback=self.edited.emit)
-        self.lamspin = lineEditDecimalOrNone(None, self, value="lam",
-                                             bottom=0, callback=self.edited.emit)
+        self.itermaxspin = gui.spin(
+            None,
+            self,
+            "itermax",
+            label="Max. iterations",
+            minv=1,
+            maxv=100000,
+            controlWidth=100,
+            callback=self.edited.emit,
+        )
+        self.lamspin = lineEditDecimalOrNone(
+            None, self, value="lam", bottom=0, callback=self.edited.emit
+        )
         form.addRow("ALS Type", self.alst_combo)
         form.addRow("Smoothing Constant", self.lamspin)
         form.addRow('Max. Iterations', self.itermaxspin)
-        self.palsspin = lineEditDecimalOrNone(None, self, value="p",
-                                              bottom=0.000000001, top=1,
-                                              callback=self.edited.emit)
-        self.palsspin.setToolTip("0.5 = symmetric, <0.5: negative "
-            "deviations are more strongly suppressed")
-        self.ratior = lineEditDecimalOrNone(None, self, value="ratio",
-                                            bottom=0.000000001, top=1,
-                                            callback=self.edited.emit)
-        self.ratior.setToolTip("0 < ratio < 1, smaller values allow less negative values")
-        self.porderairplsspin = gui.spin(None, self, "porder",
-                                         label="Order of the difference of penalties (Adaptive)",
-                                         minv=1, maxv=100, controlWidth=100,
-                                         step=1, callback=self.edited.emit)
+        self.palsspin = lineEditDecimalOrNone(
+            None, self, value="p", bottom=0.000000001, top=1, callback=self.edited.emit
+        )
+        self.palsspin.setToolTip(
+            "0.5 = symmetric, <0.5: negative deviations are more strongly suppressed"
+        )
+        self.ratior = lineEditDecimalOrNone(
+            None,
+            self,
+            value="ratio",
+            bottom=0.000000001,
+            top=1,
+            callback=self.edited.emit,
+        )
+        self.ratior.setToolTip(
+            "0 < ratio < 1, smaller values allow less negative values"
+        )
+        self.porderairplsspin = gui.spin(
+            None,
+            self,
+            "porder",
+            label="Order of the difference of penalties (Adaptive)",
+            minv=1,
+            maxv=100,
+            controlWidth=100,
+            step=1,
+            callback=self.edited.emit,
+        )
         form.addRow('Weighting Deviations', self.palsspin)
         form.addRow('Weighting Deviations', self.ratior)
         form.addRow('Penalties Order', self.porderairplsspin)
@@ -96,14 +125,11 @@ class ALSEditor(BaseEditorOrange):
         porderairpls = params.get('porder', cls.PORDER)
 
         if als_type == 0:
-            return ALSP(lam=lam, itermax=itermax,
-                        p=float(pals))
+            return ALSP(lam=lam, itermax=itermax, p=float(pals))
         elif als_type == 1:
-            return ARPLS(lam=lam, ratio=float(ratioarpls),
-                         itermax=itermax)
+            return ARPLS(lam=lam, ratio=float(ratioarpls), itermax=itermax)
         elif als_type == 2:
-            return AIRPLS(lam=lam, itermax=itermax,
-                          porder=porderairpls)
+            return AIRPLS(lam=lam, itermax=itermax, porder=porderairpls)
         else:
             raise Exception("unknown baseline type")
 

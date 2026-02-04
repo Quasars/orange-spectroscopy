@@ -6,8 +6,8 @@ from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.tests.base import WidgetTest
 from orangecontrib.spectroscopy.widgets.owpolar import OWPolar
 
-class TestOWPolar(WidgetTest):
 
+class TestOWPolar(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -16,10 +16,18 @@ class TestOWPolar(WidgetTest):
         cls.in2 = Orange.data.Table("polar/4-angle-ftir_multiin2.tab")
         cls.in3 = Orange.data.Table("polar/4-angle-ftir_multiin3.tab")
         cls.in4 = Orange.data.Table("polar/4-angle-ftir_multiin4.tab")
-        cls.multifile_polar = Orange.data.Table("polar/4-angle-ftir_multifile_polar-results.tab")
-        cls.multifile_model = Orange.data.Table("polar/4-angle-ftir_multifile_model-results.tab")
-        cls.multiin_polar = Orange.data.Table("polar/4-angle-ftir_multiin_polar-results.tab")
-        cls.multiin_model = Orange.data.Table("polar/4-angle-ftir_multiin_model-results.tab")
+        cls.multifile_polar = Orange.data.Table(
+            "polar/4-angle-ftir_multifile_polar-results.tab"
+        )
+        cls.multifile_model = Orange.data.Table(
+            "polar/4-angle-ftir_multifile_model-results.tab"
+        )
+        cls.multiin_polar = Orange.data.Table(
+            "polar/4-angle-ftir_multiin_polar-results.tab"
+        )
+        cls.multiin_model = Orange.data.Table(
+            "polar/4-angle-ftir_multiin_model-results.tab"
+        )
 
     def setUp(self):
         self.widget = self.create_widget(OWPolar)
@@ -27,18 +35,31 @@ class TestOWPolar(WidgetTest):
     def test_multifile_init(self):
         self.send_signal("Data", self.multifile, 0)
 
-        testfeats = [ft for ft in self.multifile.domain.metas
-                     if isinstance(ft, ContinuousVariable)]
-        testfeats = testfeats + [ft for ft in self.multifile.domain.attributes
-                     if isinstance(ft, ContinuousVariable)]
-        polfeats = [ft for ft in self.widget.featureselect[:]
-                    if isinstance(ft, ContinuousVariable)]
+        testfeats = [
+            ft
+            for ft in self.multifile.domain.metas
+            if isinstance(ft, ContinuousVariable)
+        ]
+        testfeats = testfeats + [
+            ft
+            for ft in self.multifile.domain.attributes
+            if isinstance(ft, ContinuousVariable)
+        ]
+        polfeats = [
+            ft
+            for ft in self.widget.featureselect[:]
+            if isinstance(ft, ContinuousVariable)
+        ]
         self.assertEqual(polfeats, testfeats)
-        testinputs = [inp for inp in self.multifile.domain
-                      if isinstance(inp, DiscreteVariable)]
+        testinputs = [
+            inp for inp in self.multifile.domain if isinstance(inp, DiscreteVariable)
+        ]
         self.assertEqual(self.widget.anglemetas[:], testinputs)
-        testxy = [xy for xy in self.multifile.domain.metas
-                  if isinstance(xy, ContinuousVariable)]
+        testxy = [
+            xy
+            for xy in self.multifile.domain.metas
+            if isinstance(xy, ContinuousVariable)
+        ]
         self.assertEqual(self.widget.x_axis[:], testxy)
         self.assertEqual(self.widget.y_axis[:], testxy)
 
@@ -64,8 +85,10 @@ class TestOWPolar(WidgetTest):
         self.assertEqual(self.widget.map_x, self.multifile.domain.metas[0])
         self.widget.map_y = self.widget.y_axis[1]
         self.assertEqual(self.widget.map_y, self.multifile.domain.metas[1])
-        self.widget.feats = [self.widget.feat_view.model()[:][2],
-                                 self.widget.feat_view.model()[:][3]]
+        self.widget.feats = [
+            self.widget.feat_view.model()[:][2],
+            self.widget.feat_view.model()[:][3],
+        ]
         self.assertEqual(self.widget.feats[0], self.multifile.domain.metas[3])
         self.assertEqual(self.widget.feats[1], self.multifile.domain.metas[4])
         self.widget.alphas = [0, 0]
@@ -76,14 +99,26 @@ class TestOWPolar(WidgetTest):
         polar = self.get_output("Polar Data")
         model = self.get_output("Curve Fit model data")
 
-        np.testing.assert_allclose(np.asarray(self.multifile_polar.metas, dtype=float),
-                                   np.asarray(polar.metas, dtype=float), rtol=4e-06)
-        np.testing.assert_allclose(np.asarray(self.multifile_polar.X, dtype=float),
-                                   np.asarray(polar.X, dtype=float), rtol=5e-06)
-        np.testing.assert_allclose(np.asarray(self.multifile_model.metas, dtype=float),
-                                   np.asarray(model.metas, dtype=float), rtol=4e-06)
-        np.testing.assert_allclose(np.asarray(self.multifile_model.X, dtype=float),
-                                   np.asarray(model.X, dtype=float), rtol=5e-06)
+        np.testing.assert_allclose(
+            np.asarray(self.multifile_polar.metas, dtype=float),
+            np.asarray(polar.metas, dtype=float),
+            rtol=4e-06,
+        )
+        np.testing.assert_allclose(
+            np.asarray(self.multifile_polar.X, dtype=float),
+            np.asarray(polar.X, dtype=float),
+            rtol=5e-06,
+        )
+        np.testing.assert_allclose(
+            np.asarray(self.multifile_model.metas, dtype=float),
+            np.asarray(model.metas, dtype=float),
+            rtol=4e-06,
+        )
+        np.testing.assert_allclose(
+            np.asarray(self.multifile_model.X, dtype=float),
+            np.asarray(model.X, dtype=float),
+            rtol=5e-06,
+        )
 
     def test_multi_inputs(self):
         self.send_signal("Data", self.in1, 0, widget=self.widget)
@@ -107,12 +142,16 @@ class TestOWPolar(WidgetTest):
         self.widget.map_y = self.widget.y_axis[1]
         self.assertEqual(self.widget.map_y, self.in1.domain.metas[1])
 
-        self.widget.feats = [self.widget.feat_view.model()[:][2],
-                                 self.widget.feat_view.model()[:][3]]
-        self.assertEqual(self.widget.feats[0],
-                         self.in1.domain.metas[2].copy(compute_value=None))
-        self.assertEqual(self.widget.feats[1],
-                         self.in1.domain.metas[3].copy(compute_value=None))
+        self.widget.feats = [
+            self.widget.feat_view.model()[:][2],
+            self.widget.feat_view.model()[:][3],
+        ]
+        self.assertEqual(
+            self.widget.feats[0], self.in1.domain.metas[2].copy(compute_value=None)
+        )
+        self.assertEqual(
+            self.widget.feats[1], self.in1.domain.metas[3].copy(compute_value=None)
+        )
         self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
@@ -122,22 +161,30 @@ class TestOWPolar(WidgetTest):
         model = self.get_output("Curve Fit model data")
 
         np.testing.assert_allclose(
-            np.asarray(self.multiin_polar.metas[:,np.r_[0:2,3:7]], dtype=float),
-            np.asarray(polar.metas[:,np.r_[0:2,3:7]], dtype=float), rtol=2e-06)
+            np.asarray(self.multiin_polar.metas[:, np.r_[0:2, 3:7]], dtype=float),
+            np.asarray(polar.metas[:, np.r_[0:2, 3:7]], dtype=float),
+            rtol=2e-06,
+        )
         np.testing.assert_allclose(
-            np.asarray(self.multiin_polar.metas[:,7:], dtype=float),
-            np.asarray(polar.metas[:,7:], dtype=float), rtol=4e-06)
+            np.asarray(self.multiin_polar.metas[:, 7:], dtype=float),
+            np.asarray(polar.metas[:, 7:], dtype=float),
+            rtol=4e-06,
+        )
         np.testing.assert_allclose(self.multiin_polar.X, polar.X, rtol=5e-06)
         np.testing.assert_allclose(
-            np.asarray(self.multiin_model.metas[:,np.r_[0:2,3:7]], dtype=float),
-            np.asarray(model.metas[:,np.r_[0:2,3:7]], dtype=float), rtol=4e-06)
+            np.asarray(self.multiin_model.metas[:, np.r_[0:2, 3:7]], dtype=float),
+            np.asarray(model.metas[:, np.r_[0:2, 3:7]], dtype=float),
+            rtol=4e-06,
+        )
         np.testing.assert_allclose(
-            np.asarray(self.multiin_model.metas[:,7:], dtype=float),
-            np.asarray(model.metas[:,7:], dtype=float), rtol=4e-06)
+            np.asarray(self.multiin_model.metas[:, 7:], dtype=float),
+            np.asarray(model.metas[:, 7:], dtype=float),
+            rtol=4e-06,
+        )
         np.testing.assert_allclose(self.multiin_model.X, model.X, rtol=5e-06)
 
     def test_pixelsubset(self):
-        #Test multi in with subset of pixels selected
+        # Test multi in with subset of pixels selected
         rng = np.random.default_rng()
         sub_idx = rng.choice(4, size=(2), replace=False)
         subset = self.in1[sub_idx]
@@ -149,8 +196,10 @@ class TestOWPolar(WidgetTest):
 
         self.widget.map_x = self.widget.x_axis[0]
         self.widget.map_y = self.widget.y_axis[1]
-        self.widget.feats = [self.widget.feat_view.model()[:][2],
-                                 self.widget.feat_view.model()[:][3]]
+        self.widget.feats = [
+            self.widget.feat_view.model()[:][2],
+            self.widget.feat_view.model()[:][3],
+        ]
         self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
@@ -159,16 +208,15 @@ class TestOWPolar(WidgetTest):
         polar = self.get_output("Polar Data")
         model = self.get_output("Curve Fit model data")
 
-        self.assertEqual(len(polar), len(sub_idx)*4)
-        self.assertEqual(len(model), len(sub_idx)*4)
+        self.assertEqual(len(polar), len(sub_idx) * 4)
+        self.assertEqual(len(model), len(sub_idx) * 4)
 
     def test_multiin_mismatched_domain(self):
-
         metadom = self.in1.domain.metas
         metadom = [i for i in metadom if isinstance(i, ContinuousVariable)]
         attdom = self.in1.domain.attributes
         attdom = attdom[0::2]
-        mismatched_domain = Domain(attdom, metas = metadom)
+        mismatched_domain = Domain(attdom, metas=metadom)
         mismatched_table = self.in1.transform(mismatched_domain)
 
         self.send_signal("Data", mismatched_table, 0, widget=self.widget)
@@ -216,7 +264,7 @@ class TestOWPolar(WidgetTest):
             self.assertEqual(j, angles[i])
 
     def test_warnings(self):
-        #test all warnings
+        # test all warnings
         self.send_signal("Data", self.multifile, 0, widget=self.widget)
         self.widget.autocommit = True
 
@@ -234,11 +282,11 @@ class TestOWPolar(WidgetTest):
         self.widget.polangles = []
         self.commit_and_wait(self.widget)
         self.assertTrue(self.widget.Warning.pol.is_shown())
-        self.widget.polangles = [0.0,45.0,'hi',135.0]
+        self.widget.polangles = [0.0, 45.0, 'hi', 135.0]
         self.commit_and_wait(self.widget)
         self.assertTrue(self.widget.Warning.pol.is_shown())
 
-        self.widget.polangles = [0.0,45.0,90.0,135.0]
+        self.widget.polangles = [0.0, 45.0, 90.0, 135.0]
         self.widget.feats = [self.widget.feat_view.model()[:][0]]
         self.widget.alphas = [0]
         self.commit_and_wait(self.widget)
@@ -262,8 +310,10 @@ class TestOWPolar(WidgetTest):
         self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
-        self.widget.feats = [self.widget.feat_view.model()[:][2],
-                            self.widget.feat_view.model()[:][3]]
+        self.widget.feats = [
+            self.widget.feat_view.model()[:][2],
+            self.widget.feat_view.model()[:][3],
+        ]
         self.widget.handleNewSignals()
         self.wait_until_stop_blocking()
         self.send_signal("Data", None, 0, widget=self.widget)
@@ -274,8 +324,10 @@ class TestOWPolar(WidgetTest):
         self.widget.map_x = self.widget.x_axis[0]
         self.widget.map_y = self.widget.y_axis[1]
         self.widget.alpha = 0
-        vars = [self.widget.feat_view.model()[:][2],
-                self.widget.feat_view.model()[:][3]]
+        vars = [
+            self.widget.feat_view.model()[:][2],
+            self.widget.feat_view.model()[:][3],
+        ]
         view = self.widget.feat_view
         model = self.widget.featureselect
         update_selection(model, view, vars)
@@ -289,6 +341,7 @@ class TestOWPolar(WidgetTest):
         self.widget.change_alphas()
         self.assertEqual(self.widget.alphas, [90, 90])
 
+
 def update_selection(model, view, setting):
     selection = QItemSelection()
     sel_model = view.selectionModel()
@@ -301,6 +354,7 @@ def update_selection(model, view, setting):
     # def test_clearangles(self):
     #     #test clearing angles
     #     pass
+
 
 if __name__ == "__main__":
     unittest.main()

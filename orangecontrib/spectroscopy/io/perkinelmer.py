@@ -4,14 +4,20 @@ import numpy as np
 
 from Orange.data import Table, Domain, FileFormat
 
-from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image_2d
+from orangecontrib.spectroscopy.io.util import (
+    SpectralFileFormat,
+    _spectra_from_image_2d,
+)
 from orangecontrib.spectroscopy.utils.specio.specio import BlockReader, PerkinElmer
 
 # This code is partially based on software developed in the Diamond synchrotron.
 
 
 class PerkinElmerReader(FileFormat, SpectralFileFormat):
-    EXTENSIONS = (".sp", ".fsm",)
+    EXTENSIONS = (
+        ".sp",
+        ".fsm",
+    )
     DESCRIPTION = "Perkin Elmer"
 
     def read_sp(self):
@@ -37,9 +43,7 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
         stops = []
         spectrum = []
 
-        block_id, block_size = reader.read(6,
-                                           format="<Hi",
-                                           expect_tuple=True)
+        block_id, block_size = reader.read(6, format="<Hi", expect_tuple=True)
 
         stops.append(reader.start + block_size)
 
@@ -54,9 +58,7 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
                     stops = stops[:-1]
 
             else:
-                block_id, block_size = reader.read(6,
-                                                   format="<Hi",
-                                                   expect_tuple=True)
+                block_id, block_size = reader.read(6, format="<Hi", expect_tuple=True)
 
                 stops.append(reader.start + block_size)
 
@@ -65,9 +67,7 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
         reader.start = stops[1]
 
         while not reader.atEnd():
-            block_id, block_size = reader.read(6,
-                                               format="<Hi",
-                                               expect_tuple=True)
+            block_id, block_size = reader.read(6, format="<Hi", expect_tuple=True)
 
             if block_id in decoders:
                 decoded = decoders[block_id](reader.peek(block_size))
@@ -80,15 +80,14 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
 
             reader.start += block_size
 
-        wavenumbers = np.linspace(info['min_wavelength'],
-                                  info['max_wavelength'],
-                                  info['n_points'])
+        wavenumbers = np.linspace(
+            info['min_wavelength'], info['max_wavelength'], info['n_points']
+        )
 
         datavals = np.array(spectrum)[None, ...]
 
         domain = Domain([], None)
-        meta_data = Table.from_numpy(domain,
-                                     X=np.zeros((len(datavals), 0)))
+        meta_data = Table.from_numpy(domain, X=np.zeros((len(datavals), 0)))
 
         meta_data.attributes = info
 
@@ -114,9 +113,7 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
         spectrum = []
 
         while not reader.atEnd(6):
-            block_id, block_size = reader.read(6,
-                                               format="<Hi",
-                                               expect_tuple=True)
+            block_id, block_size = reader.read(6, format="<Hi", expect_tuple=True)
 
             decoded = decoders[block_id](reader.read(block_size))
 
@@ -125,15 +122,14 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
             else:
                 spectrum.append(decoded)
 
-        wavenumbers = np.arange(meta['z_start'],
-                                meta['z_end'] + meta['z_delta'],
-                                meta['z_delta'])
+        wavenumbers = np.arange(
+            meta['z_start'], meta['z_end'] + meta['z_delta'], meta['z_delta']
+        )
 
         datavals = np.squeeze(spectrum)
 
         domain = Domain([], None)
-        meta_data = Table.from_numpy(domain,
-                                     X=np.zeros((len(datavals), 0)))
+        meta_data = Table.from_numpy(domain, X=np.zeros((len(datavals), 0)))
 
         meta_data.attributes = meta
 
@@ -155,9 +151,9 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
             y_loc = np.repeat(np.arange(atts['n_y']), atts['n_x'])
             x_loc = np.tile(np.arange(atts['n_x']), atts['n_y'])
 
-            features, final_data, locs_table = _spectra_from_image_2d(intensities, wn,
-                                                                      xpositions[x_loc],
-                                                                      ypositions[y_loc])
+            features, final_data, locs_table = _spectra_from_image_2d(
+                intensities, wn, xpositions[x_loc], ypositions[y_loc]
+            )
 
             return features, final_data, locs_table
 

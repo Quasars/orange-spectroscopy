@@ -5,7 +5,11 @@ import numpy as np
 from sklearn.cross_decomposition import PLSRegression
 
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin, ParameterMapping
+from Orange.widgets.tests.base import (
+    WidgetTest,
+    WidgetLearnerTestMixin,
+    ParameterMapping,
+)
 
 import Orange.version
 from orangecontrib.spectroscopy.widgets.owpls import OWPLS
@@ -27,9 +31,8 @@ def coefficients(sklmodel):
 
 
 class TestPLS(TestCase):
-
     def test_allow_y_dim(self):
-        """ The current PLS version allows only a single Y dimension. """
+        """The current PLS version allows only a single Y dimension."""
         learner = PLSRegressionLearner(n_components=2)
         d = table(10, 5, 0)
         with self.assertRaises(ValueError):
@@ -42,19 +45,21 @@ class TestPLS(TestCase):
         d = table(10, 5, 1)
         orange_model = PLSRegressionLearner()(d)
         scikit_model = PLSRegression().fit(d.X, d.Y)
-        np.testing.assert_almost_equal(scikit_model.predict(d.X).ravel(),
-                                       orange_model(d))
-        np.testing.assert_almost_equal(coefficients(scikit_model),
-                                       orange_model.coefficients)
+        np.testing.assert_almost_equal(
+            scikit_model.predict(d.X).ravel(), orange_model(d)
+        )
+        np.testing.assert_almost_equal(
+            coefficients(scikit_model), orange_model.coefficients
+        )
 
     def test_compare_to_sklearn_multid(self):
         d = table(10, 5, 3)
         orange_model = PLSRegressionLearner()(d)
         scikit_model = PLSRegression().fit(d.X, d.Y)
-        np.testing.assert_almost_equal(scikit_model.predict(d.X),
-                                       orange_model(d))
-        np.testing.assert_almost_equal(coefficients(scikit_model),
-                                       orange_model.coefficients)
+        np.testing.assert_almost_equal(scikit_model.predict(d.X), orange_model(d))
+        np.testing.assert_almost_equal(
+            coefficients(scikit_model), orange_model.coefficients
+        )
 
     def test_too_many_components(self):
         # do not change n_components
@@ -82,12 +87,15 @@ class TestPLS(TestCase):
     def test_components(self):
         def t2d(m):
             return m.reshape(-1, 1) if len(m.shape) == 1 else m
+
         for d in [table(10, 5, 1), table(10, 5, 3)]:
             orange_model = PLSRegressionLearner()(d)
             scikit_model = PLSRegression().fit(d.X, d.Y)
             components = orange_model.components()
             np.testing.assert_almost_equal(scikit_model.x_loadings_, components.X.T)
-            np.testing.assert_almost_equal(scikit_model.y_loadings_, t2d(components.Y).T)
+            np.testing.assert_almost_equal(
+                scikit_model.y_loadings_, t2d(components.Y).T
+            )
 
     def test_coefficients(self):
         for d in [table(10, 5, 1), table(10, 5, 3)]:
@@ -99,15 +107,17 @@ class TestPLS(TestCase):
 
 class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWPLS,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(OWPLS, stored_settings={"auto_apply": False})
         self.init()
         self.parameters = [
             ParameterMapping('max_iter', self.widget.n_iters),
-            ParameterMapping('n_components', self.widget.ncomps_spin)]
+            ParameterMapping('n_components', self.widget.ncomps_spin),
+        ]
 
-    skip_reason = "orange-widget-base changed apply button, which resulted in " \
-                  "test failures (but was otherwise benign)"
+    skip_reason = (
+        "orange-widget-base changed apply button, which resulted in "
+        "test failures (but was otherwise benign)"
+    )
 
     @skipIf(Orange.version.version < "3.35.0", skip_reason)
     def test_output_learner(self):

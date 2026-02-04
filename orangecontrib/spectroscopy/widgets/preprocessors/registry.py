@@ -1,5 +1,4 @@
 class PreprocessorEditorRegistry:
-
     def __init__(self):
         self.registered = []
 

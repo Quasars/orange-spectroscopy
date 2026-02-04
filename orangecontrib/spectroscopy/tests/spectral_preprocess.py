@@ -18,7 +18,6 @@ def wait_for_preview(widget, timeout=5000):
 
 
 class WarningEditor(BaseEditorOrange):
-
     class Warning(BaseEditorOrange.Warning):
         some_warning = Msg("Warn.")
 
@@ -51,7 +50,6 @@ class WarningEditor(BaseEditorOrange):
 
 
 class TestWarning(WidgetTest):
-
     widget_cls = None
 
     def setUp(self):

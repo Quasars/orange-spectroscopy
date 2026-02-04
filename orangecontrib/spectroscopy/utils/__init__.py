@@ -1,12 +1,14 @@
 import numpy as np
 
-from Orange.data import Domain, Table
+from Orange.data import Domain
 
 MAP_X_VAR = "map_x"
 MAP_Y_VAR = "map_y"
 
 
-def apply_columns_numpy(array, function, selector=None, chunk_size=10 ** 7, callback=None):
+def apply_columns_numpy(
+    array, function, selector=None, chunk_size=10**7, callback=None
+):
     """Split the array by columns, applies selection and then the function.
     Returns output equivalent to function(array[selector])
     """
@@ -32,14 +34,14 @@ def values_to_linspace(vals):
         vals = np.unique(vals)  # returns sorted array
         if len(vals) == 1:
             return vals[0], vals[0], 1
-        minabsdiff = (vals[-1] - vals[0])/(len(vals)*100)
+        minabsdiff = (vals[-1] - vals[0]) / (len(vals) * 100)
         diffs = np.diff(vals)
         diffs = diffs[diffs > minabsdiff]
         first_valid = diffs[0]
         # allow for a percent mismatch
-        diffs = diffs[diffs < first_valid*1.01]
+        diffs = diffs[diffs < first_valid * 1.01]
         step = np.mean(diffs)
-        size = int(round((vals[-1]-vals[0])/step) + 1)
+        size = int(round((vals[-1] - vals[0]) / step) + 1)
         return vals[0], vals[-1], size
     return None
 
@@ -57,12 +59,12 @@ def location_values(vals, linspace):
 
 
 def index_values(vals, linspace):
-    """ Remap values into index of array defined by linspace. """
+    """Remap values into index of array defined by linspace."""
     return index_values_nan(vals, linspace)[0]
 
 
 def index_values_nan(vals, linspace):
-    """ Remap values into index of array defined by linspace.
+    """Remap values into index of array defined by linspace.
     Returns two arrays: first contains the indices, the second invalid values."""
     positions = location_values(vals, linspace)
     return np.round(positions).astype(int), np.isnan(positions)

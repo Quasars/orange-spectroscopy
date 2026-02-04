@@ -11,43 +11,75 @@ from Orange import preprocess
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-from Orange.widgets.data.utils.preprocess import SequenceFlow, Controller, \
-    StandardItemModel
+from Orange.widgets.data.utils.preprocess import (
+    SequenceFlow,
+    Controller,
+    StandardItemModel,
+)
 from Orange.widgets.data.owpreprocess import (
-    PreprocessAction, Description, icon_path, DescriptionRole, ParametersRole
+    PreprocessAction,
+    Description,
+    icon_path,
+    DescriptionRole,
+    ParametersRole,
 )
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.overlay import OverlayWidget
-from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin, ConcurrentMixin
-
-from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QMimeData, QTimer
+from Orange.widgets.utils.concurrent import (
+    TaskState,
+    ConcurrentWidgetMixin,
+    ConcurrentMixin,
 )
+
+from AnyQt.QtCore import Qt, QEvent, QSize, QMimeData, QTimer
 from AnyQt.QtWidgets import (
-    QWidget, QListView, QVBoxLayout, QSizePolicy, QStyle,
-    QPushButton, QLabel, QMenu, QAction, QScrollArea, QGridLayout,
-    QToolButton, QSplitter
+    QWidget,
+    QListView,
+    QVBoxLayout,
+    QSizePolicy,
+    QStyle,
+    QPushButton,
+    QLabel,
+    QMenu,
+    QAction,
+    QScrollArea,
+    QGridLayout,
+    QToolButton,
+    QSplitter,
 )
 from AnyQt.QtGui import (
-    QIcon, QStandardItemModel, QStandardItem,
-    QKeySequence, QFont, QColor
+    QIcon,
+    QStandardItemModel,
+    QStandardItem,
+    QKeySequence,
+    QFont,
+    QColor,
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot, QObject
 
 from orangecontrib.spectroscopy.preprocess.utils import PreprocessException
 from orangecontrib.spectroscopy.widgets.owspectra import CurvePlot, NoSuchCurve
-from orangecontrib.spectroscopy.widgets.preprocessors.misc import SavitzkyGolayFilteringEditor
+from orangecontrib.spectroscopy.widgets.preprocessors.misc import (
+    SavitzkyGolayFilteringEditor,
+)
 from orangecontrib.spectroscopy.widgets.preprocessors.utils import REFERENCE_DATA_PARAM
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 
 
-BREWER_PALETTE8 = [(127, 201, 127), (190, 174, 212), (253, 192, 134), (255, 255, 153),
-                   (56, 108, 176), (240, 2, 127), (191, 91, 23), (102, 102, 102)]
+BREWER_PALETTE8 = [
+    (127, 201, 127),
+    (190, 174, 212),
+    (253, 192, 134),
+    (255, 255, 153),
+    (56, 108, 176),
+    (240, 2, 127),
+    (191, 91, 23),
+    (102, 102, 102),
+]
 PREVIEW_COLORS = [QColor(*a).name() for a in BREWER_PALETTE8]
 
 
 class ViewController(Controller):
-
     def createWidgetFor(self, index):
         w = super().createWidgetFor(index)
         w.parent_widget = self.parent()
@@ -98,13 +130,22 @@ class FocusFrame(SequenceFlow.Frame):
         self.title_label.setMinimumWidth(100)
         tl.addWidget(self.title_label, 0, 1)
         close_button = QToolButton(self)
-        ca = QAction("close", self, triggered=self.closeRequested,
-                     icon=QIcon(self.style().standardPixmap(QStyle.SP_DockWidgetCloseButton)))
+        ca = QAction(
+            "close",
+            self,
+            triggered=self.closeRequested,
+            icon=QIcon(self.style().standardPixmap(QStyle.SP_DockWidgetCloseButton)),
+        )
         close_button.setDefaultAction(ca)
         self.preview_button = QToolButton(self)
-        pa = QAction("preview", self, triggered=self.toggle_preview, checkable=True,
-                     icon=QIcon(self.style().standardPixmap(QStyle.SP_MediaPlay)),
-                     shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_P))
+        pa = QAction(
+            "preview",
+            self,
+            triggered=self.toggle_preview,
+            checkable=True,
+            icon=QIcon(self.style().standardPixmap(QStyle.SP_MediaPlay)),
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_P),
+        )
         pa.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         self.addAction(pa)
         self.preview_button.setDefaultAction(pa)
@@ -134,7 +175,7 @@ class FocusFrame(SequenceFlow.Frame):
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        try: #active selection on preview
+        try:  # active selection on preview
             self.widget().activateOptions()
         except AttributeError:
             pass
@@ -150,6 +191,7 @@ class SequenceFlow(SequenceFlow):
     """
     FIXME Ugly hack: using the same name for access to private variables!
     """
+
     def __init__(self, *args, preview_callback=None, multiple_previews=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.preview_callback = preview_callback
@@ -158,7 +200,11 @@ class SequenceFlow(SequenceFlow):
 
     def preview_n(self):
         """How many preprocessors to apply for the preview?"""
-        ppos = [i for i, item in enumerate(self.layout_iter(self.__flowlayout)) if item.widget().preview]
+        ppos = [
+            i
+            for i, item in enumerate(self.layout_iter(self.__flowlayout))
+            if item.widget().preview
+        ]
         # if any, show the chosen preview
         if not self.multiple_previews:
             return ppos[-1] if ppos else None
@@ -183,15 +229,14 @@ class SequenceFlow(SequenceFlow):
         self.preview_callback()
 
     def insertWidget(self, index, widget, title):
-        """ Mostly copied to get different kind of frame """
-        frame = FocusFrame(widget=widget, title=title) #changed
+        """Mostly copied to get different kind of frame"""
+        frame = FocusFrame(widget=widget, title=title)  # changed
         frame.closeRequested.connect(self.__closeRequested)
         frame.preview_changed.connect(self.preview_changed)
 
         layout = self.__flowlayout
 
-        frames = [item.widget() for item in self.layout_iter(layout)
-                  if item.widget()]
+        frames = [item.widget() for item in self.layout_iter(layout) if item.widget()]
 
         if 0 < index < len(frames):
             # find the layout index of a widget occupying the current
@@ -202,7 +247,7 @@ class SequenceFlow(SequenceFlow):
         elif index < 0 or index >= len(frames):
             insert_index = layout.count()
         else:
-            assert False
+            raise AssertionError
 
         layout.insertWidget(insert_index, frame)
         frame.installEventFilter(self)
@@ -212,7 +257,7 @@ class SequenceFlow(SequenceFlow):
         super().__closeRequested()
 
     def minimumSizeHint(self):
-        """ Add space below so that dragging to bottom works """
+        """Add space below so that dragging to bottom works"""
         psh = super().minimumSizeHint()
         return QSize(psh.width(), psh.height() + 100)
 
@@ -223,13 +268,13 @@ class SequenceFlow(SequenceFlow):
                 item.set_color(PREVIEW_COLORS[i % len(PREVIEW_COLORS)])
 
     def preview_color(self, i):
-        """ Return preview color of a specific widget. """
+        """Return preview color of a specific widget."""
         w = self.__flowlayout.itemAt(i).widget()
         return w.color
 
 
 class TimeoutLabel(QLabel):
-    """ A label that disappears out after two seconds. """
+    """A label that disappears out after two seconds."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -258,7 +303,9 @@ def transfer_highlight(from_: CurvePlot, to: CurvePlot):
         if len(index_with_same_id):
             highlight = index_with_same_id[0]
     try:
-        to.highlight_index_in_data(highlight, emit=False)  # do not emit to avoid recursion
+        to.highlight_index_in_data(
+            highlight, emit=False
+        )  # do not emit to avoid recursion
     except NoSuchCurve:
         pass
 
@@ -292,7 +339,6 @@ class InterruptException(Exception):
 
 
 class PreviewRunner(QObject, ConcurrentMixin):
-
     preview_updated = Signal()
 
     def __init__(self, master):
@@ -313,7 +359,7 @@ class PreviewRunner(QObject, ConcurrentMixin):
         self.last_partial = i
         if self.preview_pos == i:
             self.preview_data = data
-        if self.preview_pos == i-1:
+        if self.preview_pos == i - 1:
             self.after_data = data
         widgets = self.master.flow_view.widgets()
         if i < len(widgets):
@@ -377,27 +423,38 @@ class PreviewRunner(QObject, ConcurrentMixin):
             self.last_text = new_text
 
     def show_preview(self, show_info_anyway=False):
-        """ Shows preview and also passes preview data to the widgets """
+        """Shows preview and also passes preview data to the widgets"""
         master = self.master
         self.preview_pos = master.flow_view.preview_n()
         self.last_partial = None
         self.show_info_anyway = show_info_anyway
         self.preview_data = None
         self.after_data = None
-        pp_def = [master.preprocessormodel.item(i)
-                  for i in range(master.preprocessormodel.rowCount())]
+        pp_def = [
+            master.preprocessormodel.item(i)
+            for i in range(master.preprocessormodel.rowCount())
+        ]
         if master.data is not None:
             data = master.sample_data(master.data)
-            self.start(self.run_preview, data, master.reference_data,
-                       pp_def, master.process_reference)
+            self.start(
+                self.run_preview,
+                data,
+                master.reference_data,
+                pp_def,
+                master.process_reference,
+            )
         else:
             master.curveplot.set_data(None)
             master.curveplot_after.set_data(None)
 
     @staticmethod
-    def run_preview(data: Orange.data.Table, reference: Orange.data.Table,
-                    pp_def, process_reference, state: TaskState):
-
+    def run_preview(
+        data: Orange.data.Table,
+        reference: Orange.data.Table,
+        pp_def,
+        process_reference,
+        state: TaskState,
+    ):
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
                 raise InterruptException
@@ -419,29 +476,32 @@ class PreviewRunner(QObject, ConcurrentMixin):
 
 
 class SpectraPreviews:
-
     curveplot = settings.SettingProvider(CurvePlot)
     curveplot_after = settings.SettingProvider(CurvePlot)
 
     def __init__(self):
         self.curveplot = CurvePlot(self)
         self.curveplot_after = CurvePlot(self)
-        self.curveplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
-        self.curveplot_after.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
+        self.curveplot.plot.vb.x_padding = (
+            0.005  # pad view so that lines are not hidden
+        )
+        self.curveplot_after.plot.vb.x_padding = (
+            0.005  # pad view so that lines are not hidden
+        )
 
         self.curveplot.highlight_changed.connect(
-            lambda: transfer_highlight(self.curveplot, self.curveplot_after))
+            lambda: transfer_highlight(self.curveplot, self.curveplot_after)
+        )
         self.curveplot_after.highlight_changed.connect(
-            lambda: transfer_highlight(self.curveplot_after, self.curveplot))
+            lambda: transfer_highlight(self.curveplot_after, self.curveplot)
+        )
 
     def shutdown(self):
         self.curveplot.shutdown()
         self.curveplot_after.shutdown()
 
 
-class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
-                        openclass=True):
-
+class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin, openclass=True):
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)
 
@@ -473,9 +533,11 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         preprocessor = Msg("Preprocessor error: see the widget for details.")
 
     class Warning(OWWidget.Warning):
-        reference_compat = Msg("Reference is not processed for compatibility with the loaded "
-                               "workflow. New instances of this widget will also process "
-                               "the reference input.")
+        reference_compat = Msg(
+            "Reference is not processed for compatibility with the loaded "
+            "workflow. New instances of this widget will also process "
+            "the reference input."
+        )
         preprocessor = Msg("Preprocessor warning: see the widget for details.")
 
     def _build_PREPROCESSORS(self):
@@ -484,13 +546,16 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         for editor in self.editor_registry.sorted():
             assert editor.qualname is not None
             assert editor.qualname not in qualnames
-            pa = PreprocessAction(editor.name,
-                                  editor.qualname,
-                                  editor.name,
-                                  Description(editor.name,
-                                              editor.icon if editor.icon else
-                                              icon_path("Discretize.svg")),
-                                  editor)
+            pa = PreprocessAction(
+                editor.name,
+                editor.qualname,
+                editor.name,
+                Description(
+                    editor.name,
+                    editor.icon if editor.icon else icon_path("Discretize.svg"),
+                ),
+                editor,
+            )
             qualnames.add(editor.qualname)
             self.PREPROCESSORS.append(pa)
 
@@ -516,6 +581,7 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
             m = QMimeData()
             m.setData("application/x-qwidget-ref", qname)
             return m
+
         # TODO: Fix this (subclass even if just to pass a function
         # for mimeData delegate)
         self.preprocessors.mimeData = mimeData
@@ -526,10 +592,10 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         self.button.setMenu(self.preprocessor_menu)
         self.button.setAutoDefault(False)
 
-        self.preprocessorsView = view = QListView(
+        self.preprocessorsView = QListView(
             selectionMode=QListView.SingleSelection,
             dragEnabled=True,
-            dragDropMode=QListView.DragOnly
+            dragDropMode=QListView.DragOnly,
         )
 
         self._qname2ppdef = {ppdef.qualname: ppdef for ppdef in self.PREPROCESSORS}
@@ -537,19 +603,21 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         # List of 'selected' preprocessors and their parameters.
         self.preprocessormodel = None
 
-        self.flow_view = SequenceFlow(preview_callback=self._show_preview_info,
-                                      multiple_previews=self.preview_on_image)
+        self.flow_view = SequenceFlow(
+            preview_callback=self._show_preview_info,
+            multiple_previews=self.preview_on_image,
+        )
         self.controler = ViewController(self.flow_view, parent=self)
 
-        self.scroll_area = QScrollArea(
-            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
-        )
+        self.scroll_area = QScrollArea(verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn)
         self.scroll_area.viewport().setAcceptDrops(True)
         self.scroll_area.setWidget(self.flow_view)
         self.scroll_area.setWidgetResizable(True)
 
         self.flow_view.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
-        self.scroll_area.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Expanding)
+        self.scroll_area.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Expanding
+        )
 
         splitter = QSplitter(self)
         splitter.setOrientation(Qt.Vertical)
@@ -588,10 +656,23 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         self.final_preview_toggle = False
         if not self.preview_on_image:
             self.final_preview = gui.button(
-                box, self, "Final preview", self.flow_view.preview_changed,
-                toggleButton=True, value="final_preview_toggle", autoDefault=False)
-        gui.spin(box, self, "preview_curves", 1, self._max_preview_spectra, label="Show spectra",
-                 callback=self._update_preview_number)
+                box,
+                self,
+                "Final preview",
+                self.flow_view.preview_changed,
+                toggleButton=True,
+                value="final_preview_toggle",
+                autoDefault=False,
+            )
+        gui.spin(
+            box,
+            self,
+            "preview_curves",
+            1,
+            self._max_preview_spectra,
+            label="Show spectra",
+            callback=self._update_preview_number,
+        )
 
         self.output_box = gui.widgetBox(self.controlArea, "Output")
         b = gui.auto_commit(self.output_box, self, "autocommit", "Commit", box=False)
@@ -607,7 +688,9 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     def sample_data(self, data):
         if data is not None and len(data) > self.preview_curves:
-            sampled_indices = random.Random(0).sample(range(len(data)), self.preview_curves)
+            sampled_indices = random.Random(0).sample(
+                range(len(data)), self.preview_curves
+            )
             return data[sampled_indices]
         else:
             return self.data
@@ -618,12 +701,12 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
             self.Warning.reference_compat()
 
     def show_preview(self, show_info_anyway=False):
-        """ Shows preview and also passes preview data to the widgets """
+        """Shows preview and also passes preview data to the widgets"""
         self._reference_compat_warning()
         self.Warning.preprocessor.clear()
         self.Error.preprocessor.clear()
         self.Error.preview.clear()
-        for w in  self.flow_view.widgets():
+        for w in self.flow_view.widgets():
             if getattr(w, "Error", None):  # only BaseEditorOrange supports errors
                 w.Error.exception.clear()
 
@@ -636,7 +719,9 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
         else:
             icon = QIcon()
         action = QAction(
-            description.title, self, triggered=lambda x, p=pp_def: self.add_preprocessor(p)
+            description.title,
+            self,
+            triggered=lambda x, p=pp_def: self.add_preprocessor(p),
         )
         action.setToolTip(description.summary or "")
         action.setIcon(icon)
@@ -649,9 +734,11 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     def _init_menu_registry(self):
         for category in self.editor_registry.categories():
-            category_menu = self.preprocessor_menu \
-                if category == "" \
+            category_menu = (
+                self.preprocessor_menu
+                if category == ""
                 else self.preprocessor_menu.addMenu(category)
+            )
             for editor in self.editor_registry.sorted(category):
                 pa = self._qname2ppdef[editor.qualname]
                 action = self._create_preprocessor_action(pa)
@@ -667,15 +754,13 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
             item = QStandardItem(icon, description.title)
             item.setToolTip(description.summary or "")
             item.setData(pp_def, DescriptionRole)
-            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable |
-                          Qt.ItemIsDragEnabled)
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
             self.preprocessors.appendRow([item])
 
         if self.editor_registry is None:
             self._init_menu_flat()
         else:
             self._init_menu_registry()
-
 
         try:
             model = self.load(self.storedsettings)
@@ -701,13 +786,12 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
-        name = saved.get("name", "")
+        name = saved.get("name", "")  # noqa: F841
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
         def dropMimeData(data, action, row, column, parent):
-            if data.hasFormat("application/x-qwidget-ref") and \
-                    action == Qt.CopyAction:
+            if data.hasFormat("application/x-qwidget-ref") and action == Qt.CopyAction:
                 qname = bytes(data.data("application/x-qwidget-ref")).decode()
 
                 ppdef = self._qname2ppdef[qname]
@@ -850,7 +934,7 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     @classmethod
     def migrate_preprocessor(cls, preprocessor, version):
-        """ Migrate a preprocessor. A preprocessor should migrate into a list of preprocessors. """
+        """Migrate a preprocessor. A preprocessor should migrate into a list of preprocessors."""
         name, settings = preprocessor
         return [((name, settings), version)]
 
@@ -866,21 +950,23 @@ class GeneralPreprocess(OWWidget, ConcurrentWidgetMixin,
 
     @classmethod
     def migrate_preprocessors(cls, preprocessors, version):
-        input = list(zip(preprocessors, [version]*len(preprocessors)))
+        input = list(zip(preprocessors, [version] * len(preprocessors)))  # noqa: B905
         migrated = cls.migrate_preprocessor_list(input)
         return [p[0] for p in migrated], cls.settings_version
 
     @classmethod
     def migrate_settings(cls, settings_, version):
         # migrate individual preprocessors
-        if "storedsettings" in settings_ and "preprocessors" in settings_["storedsettings"]:
-            settings_["storedsettings"]["preprocessors"], _ = \
-                cls.migrate_preprocessors(settings_["storedsettings"]["preprocessors"], version)
+        if (
+            "storedsettings" in settings_
+            and "preprocessors" in settings_["storedsettings"]
+        ):
+            settings_["storedsettings"]["preprocessors"], _ = cls.migrate_preprocessors(
+                settings_["storedsettings"]["preprocessors"], version
+            )
 
 
-class SpectralPreprocess(GeneralPreprocess,
-                         SpectraPreviews, openclass=True):
-
+class SpectralPreprocess(GeneralPreprocess, SpectraPreviews, openclass=True):
     def __init__(self):
         SpectraPreviews.__init__(self)
         super().__init__()
@@ -891,7 +977,6 @@ class SpectralPreprocess(GeneralPreprocess,
 
 
 class SpectralPreprocessReference(SpectralPreprocess, openclass=True):
-
     class Inputs(SpectralPreprocess.Inputs):
         reference = Input("Reference", Orange.data.Table)
 
@@ -901,13 +986,14 @@ class SpectralPreprocessReference(SpectralPreprocess, openclass=True):
 
 
 class OWPreprocess(SpectralPreprocessReference):
-
     name = "Preprocess Spectra"
     description = "Construct a data preprocessing pipeline."
     icon = "icons/preprocess.svg"
     priority = 1000
-    replaces = ["orangecontrib.infrared.widgets.owpreproc.OWPreprocess",
-                "orangecontrib.infrared.widgets.owpreprocess.OWPreprocess"]
+    replaces = [
+        "orangecontrib.infrared.widgets.owpreproc.OWPreprocess",
+        "orangecontrib.infrared.widgets.owpreprocess.OWPreprocess",
+    ]
 
     settings_version = 9
 
@@ -923,13 +1009,26 @@ class OWPreprocess(SpectralPreprocessReference):
 
     def create_outputs(self):
         self._reference_compat_warning()
-        pp_def = [self.preprocessormodel.item(i) for i in range(self.preprocessormodel.rowCount())]
-        self.start(self.run_task, self.data, self.reference_data, pp_def, self.process_reference)
+        pp_def = [
+            self.preprocessormodel.item(i)
+            for i in range(self.preprocessormodel.rowCount())
+        ]
+        self.start(
+            self.run_task,
+            self.data,
+            self.reference_data,
+            pp_def,
+            self.process_reference,
+        )
 
     @staticmethod
-    def run_task(data: Orange.data.Table, reference: Orange.data.Table,
-                 pp_def, process_reference, state: TaskState):
-
+    def run_task(
+        data: Orange.data.Table,
+        reference: Orange.data.Table,
+        pp_def,
+        process_reference,
+        state: TaskState,
+    ):
         def progress_interrupt(i: float):
             state.set_progress_value(i)
             if state.is_interruption_requested():
@@ -939,20 +1038,20 @@ class OWPreprocess(SpectralPreprocessReference):
         # happen when adding a preprocessor (there, commit() is called twice).
         # Wait 100 ms before processing - if a new task is started in meanwhile,
         # allow that is easily` cancelled.
-        for i in range(10):
+        for _i in range(10):
             time.sleep(0.010)
             progress_interrupt(0)
 
         n = len(pp_def)
         plist = []
         for i in range(n):
-            progress_interrupt(i/n*100)
+            progress_interrupt(i / n * 100)
             item = pp_def[i]
             pp = create_preprocessor(item, reference)
             plist.append(pp)
             if data is not None:
                 data = pp(data)
-            progress_interrupt((i/n + 0.5/n)*100)
+            progress_interrupt((i / n + 0.5 / n) * 100)
             if process_reference and reference is not None and i != n - 1:
                 reference = pp(reference)
         # if there are no preprocessors, return None instead of an empty list
@@ -994,9 +1093,14 @@ class OWPreprocess(SpectralPreprocessReference):
             settings["from_type"] = 0
             settings["to_type"] = 1
             version = 5
-        if name in ["orangecontrib.spectroscopy.preprocess.emsc",
-                    "orangecontrib.spectroscopy.preprocess.me_emsc.me_emsc"] \
-                and version < 7:
+        if (
+            name
+            in [
+                "orangecontrib.spectroscopy.preprocess.emsc",
+                "orangecontrib.spectroscopy.preprocess.me_emsc.me_emsc",
+            ]
+            and version < 7
+        ):
             ranges = settings.get("ranges", [])
             new_ranges = [[l, r, w, 0.0] for l, r, w in ranges]
             settings["ranges"] = new_ranges
@@ -1009,8 +1113,8 @@ class OWPreprocess(SpectralPreprocessReference):
             settings["inverse"] = True
         if name == "orangecontrib.infrared.curveshift":
             name = "orangecontrib.spectroscopy.shiftandscale"
-            settings["offset"] = settings.get("amount", 0.)
-            settings["scale"] = 1.
+            settings["offset"] = settings.get("amount", 0.0)
+            settings["scale"] = 1.0
         return [((name, settings), version)]
 
     @classmethod
@@ -1018,7 +1122,7 @@ class OWPreprocess(SpectralPreprocessReference):
         # For backwards compatibility, set process_reference=False
         # but only if there were multiple preprocessors
         if "process_reference" not in settings_:
-            settings_["process_reference"] = not(
+            settings_["process_reference"] = not (
                 version <= 5
                 and "storedsettings" in settings_
                 and "preprocessors" in settings_["storedsettings"]
@@ -1030,5 +1134,6 @@ class OWPreprocess(SpectralPreprocessReference):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     data = Orange.data.Table("collagen.csv")
     WidgetPreview(OWPreprocess).run(set_data=data[:30], set_reference=data[10:11])

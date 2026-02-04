@@ -21,18 +21,32 @@ from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.preprocess.integrate import Integrate
 from orangecontrib.spectroscopy.preprocess.emsc import EMSC
-from orangecontrib.spectroscopy.preprocess.transform import Absorbance, Transmittance, \
-    CommonDomainRef
-from orangecontrib.spectroscopy.preprocess.utils import SelectColumn, CommonDomain, \
-    CommonDomainOrder, CommonDomainOrderUnknowns, nan_extend_edges_and_interpolate, \
-    remove_whole_nan_ys, interp1d_with_unknowns_numpy, interp1d_with_unknowns_scipy, \
-    interp1d_wo_unknowns_scipy, edge_baseline, MissingReferenceException, \
-    WrongReferenceException, replace_infs, transform_to_sorted_features, PreprocessException, \
-    linear_baseline
+from orangecontrib.spectroscopy.preprocess.transform import (
+    Absorbance,
+    Transmittance,
+    CommonDomainRef,
+)
+from orangecontrib.spectroscopy.preprocess.utils import (
+    SelectColumn,
+    CommonDomain,
+    CommonDomainOrder,
+    CommonDomainOrderUnknowns,
+    nan_extend_edges_and_interpolate,
+    remove_whole_nan_ys,
+    interp1d_with_unknowns_numpy,
+    interp1d_with_unknowns_scipy,
+    interp1d_wo_unknowns_scipy,
+    edge_baseline,
+    MissingReferenceException,
+    WrongReferenceException,
+    replace_infs,
+    transform_to_sorted_features,
+    PreprocessException,
+    linear_baseline,
+)
 
 
 class MNFDenoising(Preprocess):
-
     def __init__(self, components=None):
         self.components = components
 
@@ -41,15 +55,18 @@ class MNFDenoising(Preprocess):
             # maxsvd = min(len(data.domain.attributes), len(data))
             commonfn = _MNFCommon(data.domain, self.components)
 
-            nats = [at.copy(compute_value=MNFDenoisingFeature(i, commonfn))
-                    for i, at in enumerate(data.domain.attributes)]
+            nats = [
+                at.copy(compute_value=MNFDenoisingFeature(i, commonfn))
+                for i, at in enumerate(data.domain.attributes)
+            ]
         else:
             # FIXME we should have a warning here
-            nats = [at.copy(compute_value=lambda d: np.full((len(d), 1), np.nan))
-                    for at in data.domain.attributes]
+            nats = [
+                at.copy(compute_value=lambda d: np.full((len(d), 1), np.nan))
+                for at in data.domain.attributes
+            ]
 
-        domain = Orange.data.Domain(nats, data.domain.class_vars,
-                                    data.domain.metas)
+        domain = Orange.data.Domain(nats, data.domain.class_vars, data.domain.metas)
 
         return data.from_table(domain, data)
 
@@ -59,7 +76,6 @@ class MNFDenoisingFeature(SelectColumn):
 
 
 class _MNFCommon(CommonDomainOrderUnknowns):
-
     def __init__(self, domain, components):
         super().__init__(domain)
         self.domain = domain
@@ -102,7 +118,7 @@ class _MNFCommon(CommonDomainOrderUnknowns):
 
         # choice of top components
         R = np.eye(m[1], m[1])
-        R[self.components:, self.components:] = 0
+        R[self.components :, self.components :] = 0
 
         # inverse MNF transformation
         D = np.dot(np.dot(M, R), np.linalg.inv(P))
@@ -128,7 +144,7 @@ class _PCAReconstructCommon(CommonDomain):
             # set unused components to zero
             remove = np.ones(pca_space.shape[1])
             if isinstance(self.components, int):
-                remove[:self.components] = 0
+                remove[: self.components] = 0
             else:
                 remove[self.components] = 0
             remove = np.extract(remove, np.arange(pca_space.shape[1]))
@@ -137,9 +153,12 @@ class _PCAReconstructCommon(CommonDomain):
 
 
 class PCADenoising(Preprocess):
-
-    def __init__(self, components: Union[None, int, Sequence[int]]=None,
-                 random_state=0, svd_solver="randomized"):
+    def __init__(
+        self,
+        components: Union[None, int, Sequence[int]] = None,
+        random_state=0,
+        svd_solver="randomized",
+    ):
         self.components = components
         self.random_state = random_state
         self.svd_solver = svd_solver
@@ -147,19 +166,24 @@ class PCADenoising(Preprocess):
     def __call__(self, data):
         if data and len(data.domain.attributes):
             maxpca = min(len(data.domain.attributes), len(data), MAX_COMPONENTS)
-            pca = Orange.projection.PCA(n_components=maxpca,
-                                        random_state=self.random_state,
-                                        svd_solver=self.svd_solver)(data)
+            pca = Orange.projection.PCA(
+                n_components=maxpca,
+                random_state=self.random_state,
+                svd_solver=self.svd_solver,
+            )(data)
             commonfn = _PCAReconstructCommon(pca, self.components)
-            nats = [at.copy(compute_value=PCADenoisingFeature(i, commonfn))
-                    for i, at in enumerate(data.domain.attributes)]
+            nats = [
+                at.copy(compute_value=PCADenoisingFeature(i, commonfn))
+                for i, at in enumerate(data.domain.attributes)
+            ]
         else:
             # FIXME we should have a warning here
-            nats = [at.copy(compute_value=lambda d: np.full((len(d), 1), np.nan))
-                    for at in data.domain.attributes]
+            nats = [
+                at.copy(compute_value=lambda d: np.full((len(d), 1), np.nan))
+                for at in data.domain.attributes
+            ]
 
-        domain = Orange.data.Domain(nats, data.domain.class_vars,
-                                    data.domain.metas)
+        domain = Orange.data.Domain(nats, data.domain.class_vars, data.domain.metas)
 
         return data.from_table(domain, data)
 
@@ -169,7 +193,6 @@ class GaussianFeature(SelectColumn):
 
 
 class _GaussianCommon(CommonDomainOrderUnknowns):
-
     def __init__(self, sd, domain):
         super().__init__(domain)
         self.sd = sd
@@ -182,21 +205,20 @@ class _GaussianCommon(CommonDomainOrderUnknowns):
 
 
 class GaussianSmoothing(Preprocess):
-
-    def __init__(self, sd=10.):
+    def __init__(self, sd=10.0):
         self.sd = sd
 
     def __call__(self, data):
         common = _GaussianCommon(self.sd, data.domain)
-        atts = [a.copy(compute_value=GaussianFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=GaussianFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
 class Cut(Preprocess):
-
     def __init__(self, lowlim=None, highlim=None, inverse=False):
         self.lowlim = lowlim
         self.highlim = highlim
@@ -205,14 +227,22 @@ class Cut(Preprocess):
     def __call__(self, data):
         x = getx(data)
         if not self.inverse:
-            okattrs = [at for at, v in zip(data.domain.attributes, x)
-                       if (self.lowlim is None or self.lowlim <= v) and
-                       (self.highlim is None or v <= self.highlim)]
+            okattrs = [
+                at
+                for at, v in zip(data.domain.attributes, x, strict=True)
+                if (self.lowlim is None or self.lowlim <= v)
+                and (self.highlim is None or v <= self.highlim)
+            ]
         else:
-            okattrs = [at for at, v in zip(data.domain.attributes, x)
-                       if (self.lowlim is not None and v <= self.lowlim) or
-                       (self.highlim is not None and self.highlim <= v)]
-        domain = Orange.data.Domain(okattrs, data.domain.class_vars, metas=data.domain.metas)
+            okattrs = [
+                at
+                for at, v in zip(data.domain.attributes, x, strict=True)
+                if (self.lowlim is not None and v <= self.lowlim)
+                or (self.highlim is not None and self.highlim <= v)
+            ]
+        domain = Orange.data.Domain(
+            okattrs, data.domain.class_vars, metas=data.domain.metas
+        )
         return data.from_table(domain, data)
 
 
@@ -221,7 +251,6 @@ class SavitzkyGolayFeature(SelectColumn):
 
 
 class _SavitzkyGolayCommon(CommonDomainOrderUnknowns):
-
     def __init__(self, window, polyorder, deriv, domain):
         super().__init__(domain)
         self.window = window
@@ -229,15 +258,21 @@ class _SavitzkyGolayCommon(CommonDomainOrderUnknowns):
         self.deriv = deriv
 
     def transformed(self, X, wavenumbers):
-        return savgol_filter(X, window_length=self.window,
-                             polyorder=self.polyorder,
-                             deriv=self.deriv, mode="nearest")
+        return savgol_filter(
+            X,
+            window_length=self.window,
+            polyorder=self.polyorder,
+            deriv=self.deriv,
+            mode="nearest",
+        )
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.window == other.window \
-               and self.polyorder == other.polyorder \
-               and self.deriv == other.deriv
+        return (
+            super().__eq__(other)
+            and self.window == other.window
+            and self.polyorder == other.polyorder
+            and self.deriv == other.deriv
+        )
 
     def __hash__(self):
         return hash((super().__hash__(), self.window, self.polyorder, self.deriv))
@@ -254,12 +289,14 @@ class SavitzkyGolayFiltering(Preprocess):
         self.deriv = deriv
 
     def __call__(self, data):
-        common = _SavitzkyGolayCommon(self.window, self.polyorder,
-                                      self.deriv, data.domain)
-        atts = [a.copy(compute_value=SavitzkyGolayFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = _SavitzkyGolayCommon(
+            self.window, self.polyorder, self.deriv, data.domain
+        )
+        atts = [
+            a.copy(compute_value=SavitzkyGolayFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -268,7 +305,6 @@ class RubberbandBaselineFeature(SelectColumn):
 
 
 class _RubberbandBaselineCommon(CommonDomainOrder):
-
     def __init__(self, peak_dir, sub, domain):
         super().__init__(domain)
         self.peak_dir = peak_dir
@@ -288,10 +324,10 @@ class _RubberbandBaselineCommon(CommonDomainOrder):
             else:
                 if self.peak_dir == RubberbandBaseline.PeakPositive:
                     v = np.roll(v, -v.argmin())
-                    v = v[:v.argmax() + 1]
+                    v = v[: v.argmax() + 1]
                 elif self.peak_dir == RubberbandBaseline.PeakNegative:
                     v = np.roll(v, -v.argmax())
-                    v = v[:v.argmin() + 1]
+                    v = v[: v.argmin() + 1]
                 # If there are NaN values at the edges of data then convex hull
                 # does not include the endpoints. Because the same values are also
                 # NaN in the current row, we can fill them with NaN (bounds_error
@@ -318,12 +354,12 @@ class RubberbandBaseline(Preprocess):
         self.sub = sub
 
     def __call__(self, data):
-        common = _RubberbandBaselineCommon(self.peak_dir, self.sub,
-                                           data.domain)
-        atts = [a.copy(compute_value=RubberbandBaselineFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = _RubberbandBaselineCommon(self.peak_dir, self.sub, data.domain)
+        atts = [
+            a.copy(compute_value=RubberbandBaselineFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -332,7 +368,6 @@ class LinearBaselineFeature(SelectColumn):
 
 
 class _LinearBaselineCommon(CommonDomainOrderUnknowns):
-
     def __init__(self, peak_dir, sub, zero_points, domain):
         super().__init__(domain)
         self.peak_dir = peak_dir
@@ -361,12 +396,14 @@ class LinearBaseline(Preprocess):
         self.zero_points = zero_points
 
     def __call__(self, data):
-        common = _LinearBaselineCommon(self.peak_dir, self.sub, self.zero_points,
-                                       data.domain)
-        atts = [a.copy(compute_value=LinearBaselineFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = _LinearBaselineCommon(
+            self.peak_dir, self.sub, self.zero_points, data.domain
+        )
+        atts = [
+            a.copy(compute_value=LinearBaselineFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -375,7 +412,6 @@ class NormalizeFeature(SelectColumn):
 
 
 class _NormalizeCommon(CommonDomain):
-
     def __init__(self, method, lower, upper, int_method, attr, domain):
         super().__init__(domain)
         self.method = method
@@ -404,21 +440,24 @@ class _NormalizeCommon(CommonDomain):
                     # keep nans where they were
                     data.X[nans] = float("nan")
             elif self.method == Normalize.Area:
-                norm_data = Integrate(methods=self.int_method,
-                                      limits=[[self.lower, self.upper]])(data)
+                norm_data = Integrate(
+                    methods=self.int_method, limits=[[self.lower, self.upper]]
+                )(data)
                 data.X /= norm_data.X
                 replace_infs(data.X)
             elif self.method == Normalize.SNV:
-                data.X = (data.X - bottleneck.nanmean(data.X, axis=1).reshape(-1, 1)) / \
-                         bottleneck.nanstd(data.X, axis=1).reshape(-1, 1)
+                data.X = (
+                    data.X - bottleneck.nanmean(data.X, axis=1).reshape(-1, 1)
+                ) / bottleneck.nanstd(data.X, axis=1).reshape(-1, 1)
                 replace_infs(data.X)
             elif self.method == Normalize.Attribute:
-                if self.attr in data.domain and isinstance(data.domain[self.attr], Orange.data.ContinuousVariable):
+                if self.attr in data.domain and isinstance(
+                    data.domain[self.attr], Orange.data.ContinuousVariable
+                ):
                     ndom = Orange.data.Domain([data.domain[self.attr]])
                     factors = data.transform(ndom)
                     data.X /= factors.X
                     replace_infs(data.X)
-                    nd = data.domain[self.attr]
                 else:  # invalid attribute for normalization
                     data.X *= float("nan")
             elif self.method == Normalize.MinMax:
@@ -429,23 +468,35 @@ class _NormalizeCommon(CommonDomain):
         return data.X
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.method == other.method \
-               and self.lower == other.lower \
-               and self.upper == other.upper \
-               and self.int_method == other.int_method \
-               and self.attr == other.attr
+        return (
+            super().__eq__(other)
+            and self.method == other.method
+            and self.lower == other.lower
+            and self.upper == other.upper
+            and self.int_method == other.int_method
+            and self.attr == other.attr
+        )
 
     def __hash__(self):
-        return hash((super().__hash__(), self.method, self.lower,
-                     self.upper, self.int_method, self.attr))
+        return hash(
+            (
+                super().__hash__(),
+                self.method,
+                self.lower,
+                self.upper,
+                self.int_method,
+                self.attr,
+            )
+        )
 
 
 class Normalize(Preprocess):
     # Normalization methods
     Vector, Area, Attribute, MinMax, SNV = 0, 1, 2, 3, 4
 
-    def __init__(self, method=Vector, lower=float, upper=float, int_method=0, attr=None):
+    def __init__(
+        self, method=Vector, lower=float, upper=float, int_method=0, attr=None
+    ):
         self.method = method
         self.lower = lower
         self.upper = upper
@@ -453,24 +504,24 @@ class Normalize(Preprocess):
         self.attr = attr
 
     def __call__(self, data):
-        common = _NormalizeCommon(self.method, self.lower, self.upper,
-                                  self.int_method, self.attr, data.domain)
-        atts = [a.copy(compute_value=NormalizeFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = _NormalizeCommon(
+            self.method, self.lower, self.upper, self.int_method, self.attr, data.domain
+        )
+        atts = [
+            a.copy(compute_value=NormalizeFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
 class _NormalizeReferenceCommon(CommonDomainRef):
-
     def transformed(self, data):
         ref_X = self.interpolate_extend_to(self.reference, getx(data))
         return replace_infs(data.X / ref_X)
 
 
 class NormalizeReference(Preprocess):
-
     def __init__(self, reference):
         if reference is None:
             raise MissingReferenceException()
@@ -480,39 +531,44 @@ class NormalizeReference(Preprocess):
 
     def __call__(self, data):
         common = _NormalizeReferenceCommon(self.reference, data.domain)
-        atts = [a.copy(compute_value=NormalizeFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=NormalizeFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.transform(domain)
 
 
 class _NormalizePhaseReferenceCommon(CommonDomainRef):
-
     def transformed(self, data):
         ref_X = self.interpolate_extend_to(self.reference, getx(data))
         return replace_infs(np.angle(np.exp(data.X * 1j) / np.exp(ref_X * 1j)))
 
 
-
 class NormalizePhaseReference(NormalizeReference):
-
     def __call__(self, data):
         common = _NormalizePhaseReferenceCommon(self.reference, data.domain)
-        atts = [a.copy(compute_value=NormalizeFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=NormalizeFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.transform(domain)
 
 
-def features_with_interpolation(points, kind="linear", domain=None, handle_nans=True, interpfn=None):
-    common = _InterpolateCommon(points, kind, domain, handle_nans=handle_nans, interpfn=interpfn)
+def features_with_interpolation(
+    points, kind="linear", domain=None, handle_nans=True, interpfn=None
+):
+    common = _InterpolateCommon(
+        points, kind, domain, handle_nans=handle_nans, interpfn=interpfn
+    )
     atts = []
     for i, p in enumerate(points):
         atts.append(
-            Orange.data.ContinuousVariable(name=str(p),
-                                           compute_value=InterpolatedFeature(i, common)))
+            Orange.data.ContinuousVariable(
+                name=str(p), compute_value=InterpolatedFeature(i, common)
+            )
+        )
     return atts
 
 
@@ -521,7 +577,6 @@ class InterpolatedFeature(SelectColumn):
 
 
 class _InterpolateCommon:
-
     def __init__(self, points, kind, domain, handle_nans=True, interpfn=None):
         self.points = points
         self.kind = kind
@@ -532,8 +587,11 @@ class _InterpolateCommon:
     def __call__(self, data):
         # convert to data domain if any conversion is possible,
         # otherwise we use the interpolator directly to make domains compatible
-        if self.domain is not None and data.domain != self.domain \
-                and any(at.compute_value for at in self.domain.attributes):
+        if (
+            self.domain is not None
+            and data.domain != self.domain
+            and any(at.compute_value for at in self.domain.attributes)
+        ):
             data = data.from_table(self.domain, data)
         x = getx(data)
         # removing whole NaN columns from the data will effectively replace
@@ -555,16 +613,26 @@ class _InterpolateCommon:
         return interpfn(x, ys, self.points, kind=self.kind)
 
     def __eq__(self, other):
-        return type(self) is type(other) \
-               and np.all(self.points == other.points) \
-               and self.kind == other.kind \
-               and self.domain == other.domain \
-               and self.handle_nans == other.handle_nans \
-               and self.interpfn == other.interpfn
+        return (
+            type(self) is type(other)
+            and np.all(self.points == other.points)
+            and self.kind == other.kind
+            and self.domain == other.domain
+            and self.handle_nans == other.handle_nans
+            and self.interpfn == other.interpfn
+        )
 
     def __hash__(self):
-        return hash((type(self), tuple(self.points[:5]), self.kind,
-                     self.domain, self.handle_nans, self.interpfn))
+        return hash(
+            (
+                type(self),
+                tuple(self.points[:5]),
+                self.kind,
+                self.domain,
+                self.handle_nans,
+                self.interpfn,
+            )
+        )
 
 
 class Interpolate(Preprocess):
@@ -585,10 +653,14 @@ class Interpolate(Preprocess):
         self.interpfn = None
 
     def __call__(self, data):
-        atts = features_with_interpolation(self.points, self.kind, data.domain,
-                                           self.handle_nans, interpfn=self.interpfn)
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = features_with_interpolation(
+            self.points,
+            self.kind,
+            data.domain,
+            self.handle_nans,
+            interpfn=self.interpfn,
+        )
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.transform(domain)
 
 
@@ -609,7 +681,10 @@ class InterpolateToDomain(Preprocess):
 
     def __init__(self, target, kind="linear", handle_nans=True):
         self.target = target
-        if not all(isinstance(a, Orange.data.ContinuousVariable) for a in self.target.domain.attributes):
+        if not all(
+            isinstance(a, Orange.data.ContinuousVariable)
+            for a in self.target.domain.attributes
+        ):
             raise NotAllContinuousException()
         self.points = getx(self.target)
         self.kind = kind
@@ -617,10 +692,16 @@ class InterpolateToDomain(Preprocess):
         self.interpfn = None
 
     def __call__(self, data):
-        X = _InterpolateCommon(self.points, self.kind, None, handle_nans=self.handle_nans,
-                               interpfn=self.interpfn)(data)
-        domain = Orange.data.Domain(self.target.domain.attributes, data.domain.class_vars,
-                                    data.domain.metas)
+        X = _InterpolateCommon(
+            self.points,
+            self.kind,
+            None,
+            handle_nans=self.handle_nans,
+            interpfn=self.interpfn,
+        )(data)
+        domain = Orange.data.Domain(
+            self.target.domain.attributes, data.domain.class_vars, data.domain.metas
+        )
         data = data.transform(domain)
         with data.unlocked_reference(data.X):
             data.X = X
@@ -633,7 +714,6 @@ class XASnormalizationFeature(SelectColumn):
 
 
 class _XASnormalizationCommon(CommonDomainOrderUnknowns):
-
     def __init__(self, edge, preedge_dict, postedge_dict, domain):
         super().__init__(domain)
         self.edge = edge
@@ -646,7 +726,8 @@ class _XASnormalizationCommon(CommonDomainOrderUnknowns):
 
         try:
             spectra, jump_vals = normal_xas.normalize_all(
-                energies, X, self.edge, self.preedge_params, self.postedge_params)
+                energies, X, self.edge, self.preedge_params, self.postedge_params
+            )
             jump_vals = jump_vals.reshape(-1, 1)
         except Exception:
             # TODO handle meaningful exceptions with PreprocessException
@@ -671,16 +752,23 @@ class XASnormalization(Preprocess):
         self.postedge_params = postedge_dict
 
     def __call__(self, data):
-        common = _XASnormalizationCommon(self.edge, self.preedge_params,
-                                         self.postedge_params, data.domain)
-        newattrs = [ContinuousVariable(name=var.name,
-                                       compute_value=XASnormalizationFeature(i, common))
-                    for i, var in enumerate(data.domain.attributes)]
-        newmetas = data.domain.metas + (ContinuousVariable(
-            name='edge_jump', compute_value=XASnormalizationFeature(len(newattrs), common)),)
+        common = _XASnormalizationCommon(
+            self.edge, self.preedge_params, self.postedge_params, data.domain
+        )
+        newattrs = [
+            ContinuousVariable(
+                name=var.name, compute_value=XASnormalizationFeature(i, common)
+            )
+            for i, var in enumerate(data.domain.attributes)
+        ]
+        newmetas = data.domain.metas + (
+            ContinuousVariable(
+                name='edge_jump',
+                compute_value=XASnormalizationFeature(len(newattrs), common),
+            ),
+        )
 
-        domain = Orange.data.Domain(
-            newattrs, data.domain.class_vars, newmetas)
+        domain = Orange.data.Domain(newattrs, data.domain.class_vars, newmetas)
 
         return data.from_table(domain, data)
 
@@ -702,7 +790,9 @@ class _ExtractEXAFSCommon(CommonDomain):
     # not CommonDomainOrderUnknowns because E -> K
     # and because transformed needs Edge jumps
 
-    def __init__(self, edge, extra_from, extra_to, poly_deg, kweight, m, k_interp, domain):
+    def __init__(
+        self, edge, extra_from, extra_to, poly_deg, kweight, m, k_interp, domain
+    ):
         super().__init__(domain)
         self.edge = edge
         self.extra_from = extra_from
@@ -720,7 +810,8 @@ class _ExtractEXAFSCommon(CommonDomain):
             I_jumps = edges.X[:, 0]
         else:
             raise NoEdgejumpProvidedException(
-                'Invalid meta data: Intensity jump at edge is missing')
+                'Invalid meta data: Intensity jump at edge is missing'
+            )
 
         # order X by wavenumbers:
         # xs non ordered energies
@@ -738,7 +829,7 @@ class _ExtractEXAFSCommon(CommonDomain):
         # Results are going to be discarded later.
         nan_rows = bottleneck.allnan(X, axis=1)
         if np.any(nan_rows):  # if there were no nans X is a view, so do not modify
-            X[nan_rows] = 1.
+            X[nan_rows] = 1.0
 
         # do the transformation
         X = self.transformed(X, xs[xsind], I_jumps)
@@ -751,14 +842,21 @@ class _ExtractEXAFSCommon(CommonDomain):
 
     def transformed(self, X, energies, I_jumps):
         try:
-            Km_Chi, Chi, bkgr = extra_exafs.extract_all(energies, X,
-                                                        self.edge, I_jumps,
-                                                        self.extra_from, self.extra_to,
-                                                        self.poly_deg, self.kweight, self.m)
+            Km_Chi, Chi, bkgr = extra_exafs.extract_all(
+                energies,
+                X,
+                self.edge,
+                I_jumps,
+                self.extra_from,
+                self.extra_to,
+                self.poly_deg,
+                self.kweight,
+                self.m,
+            )
         except Exception as e:
             # extra_exafs should be fixed to return a specific exception
             if "jump at edge" in e.args[0]:
-                raise EdgeJumpException("Problem with edge jump.")
+                raise EdgeJumpException("Problem with edge jump.") from e
             else:
                 raise
 
@@ -780,8 +878,15 @@ class ExtractEXAFS(Preprocess):
     ref : reference single-channel (Orange.data.Table)
     """
 
-    def __init__(self, edge=None, extra_from=None, extra_to=None,
-                 poly_deg=None, kweight=None, m=None):
+    def __init__(
+        self,
+        edge=None,
+        extra_from=None,
+        extra_to=None,
+        poly_deg=None,
+        kweight=None,
+        m=None,
+    ):
         self.edge = edge
         self.extra_from = extra_from
         self.extra_to = extra_to
@@ -790,23 +895,34 @@ class ExtractEXAFS(Preprocess):
         self.m = m
 
     def __call__(self, data):
-
         if data.X.shape[1] > 0:
             # --- compute K
             energies = np.sort(getx(data))  # input data can be in any order
-            start_idx, end_idx = extra_exafs.get_idx_bounds(energies, self.edge,
-                                                            self.extra_from, self.extra_to)
-            k_interp, k_points = extra_exafs.get_K_points(energies, self.edge,
-                                                          start_idx, end_idx)
+            start_idx, end_idx = extra_exafs.get_idx_bounds(
+                energies, self.edge, self.extra_from, self.extra_to
+            )
+            k_interp, k_points = extra_exafs.get_K_points(
+                energies, self.edge, start_idx, end_idx
+            )
             # ----------
 
-            common = _ExtractEXAFSCommon(self.edge, self.extra_from, self.extra_to,
-                                         self.poly_deg, self.kweight, self.m, k_interp,
-                                         data.domain)
+            common = _ExtractEXAFSCommon(
+                self.edge,
+                self.extra_from,
+                self.extra_to,
+                self.poly_deg,
+                self.kweight,
+                self.m,
+                k_interp,
+                data.domain,
+            )
 
-            newattrs = [ContinuousVariable(name=str(var),
-                                           compute_value=ExtractEXAFSFeature(i, common))
-                        for i, var in enumerate(k_interp)]
+            newattrs = [
+                ContinuousVariable(
+                    name=str(var), compute_value=ExtractEXAFSFeature(i, common)
+                )
+                for i, var in enumerate(k_interp)
+            ]
         else:
             newattrs = []
 
@@ -819,12 +935,10 @@ class ShiftAndScaleFeature(SelectColumn):
 
 
 class _ShiftAndScaleCommon(CommonDomain):
-
     def __init__(self, offset, scale, domain):
         super().__init__(domain)
         self.offset = offset
         self.scale = scale
-
 
     def transformed(self, data):
         return self.scale * data.X + self.offset
@@ -841,16 +955,17 @@ class ShiftAndScale(Preprocess):
     scale  : float
     """
 
-    def __init__(self, offset=0., scale=1.):
+    def __init__(self, offset=0.0, scale=1.0):
         self.offset = offset
         self.scale = scale
 
     def __call__(self, data):
         common = _ShiftAndScaleCommon(self.offset, self.scale, data.domain)
-        atts = [a.copy(compute_value=ShiftAndScaleFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=ShiftAndScaleFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -877,14 +992,18 @@ class _DespikeCommon(CommonDomainOrderUnknowns):
                 w = np.arange(max(i - self.dis, 0), min(i + self.dis + 1, len(spikes)))
                 w2 = w[spikes[w] == 0]
                 row_out[i] = np.nanmean(row_in[w2])
-                if np.isnan(row_out[i]):  # no valid points within distance, find closest value
+                if np.isnan(
+                    row_out[i]
+                ):  # no valid points within distance, find closest value
                     if non_nan_nor_spike is None:  # compute it only once
-                        non_nan_nor_spike = np.nonzero(~(np.isnan(row_in) | (spikes > 0)))[0]
+                        non_nan_nor_spike = np.nonzero(
+                            ~(np.isnan(row_in) | (spikes > 0))
+                        )[0]
                     # find nearest non-nan indices
                     valid_ind = []
                     insertp = np.searchsorted(non_nan_nor_spike, i, side="left")
                     if insertp > 0:
-                        valid_ind.append(non_nan_nor_spike[insertp-1])  # left non-nan
+                        valid_ind.append(non_nan_nor_spike[insertp - 1])  # left non-nan
                     if insertp < len(non_nan_nor_spike):
                         valid_ind.append(non_nan_nor_spike[insertp])  # right non-nan
                     valid_ind = np.array(valid_ind)
@@ -904,7 +1023,7 @@ class _DespikeCommon(CommonDomainOrderUnknowns):
                     median1 = np.median(row)
                     mad_int = np.median(np.abs(row - median1))
                     modified_z_scores = 0.6745 * (row - median1) / mad_int
-                    spikes = (abs(modified_z_scores) > self.threshold)
+                    spikes = abs(modified_z_scores) > self.threshold
                     despiked = interpolatespikes(spikes, row)
                     out.append(despiked)
                 else:
@@ -915,21 +1034,19 @@ class _DespikeCommon(CommonDomainOrderUnknowns):
 
 
 class Despike(Preprocess):
-
     def __init__(self, threshold=7, cutoff=100, dis=5):
         self.threshold = threshold
         self.cutoff = cutoff
         self.dis = dis
 
     def __call__(self, data):
-        common = _DespikeCommon(self.threshold, self.cutoff,
-                                self.dis, data.domain)
-        atts = [a.copy(compute_value=DespikeFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = _DespikeCommon(self.threshold, self.cutoff, self.dis, data.domain)
+        atts = [
+            a.copy(compute_value=DespikeFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
-
 
 
 class SpSubtractFeature(SelectColumn):
@@ -937,7 +1054,6 @@ class SpSubtractFeature(SelectColumn):
 
 
 class _SpSubtractCommon(CommonDomainRef):
-
     def __init__(self, amount, reference, domain):
         super().__init__(reference, domain)
         self.amount = amount
@@ -960,7 +1076,7 @@ class SpSubtract(Preprocess):
     reference : reference single-channel (Orange.data.Table)
     """
 
-    def __init__(self, reference, amount=0.):
+    def __init__(self, reference, amount=0.0):
         if reference is None or len(reference) != 1:
             raise WrongReferenceException("Reference data should have length 1")
         self.reference = reference
@@ -968,9 +1084,9 @@ class SpSubtract(Preprocess):
 
     def __call__(self, data):
         common = _SpSubtractCommon(self.amount, self.reference, data.domain)
-        atts = [a.copy(compute_value=SpSubtractFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=SpSubtractFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
-

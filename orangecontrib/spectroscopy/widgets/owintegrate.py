@@ -8,7 +8,12 @@ import numpy as np
 import Orange.data
 from Orange import preprocess
 from Orange.widgets.data.owpreprocess import (
-    PreprocessAction, Description, icon_path, DescriptionRole, ParametersRole, blocked,
+    PreprocessAction,
+    Description,
+    icon_path,
+    DescriptionRole,
+    ParametersRole,
+    blocked,
 )
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import Output, Msg
@@ -19,16 +24,19 @@ from orangecontrib.spectroscopy.preprocess import Integrate
 from orangecontrib.spectroscopy.widgets.owspectra import SELECTONE
 from orangecontrib.spectroscopy.widgets.owhyper import refresh_integral_markings
 from orangecontrib.spectroscopy.widgets.owpreprocess import (
-    SpectralPreprocess, create_preprocessor, InterruptException
+    SpectralPreprocess,
+    create_preprocessor,
+    InterruptException,
 )
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import BaseEditorOrange, \
-    SetXDoubleSpinBox
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditorOrange,
+    SetXDoubleSpinBox,
+)
 
 from orangecontrib.spectroscopy.widgets.gui import MovableVline
 
 
 class IntegrateOneEditor(BaseEditorOrange):
-
     class Warning(BaseEditorOrange.Warning):
         out_of_range = Msg("Limit out of range.")
 
@@ -44,17 +52,18 @@ class IntegrateOneEditor(BaseEditorOrange):
         self.__editors = {}
         self.__lines = {}
 
-        for name, longname in self.integrator.parameters():
-            v = 0.
+        for name, _longname in self.integrator.parameters():
+            v = 0.0
             self.__values[name] = v
 
-            e = SetXDoubleSpinBox(minimum=minf, maximum=maxf,
-                                  singleStep=0.5, value=v)
+            e = SetXDoubleSpinBox(minimum=minf, maximum=maxf, singleStep=0.5, value=v)
             e.focusIn = self.activateOptions
             e.editingFinished.connect(self.edited)
+
             def cf(x, name=name):
                 self.edited.emit()
                 return self.set_value(name, x)
+
             e.valueChanged[float].connect(cf)
             self.__editors[name] = e
             layout.addRow(name, e)
@@ -64,8 +73,10 @@ class IntegrateOneEditor(BaseEditorOrange):
                 color = (255, 140, 26)
 
             l = MovableVline(position=v, label=name, color=color)
+
             def set_rounded(_, line=l, name=name):
                 cf(float(line.rounded_value()), name)
+
             l.sigMoved.connect(set_rounded)
             self.__lines[name] = l
 
@@ -95,7 +106,7 @@ class IntegrateOneEditor(BaseEditorOrange):
         if params:  # parameters were set manually set
             self.user_changed = True
         for name, _ in self.integrator.parameters():
-            self.set_value(name, params.get(name, 0.), user=False)
+            self.set_value(name, params.get(name, 0.0), user=False)
 
     def parameters(self):
         return self.__values
@@ -104,8 +115,8 @@ class IntegrateOneEditor(BaseEditorOrange):
     def createinstance(cls, params):
         params = dict(params)
         values = []
-        for ind, (name, _) in enumerate(cls.integrator.parameters()):
-            values.append(params.get(name, 0.))
+        for _ind, (name, _) in enumerate(cls.integrator.parameters()):
+            values.append(params.get(name, 0.0))
         return Integrate(methods=cls.integrator, limits=[values], metas=True)
 
     def set_preview_data(self, data):
@@ -115,8 +126,10 @@ class IntegrateOneEditor(BaseEditorOrange):
             if len(xs):
                 minx = np.min(xs)
                 maxx = np.max(xs)
-                limits = [self.__values.get(name, 0.)
-                          for ind, (name, _) in enumerate(self.integrator.parameters())]
+                limits = [
+                    self.__values.get(name, 0.0)
+                    for ind, (name, _) in enumerate(self.integrator.parameters())
+                ]
                 for v in limits:
                     if v < minx or v > maxx:
                         self.parent_widget.Warning.preprocessor()
@@ -193,10 +206,13 @@ class IntegrateSeparateBaselineEditor(IntegrateSimpleEditor):
 
 PREPROCESSORS = [
     PreprocessAction(
-        "Integrate", c.qualname, "Integration",
+        "Integrate",
+        c.qualname,
+        "Integration",
         Description(c.integrator.name, icon_path("Discretize.svg")),
-        c
-    ) for c in [
+        c,
+    )
+    for c in [
         IntegrateSimpleEditor,
         IntegrateBaselineEditor,
         IntegratePeakMaxEditor,
@@ -233,7 +249,13 @@ class OWIntegrate(SpectralPreprocess):
     def __init__(self):
         self.markings_list = []
         super().__init__()
-        cb = gui.checkBox(self.output_box, self, "output_metas", "Output as metas", callback=self.commit.deferred)
+        cb = gui.checkBox(
+            self.output_box,
+            self,
+            "output_metas",
+            "Output as metas",
+            callback=self.commit.deferred,
+        )
         self.output_box.layout().insertWidget(0, cb)  # move to top of the box
         self.curveplot.selection_type = SELECTONE
         self.curveplot.select_at_least_1 = True
@@ -245,7 +267,7 @@ class OWIntegrate(SpectralPreprocess):
         if np.any(self.curveplot.selection_group) and self.curveplot.data:
             # select data
             ind = np.flatnonzero(self.curveplot.selection_group)[0]
-            show = self.curveplot.data[ind:ind+1]
+            show = self.curveplot.data[ind : ind + 1]
 
             previews = self.flow_view.preview_n()
             for i in range(self.preprocessormodel.rowCount()):
@@ -268,12 +290,14 @@ class OWIntegrate(SpectralPreprocess):
         super().show_preview(False)
 
     def create_outputs(self):
-        pp_def = [self.preprocessormodel.item(i) for i in range(self.preprocessormodel.rowCount())]
+        pp_def = [
+            self.preprocessormodel.item(i)
+            for i in range(self.preprocessormodel.rowCount())
+        ]
         self.start(self.run_task, self.data, pp_def, self.output_metas)
 
     @staticmethod
     def run_task(data: Orange.data.Table, pp_def, output_metas, state):
-
         def progress_interrupt(i: float):
             state.set_progress_value(i)
             if state.is_interruption_requested():
@@ -283,7 +307,7 @@ class OWIntegrate(SpectralPreprocess):
         # happen when adding a preprocessor (there, commit() is called twice).
         # Wait 100 ms before processing - if a new task is started in meanwhile,
         # allow that is easily` cancelled.
-        for i in range(10):
+        for _i in range(10):
             time.sleep(0.005)
             progress_interrupt(0)
 
@@ -297,7 +321,9 @@ class OWIntegrate(SpectralPreprocess):
 
         preprocessor = None
         if plist:
-            preprocessor = PreprocessorListMoveMetas(not output_metas, preprocessors=plist)
+            preprocessor = PreprocessorListMoveMetas(
+                not output_metas, preprocessors=plist
+            )
 
         if data is not None and preprocessor is not None:
             data = preprocessor(data)
@@ -319,12 +345,14 @@ class PreprocessorListMoveMetas(preprocess.preprocess.PreprocessorList):
         if self.move_metas:
             oldmetas = set(data.domain.metas)
             newmetas = [m for m in tdata.domain.metas if m not in oldmetas]
-            domain = Orange.data.Domain(newmetas, data.domain.class_vars,
-                                        metas=data.domain.metas)
+            domain = Orange.data.Domain(
+                newmetas, data.domain.class_vars, metas=data.domain.metas
+            )
             tdata = tdata.transform(domain)
         return tdata
 
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWIntegrate).run(Orange.data.Table("collagen.csv"))

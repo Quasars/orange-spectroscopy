@@ -5,7 +5,6 @@ from orangecontrib.spectroscopy.widgets.owreshape import OWReshape
 
 
 class TestOWReshape(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
