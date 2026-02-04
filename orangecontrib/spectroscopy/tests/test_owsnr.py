@@ -5,9 +5,8 @@ from orangecontrib.spectroscopy.widgets.owsnr import OWSNR
 
 
 class TestOWSNR(WidgetTest):
-
     @classmethod
-    def setUpClass(cls): # carregando dado de teste
+    def setUpClass(cls):  # carregando dado de teste
         super().setUpClass()
         cls.file_test = Orange.data.Table("three_coordinates_data.csv")
 
@@ -48,8 +47,9 @@ class TestOWSNR(WidgetTest):
         ref = [0.08537, 0.0684601, 0.0553439]
         np.testing.assert_equal(out.X.shape, (5, 10))
         np.testing.assert_allclose(out.X[0, :3], ref, rtol=1e-06, atol=1e-06)
-        np.testing.assert_equal(out.metas[:3, :2].astype(float),
-                                [[np.nan, 0], [np.nan, 1], [np.nan, 2]])
+        np.testing.assert_equal(
+            out.metas[:3, :2].astype(float), [[np.nan, 0], [np.nan, 1], [np.nan, 2]]
+        )
 
     def test_none_coordinate_std(self):
         self.send_signal("Data", self.file_test)

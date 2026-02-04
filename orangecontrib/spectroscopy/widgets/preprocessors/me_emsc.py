@@ -6,8 +6,10 @@ from Orange.widgets import gui
 from orangecontrib.spectroscopy.preprocess.me_emsc import ME_EMSC
 from orangecontrib.spectroscopy.widgets.gui import lineEditFloatRange
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import REFERENCE_DATA_PARAM, \
-    BaseEditorOrange
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    REFERENCE_DATA_PARAM,
+    BaseEditorOrange,
+)
 from orangecontrib.spectroscopy.widgets.preprocessors.emsc import EMSCEditor
 
 
@@ -44,39 +46,67 @@ class MeEMSCEditor(EMSCEditor):
         self.a_low = self.A_LOW
         self.a_high = self.A_HIGH
 
-        gui.spin(self.controlArea, self, "max_iter", label="Max iterations", minv=0, maxv=100,
-                 controlWidth=50, callback=self.edited.emit)
-        gui.checkBox(self.controlArea, self, "fixed_iter", label="Always perform max iterations",
-                     callback=self.edited.emit)
+        gui.spin(
+            self.controlArea,
+            self,
+            "max_iter",
+            label="Max iterations",
+            minv=0,
+            maxv=100,
+            controlWidth=50,
+            callback=self.edited.emit,
+        )
+        gui.checkBox(
+            self.controlArea,
+            self,
+            "fixed_iter",
+            label="Always perform max iterations",
+            callback=self.edited.emit,
+        )
 
-        self.comp_spin = gui.spin(self.controlArea, self, "ncomp", label="Components",
-                                  minv=3, maxv=15,
-                                  controlWidth=50, callback=self.edited.emit)
-        gui.checkBox(self.controlArea, self, "autoset_ncomp",
-                     label="Automatically set components",
-                     callback=lambda: (self._auto_click(), self.edited.emit()))
+        self.comp_spin = gui.spin(
+            self.controlArea,
+            self,
+            "ncomp",
+            label="Components",
+            minv=3,
+            maxv=15,
+            controlWidth=50,
+            callback=self.edited.emit,
+        )
+        gui.checkBox(
+            self.controlArea,
+            self,
+            "autoset_ncomp",
+            label="Automatically set components",
+            callback=lambda: (self._auto_click(), self.edited.emit()),
+        )
 
         form_set = QFormLayout()
         self.controlArea.layout().addLayout(form_set)
 
         bint = QBoxLayout(QBoxLayout.LeftToRight)
-        low = lineEditFloatRange(self, self, "n0_low", bottom=1.1, top=3,
-                                 callback=self.edited.emit)
+        low = lineEditFloatRange(
+            self, self, "n0_low", bottom=1.1, top=3, callback=self.edited.emit
+        )
         low.sizeHintFactor = 0.4
         bint.addWidget(low)
-        high = lineEditFloatRange(self, self, "n0_high", bottom=1.1, top=3,
-                                 callback=self.edited.emit)
+        high = lineEditFloatRange(
+            self, self, "n0_high", bottom=1.1, top=3, callback=self.edited.emit
+        )
         high.sizeHintFactor = 0.4
         bint.addWidget(high)
         form_set.addRow("Refractive index", bint)
 
         bint = QBoxLayout(QBoxLayout.LeftToRight)
-        low = lineEditFloatRange(self, self, "a_low", bottom=2, top=50,
-                                 callback=self.edited.emit)
+        low = lineEditFloatRange(
+            self, self, "a_low", bottom=2, top=50, callback=self.edited.emit
+        )
         low.sizeHintFactor = 0.4
         bint.addWidget(low)
-        high = lineEditFloatRange(self, self, "a_high", bottom=2, top=50,
-                                 callback=self.edited.emit)
+        high = lineEditFloatRange(
+            self, self, "a_high", bottom=2, top=50, callback=self.edited.emit
+        )
         high.sizeHintFactor = 0.4
         bint.addWidget(high)
         form_set.addRow("Spherical radius", bint)
@@ -85,8 +115,13 @@ class MeEMSCEditor(EMSCEditor):
         self.controlArea.layout().addWidget(self.reference_info)
 
         self.output_model = self.OUTPUT_MODEL_DEFAULT
-        gui.checkBox(self.controlArea, self, "output_model", "Output EMSC model",
-                     callback=self.edited.emit)
+        gui.checkBox(
+            self.controlArea,
+            self,
+            "output_model",
+            "Output EMSC model",
+            callback=self.edited.emit,
+        )
 
         self._auto_click()
         self._init_regions()
@@ -141,9 +176,16 @@ class MeEMSCEditor(EMSCEditor):
         if reference is None:
             return lambda data: data[:0]  # return an empty data table
         else:
-            return ME_EMSC(reference=reference, weights=weights, max_iter=max_iter,
-                           fixed_iter=fixed_iter, ncomp=ncomp, n0=n0, a=a,
-                           output_model=output_model)
+            return ME_EMSC(
+                reference=reference,
+                weights=weights,
+                max_iter=max_iter,
+                fixed_iter=fixed_iter,
+                ncomp=ncomp,
+                n0=n0,
+                a=a,
+                output_model=output_model,
+            )
 
 
 preprocess_editors.register(MeEMSCEditor, 325)

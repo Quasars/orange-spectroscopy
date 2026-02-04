@@ -6,7 +6,6 @@ from orangecontrib.spectroscopy.widgets.owbin import OWBin
 
 
 class TestOWBin(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -29,8 +28,14 @@ class TestOWBin(WidgetTest):
         x_coords_binned = np.array([x_coords[0:2].mean(), x_coords[2:4].mean()])
         np.testing.assert_equal(m[:, "map_x"].metas[::4, 0], x_coords_binned)
         y_coords = self.mosaic[:, "map_y"].metas[:, 0]
-        y_coords_binned = np.array([y_coords[0:8].mean(), y_coords[8:16].mean(),
-                                    y_coords[16:24].mean(), y_coords[24:32].mean()])
+        y_coords_binned = np.array(
+            [
+                y_coords[0:8].mean(),
+                y_coords[8:16].mean(),
+                y_coords[16:24].mean(),
+                y_coords[24:32].mean(),
+            ]
+        )
         np.testing.assert_equal(m[:, "map_y"].metas[0:4, 0], y_coords_binned)
 
     def test_bin_changed(self):

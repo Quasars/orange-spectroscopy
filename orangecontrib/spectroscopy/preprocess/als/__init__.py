@@ -4,10 +4,11 @@ import Orange
 import Orange.data
 from Orange.preprocess.preprocess import Preprocess
 
-from orangecontrib.spectroscopy.preprocess.utils import SelectColumn, \
-    CommonDomainOrderUnknowns
-from orangecontrib.spectroscopy.preprocess.als.baseline import als, arpls, \
-    airpls
+from orangecontrib.spectroscopy.preprocess.utils import (
+    SelectColumn,
+    CommonDomainOrderUnknowns,
+)
+from orangecontrib.spectroscopy.preprocess.als.baseline import als, arpls, airpls
 
 
 class ALSFeature(SelectColumn):
@@ -27,15 +28,17 @@ class ALSCommon(CommonDomainOrderUnknowns):
         if data.size > 0:
             for row in data:
                 input_array = row
-                final.append(input_array - als(input_array, lam=self.lam,
-                                               p=self.p, itermax=self.itermax))
+                final.append(
+                    input_array
+                    - als(input_array, lam=self.lam, p=self.p, itermax=self.itermax)
+                )
             return np.array(final)
         else:
             return data
 
 
 class ALSP(Preprocess):
-    lam = 1E+6
+    lam = 1e6
     itermax = 10
     p = 0.1
 
@@ -46,10 +49,11 @@ class ALSP(Preprocess):
 
     def __call__(self, data):
         common = ALSCommon(self.lam, self.itermax, self.p, data.domain)
-        atts = [a.copy(compute_value=ALSFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        atts = [
+            a.copy(compute_value=ALSFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -58,8 +62,7 @@ class ARPLSFeature(SelectColumn):
 
 
 class ARPLSCommon(CommonDomainOrderUnknowns):
-    def __init__(self, lam, itermax,
-                 ratio, domain):
+    def __init__(self, lam, itermax, ratio, domain):
         super().__init__(domain)
         self.lam = lam
         self.itermax = itermax
@@ -70,32 +73,32 @@ class ARPLSCommon(CommonDomainOrderUnknowns):
         final = []
         if data.size > 0:
             for row in data:
-                final.append(row - arpls(row, lam=self.lam, itermax=self.itermax,
-                                         ratio=self.ratio))
+                final.append(
+                    row
+                    - arpls(row, lam=self.lam, itermax=self.itermax, ratio=self.ratio)
+                )
             return np.array(final)
         else:
             return data
 
 
 class ARPLS(Preprocess):
-    lam = 100E+6
+    lam = 100e6
     itermax = 10
     ratio = 0.5
 
-    def __init__(self, lam=lam,
-                 ratio=ratio, itermax=itermax):
+    def __init__(self, lam=lam, ratio=ratio, itermax=itermax):
         self.lam = lam
         self.itermax = itermax
         self.ratio = ratio
 
     def __call__(self, data):
-        common = ARPLSCommon(self.lam,
-                             self.itermax, self.ratio,
-                             data.domain)
-        atts = [a.copy(compute_value=ARPLSFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = ARPLSCommon(self.lam, self.itermax, self.ratio, data.domain)
+        atts = [
+            a.copy(compute_value=ARPLSFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
 
@@ -115,8 +118,12 @@ class AIRPLSCommon(CommonDomainOrderUnknowns):
         final = []
         if data.size > 0:
             for row in data:
-                final.append(row - airpls(row, lam=self.lam,
-                                          porder=self.porder, itermax=self.itermax))
+                final.append(
+                    row
+                    - airpls(
+                        row, lam=self.lam, porder=self.porder, itermax=self.itermax
+                    )
+                )
             return np.array(final)
 
         else:
@@ -124,7 +131,7 @@ class AIRPLSCommon(CommonDomainOrderUnknowns):
 
 
 class AIRPLS(Preprocess):
-    lam = 1E+6
+    lam = 1e6
     itermax = 10
     porder = 1
 
@@ -134,10 +141,10 @@ class AIRPLS(Preprocess):
         self.porder = porder
 
     def __call__(self, data):
-        common = AIRPLSCommon(self.lam, self.itermax,
-                              self.porder, data.domain)
-        atts = [a.copy(compute_value=AIRPLSFeature(i, common))
-                for i, a in enumerate(data.domain.attributes)]
-        domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                    data.domain.metas)
+        common = AIRPLSCommon(self.lam, self.itermax, self.porder, data.domain)
+        atts = [
+            a.copy(compute_value=AIRPLSFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)

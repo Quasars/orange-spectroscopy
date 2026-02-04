@@ -14,7 +14,9 @@ from orangecontrib.spectroscopy.models.pls import PLSRegressionLearner
 
 class OWPLS(OWBaseLearner):
     name = 'PLS'
-    description = "Partial Least Squares Regression widget for multivariate data analysis"
+    description = (
+        "Partial Least Squares Regression widget for multivariate data analysis"
+    )
     icon = "icons/PLS.svg"
     keywords = ["partial least squares"]
 
@@ -27,8 +29,10 @@ class OWPLS(OWBaseLearner):
 
     class Warning(OWBaseLearner.Warning):
         sparse_data = Msg('Sparse input data: default preprocessing is to scale it.')
-        deprecated = Msg('The PLS widget is deprecated and will be removed in the future.\n'
-                         'Please use the PLS widget from the Model category instead.')
+        deprecated = Msg(
+            'The PLS widget is deprecated and will be removed in the future.\n'
+            'Please use the PLS widget from the Model category instead.'
+        )
 
     n_components = Setting(2)
     max_iter = Setting(500)
@@ -36,19 +40,32 @@ class OWPLS(OWBaseLearner):
     def add_main_layout(self):
         self.Warning.deprecated()
 
-        self.optimization_box = gui.vBox(
-            self.controlArea, "Optimization Parameters")
+        self.optimization_box = gui.vBox(self.controlArea, "Optimization Parameters")
         self.ncomps_spin = gui.spin(
-            self.optimization_box, self, "n_components", 1, 50, 1,
+            self.optimization_box,
+            self,
+            "n_components",
+            1,
+            50,
+            1,
             label="Components: ",
-            alignment=Qt.AlignRight, controlWidth=100,
-            callback=self.settings_changed)
-        self.n_iters = gui.spin(
-            self.optimization_box, self, "max_iter", 5, 1000000, 50,
-            label="Iteration limit: ",
-            alignment=Qt.AlignRight, controlWidth=100,
+            alignment=Qt.AlignRight,
+            controlWidth=100,
             callback=self.settings_changed,
-            checkCallback=self.settings_changed)
+        )
+        self.n_iters = gui.spin(
+            self.optimization_box,
+            self,
+            "max_iter",
+            5,
+            1000000,
+            50,
+            label="Iteration limit: ",
+            alignment=Qt.AlignRight,
+            controlWidth=100,
+            callback=self.settings_changed,
+            checkCallback=self.settings_changed,
+        )
 
     def update_model(self):
         super().update_model()
@@ -73,10 +90,15 @@ class OWPLS(OWBaseLearner):
         self.Error.data_error.clear()
         self.data = data
 
-        if data is not None and data.domain.class_var is None and not data.domain.class_vars:
+        if (
+            data is not None
+            and data.domain.class_var is None
+            and not data.domain.class_vars
+        ):
             self.Error.data_error(
                 "Data has no target variable.\n"
-                "Select one with the Select Columns widget.")
+                "Select one with the Select Columns widget."
+            )
             self.data = None
 
         # invalidate the model so that handleNewSignals will update it
@@ -87,9 +109,9 @@ class OWPLS(OWBaseLearner):
 
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
-        return PLSRegressionLearner(n_components=self.n_components,
-                                    max_iter=self.max_iter,
-                                    **common_args)
+        return PLSRegressionLearner(
+            n_components=self.n_components, max_iter=self.max_iter, **common_args
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

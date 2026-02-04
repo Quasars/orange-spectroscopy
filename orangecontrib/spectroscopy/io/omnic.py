@@ -10,7 +10,8 @@ from orangecontrib.spectroscopy.utils.pymca5 import OmnicMap
 
 
 class OmnicMapReader(FileFormat, SpectralFileFormat):
-    """ Reader for files with two columns of numbers (X and Y)"""
+    """Reader for files with two columns of numbers (X and Y)"""
+
     EXTENSIONS = ('.map',)
     DESCRIPTION = 'Omnic map'
 
@@ -24,16 +25,22 @@ class OmnicMapReader(FileFormat, SpectralFileFormat):
             fv = info['OmnicInfo']['First X value']
             features = np.linspace(fv, lv, num=X.shape[-1])
         except KeyError:
-            #just start counting from 0 when nothing is known
+            # just start counting from 0 when nothing is known
             features = np.arange(X.shape[-1])
 
         try:
             loc_first = info['OmnicInfo']["First map location"]
             loc_last = info['OmnicInfo']["Last map location"]
-            x_locs = np.linspace(min(loc_first[0], loc_last[0]),
-                                 max(loc_first[0], loc_last[0]), X.shape[1])
-            y_locs = np.linspace(min(loc_first[1], loc_last[1]),
-                                 max(loc_first[1], loc_last[1]), X.shape[0])
+            x_locs = np.linspace(
+                min(loc_first[0], loc_last[0]),
+                max(loc_first[0], loc_last[0]),
+                X.shape[1],
+            )
+            y_locs = np.linspace(
+                min(loc_first[1], loc_last[1]),
+                max(loc_first[1], loc_last[1]),
+                X.shape[0],
+            )
         except KeyError:
             x_locs = np.arange(X.shape[1])
             y_locs = np.arange(X.shape[0])
@@ -42,7 +49,7 @@ class OmnicMapReader(FileFormat, SpectralFileFormat):
 
 
 class SPAReader(FileFormat, SpectralFileFormat):
-    #based on code by Zack Gainsforth
+    # based on code by Zack Gainsforth
 
     EXTENSIONS = (".spa", ".SPA", ".srs")
     DESCRIPTION = 'SPA'
@@ -62,8 +69,9 @@ class SPAReader(FileFormat, SpectralFileFormat):
                 for i in range(n):
                     # Go to the section start.
                     f.seek(304 + (22 if extended else 16) * i)
-                    t, offset, length = struct.unpack('<hqi' if extended else '<hii',
-                                                      f.read(14 if extended else 10))
+                    t, offset, length = struct.unpack(
+                        '<hqi' if extended else '<hii', f.read(14 if extended else 10)
+                    )
                     self.saved_sections.append((i, t, offset, length))
         return self.saved_sections
 
@@ -83,12 +91,16 @@ class SPAReader(FileFormat, SpectralFileFormat):
         _, _, offset, length = self.sections()[info]
         with open(self.filename, 'rb') as f:
             f.seek(offset)
-            dataType, numPoints, xUnits, yUnits, firstX, lastX, noise = \
-                struct.unpack('<iiiifff', f.read(28))
-            return numPoints, firstX, lastX,
+            dataType, numPoints, xUnits, yUnits, firstX, lastX, noise = struct.unpack(
+                '<iiiifff', f.read(28)
+            )
+            return (
+                numPoints,
+                firstX,
+                lastX,
+            )
 
     def read_spectra(self):
-
         self.sections()
 
         if self.type == 1:
@@ -102,7 +114,7 @@ class SPAReader(FileFormat, SpectralFileFormat):
 
         with open(self.filename, 'rb') as f:
             f.seek(offset)
-            data = np.fromfile(f, dtype='float32', count=length//4)
+            data = np.fromfile(f, dtype='float32', count=length // 4)
 
         if len(data) == numPoints:
             domvals = np.linspace(firstX, lastX, numPoints)
@@ -114,7 +126,10 @@ class SPAReader(FileFormat, SpectralFileFormat):
 
 
 class SPCReader(FileFormat):
-    EXTENSIONS = ('.spc', '.SPC',)
+    EXTENSIONS = (
+        '.spc',
+        '.SPC',
+    )
     DESCRIPTION = 'Galactic SPC format'
 
     def read(self):
@@ -145,7 +160,7 @@ class SPCReader(FileFormat):
         instances = []
         for sub in spc_file.sub:
             x, y = sub.x, sub.y
-            newinstance = np.ones(len(all_x))*np.nan
+            newinstance = np.ones(len(all_x)) * np.nan
             ss = np.searchsorted(all_x, x)  # find positions to set
             newinstance[ss] = y
             instances.append(newinstance)

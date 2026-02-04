@@ -13,8 +13,7 @@ class OWSNR(OWWidget):
     name = "SNR"
 
     # Short widget description
-    description = (
-        "Calculates Signal-to-Noise Ratio (SNR), Averages or Standard Deviation by coordinates.")
+    description = "Calculates Signal-to-Noise Ratio (SNR), Averages or Standard Deviation by coordinates."
 
     icon = "icons/snr.svg"
     keywords = ["signal", "noise", "standard", "deviation", "average"]
@@ -26,15 +25,19 @@ class OWSNR(OWWidget):
     class Outputs:
         final_data = Output("SNR", Orange.data.Table, default=True)
 
-    OUT_OPTIONS = {'Signal-to-noise ratio': 0, #snr
-                   'Average': 1, # average
-                   'Standard Deviation': 2} # std
+    OUT_OPTIONS = {
+        'Signal-to-noise ratio': 0,  # snr
+        'Average': 1,  # average
+        'Standard Deviation': 2,
+    }  # std
 
     settingsHandler = settings.DomainContextHandler()
-    group_x = settings.ContextSetting(None, exclude_attributes=True,
-                                      exclude_class_vars=True)
-    group_y = settings.ContextSetting(None, exclude_attributes=True,
-                                      exclude_class_vars=True)
+    group_x = settings.ContextSetting(
+        None, exclude_attributes=True, exclude_class_vars=True
+    )
+    group_y = settings.ContextSetting(
+        None, exclude_attributes=True, exclude_class_vars=True
+    )
     out_choiced = settings.Setting(0)
 
     autocommit = settings.Setting(True)
@@ -54,20 +57,38 @@ class OWSNR(OWWidget):
         self.group_y = None
 
         # methods in this widget assume group axes in metas
-        self.xy_model = DomainModel(DomainModel.METAS,
-            placeholder="None", separators=False,
-            valid_types=Orange.data.ContinuousVariable)
+        self.xy_model = DomainModel(
+            DomainModel.METAS,
+            placeholder="None",
+            separators=False,
+            valid_types=Orange.data.ContinuousVariable,
+        )
         self.group_view_x = gui.comboBox(
-            self.controlArea, self, "group_x", box="Select axis: x",
-            model=self.xy_model, callback=self.grouping_changed)
+            self.controlArea,
+            self,
+            "group_x",
+            box="Select axis: x",
+            model=self.xy_model,
+            callback=self.grouping_changed,
+        )
 
         self.group_view_y = gui.comboBox(
-            self.controlArea, self, "group_y", box="Select axis: y",
-            model=self.xy_model, callback=self.grouping_changed)
+            self.controlArea,
+            self,
+            "group_y",
+            box="Select axis: y",
+            model=self.xy_model,
+            callback=self.grouping_changed,
+        )
 
         self.selected_out = gui.comboBox(
-            self.controlArea, self, "out_choiced", box="Select Output:",
-            items=self.OUT_OPTIONS, callback=self.out_choice_changed)
+            self.controlArea,
+            self,
+            "out_choiced",
+            box="Select Output:",
+            items=self.OUT_OPTIONS,
+            callback=self.out_choice_changed,
+        )
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
@@ -97,22 +118,30 @@ class OWSNR(OWWidget):
     def calc_table_np(self, array):
         if len(array) == 0:
             return array
-        if self.out_choiced == 0: #snr
+        if self.out_choiced == 0:  # snr
             return self.make_table(
-                (bottleneck.nanmean(array, axis=0) /
-                 bottleneck.nanstd(array, axis=0)).reshape(1, -1), self.data)
-        elif self.out_choiced == 1: #avg
-            return self.make_table(bottleneck.nanmean(array, axis=0).reshape(1, -1), self.data)
-        else: # std
-            return self.make_table(bottleneck.nanstd(array, axis=0).reshape(1, -1), self.data)
-
+                (
+                    bottleneck.nanmean(array, axis=0) / bottleneck.nanstd(array, axis=0)
+                ).reshape(1, -1),
+                self.data,
+            )
+        elif self.out_choiced == 1:  # avg
+            return self.make_table(
+                bottleneck.nanmean(array, axis=0).reshape(1, -1), self.data
+            )
+        else:  # std
+            return self.make_table(
+                bottleneck.nanstd(array, axis=0).reshape(1, -1), self.data
+            )
 
     @staticmethod
     def make_table(array, data_table):
-        new_table = Orange.data.Table.from_numpy(data_table.domain,
-                                                 X=array.copy(),
-                                                 Y=np.atleast_2d(data_table.Y[0]).copy(),
-                                                 metas=np.atleast_2d(data_table.metas[0]).copy())
+        new_table = Orange.data.Table.from_numpy(
+            data_table.domain,
+            X=array.copy(),
+            Y=np.atleast_2d(data_table.Y[0]).copy(),
+            metas=np.atleast_2d(data_table.metas[0]).copy(),
+        )
         cont_vars = data_table.domain.class_vars + data_table.domain.metas
         with new_table.unlocked():
             for var in cont_vars:
@@ -155,14 +184,14 @@ class OWSNR(OWWidget):
         sortidx = np.lexsort(coo.T)
         sorted_coo = coo[sortidx]
         unqID_mask = np.append(True, np.any(np.diff(sorted_coo, axis=0), axis=1))
-        ID = unqID_mask.cumsum()-1
+        ID = unqID_mask.cumsum() - 1
         unq_coo = sorted_coo[unqID_mask]
         unique, counts = np.unique(ID, return_counts=True)
 
         pos = 0
         bins = []
         for size in counts:
-            bins.append(sortidx[pos:pos+size])
+            bins.append(sortidx[pos : pos + size])
             pos += size
 
         matrix = []
@@ -192,14 +221,14 @@ class OWSNR(OWWidget):
         sortidx = np.lexsort(coo.T)
         sorted_coo = coo[sortidx]
         unqID_mask = np.append(True, np.any(np.diff(sorted_coo, axis=0), axis=1))
-        ID = unqID_mask.cumsum()-1
+        ID = unqID_mask.cumsum() - 1
         unq_coo = sorted_coo[unqID_mask]
         unique, counts = np.unique(ID, return_counts=True)
 
         pos = 0
         bins = []
         for size in counts:
-            bins.append(sortidx[pos:pos+size])
+            bins.append(sortidx[pos : pos + size])
             pos += size
 
         matrix = []
@@ -239,4 +268,5 @@ class OWSNR(OWWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWSNR).run(Orange.data.Table("three_coordinates_data.csv"))

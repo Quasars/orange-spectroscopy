@@ -1,6 +1,7 @@
 import os
 import unittest
 
+
 def suite(loader=None, pattern='test*.py'):
     test_dir = os.path.dirname(__file__)
     if loader is None:

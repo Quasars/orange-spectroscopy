@@ -1,12 +1,13 @@
 from orangecontrib.spectroscopy.tests.test_owpreprocess import PreprocessorEditorTest
 from orangecontrib.spectroscopy.widgets.owpreprocess import OWPreprocess
 from orangecontrib.spectroscopy.tests.test_preprocess import SMALL_COLLAGEN
-from orangecontrib.spectroscopy.widgets.preprocessors.spikeremoval import SpikeRemovalEditor
+from orangecontrib.spectroscopy.widgets.preprocessors.spikeremoval import (
+    SpikeRemovalEditor,
+)
 from orangecontrib.spectroscopy.preprocess import Despike
 
 
 class TestSpikeRemovalEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(SpikeRemovalEditor, self.widget)

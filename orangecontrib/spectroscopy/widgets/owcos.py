@@ -6,7 +6,10 @@ from AnyQt.QtCore import QRectF, Qt
 from pyqtgraph import LabelItem
 
 import Orange.data
-from Orange.widgets.visualize.utils.customizableplot import CommonParameterSetter, Updater
+from Orange.widgets.visualize.utils.customizableplot import (
+    CommonParameterSetter,
+    Updater,
+)
 from Orange.widgets.visualize.utils.plotutils import PlotItem, GraphicsView, AxisItem
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets import gui, settings
@@ -16,7 +19,10 @@ from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.widgets.owhyper import ImageColorLegend
 from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox
-from orangecontrib.spectroscopy.widgets.gui import float_to_str_decimals as strdec, pixel_decimals
+from orangecontrib.spectroscopy.widgets.gui import (
+    float_to_str_decimals as strdec,
+    pixel_decimals,
+)
 
 
 # put calculation widgets outside the class for easier reuse
@@ -41,7 +47,7 @@ def calc_cos(table1, table2):
     sync = series1.T @ series2 / (len(series1) - 1)
 
     # Hilbert-Noda transformation matrix
-    i, j = np.ogrid[:len(series1), :len(series1)]
+    i, j = np.ogrid[: len(series1), : len(series1)]
 
     # TODO - We could use the code below after allowing numpy>2.0
     # with np.errstate(divide='ignore'):
@@ -130,9 +136,11 @@ class ParameterSetter(CommonParameterSetter):
 
     @property
     def axis_items(self):
-        return [self.master.left_plot.getAxis("left"),
-                self.master.top_plot.getAxis("top"),
-                self.master.cbarCOS.axis]
+        return [
+            self.master.left_plot.getAxis("left"),
+            self.master.top_plot.getAxis("top"),
+            self.master.cbarCOS.axis,
+        ]
 
 
 class COS2DViewBox(InteractiveViewBox):
@@ -152,8 +160,7 @@ class OWCos(OWWidget):
     name = "2D Correlation Plot"
 
     # Short widget description
-    description = (
-        "Perform 2D correlation analysis with series spectra")
+    description = "Perform 2D correlation analysis with series spectra"
 
     icon = "icons/2dcos.svg"
 
@@ -166,7 +173,9 @@ class OWCos(OWWidget):
 
     class Outputs:
         # TODO implement outputting the matrix
-        corr_matrix = Output("2D correlation matrix", Orange.misc.DistMatrix, dynamic=False)
+        corr_matrix = Output(
+            "2D correlation matrix", Orange.misc.DistMatrix, dynamic=False
+        )
 
     class Error(OWWidget.Error):
         empty_data = Msg("Input data is empty.")
@@ -187,22 +196,32 @@ class OWCos(OWWidget):
     def __init__(self):
         super().__init__()
         self.parameter_setter = ParameterSetter(self)
-        VisualSettingsDialog(
-            self, self.parameter_setter.initial_settings
-        )
+        VisualSettingsDialog(self, self.parameter_setter.initial_settings)
 
         self.cosmat = None
         self.data1 = None
         self.data2 = None
 
         # control area
-        gui.radioButtons(self.controlArea, self, "selector",
-                         btnLabels=("Synchronous", "Asynchronous"), box="Plot type",
-                         callback=self.plotCOS)
-        self.isocurve_spin = gui.spin(self.controlArea, self, "isonum",
-                                      minv=0, maxv=9, step=1,
-                                      label="Number of curves", box="Isocurves",
-                                      callback=self.plotCOS)
+        gui.radioButtons(
+            self.controlArea,
+            self,
+            "selector",
+            btnLabels=("Synchronous", "Asynchronous"),
+            box="Plot type",
+            callback=self.plotCOS,
+        )
+        self.isocurve_spin = gui.spin(
+            self.controlArea,
+            self,
+            "isonum",
+            minv=0,
+            maxv=9,
+            step=1,
+            label="Number of curves",
+            box="Isocurves",
+            callback=self.plotCOS,
+        )
         gui.rubber(self.controlArea)
         self.cursorPos = gui.label(self.controlArea, self, "", box="Crosshair")
 
@@ -221,9 +240,15 @@ class OWCos(OWWidget):
         ci.layout.setRowStretchFactor(1, 5)
 
         # image
-        self.cos2Dplot = PlotItem(viewBox=COS2DViewBox(self),
-                                  axisItems={"left": AxisItem("left"), "bottom": AxisItem("bottom"),
-                                             "right": AxisItem("right"), "top": AxisItem("top")})
+        self.cos2Dplot = PlotItem(
+            viewBox=COS2DViewBox(self),
+            axisItems={
+                "left": AxisItem("left"),
+                "bottom": AxisItem("bottom"),
+                "right": AxisItem("right"),
+                "top": AxisItem("top"),
+            },
+        )
         self.cos2Dplot.buttonsHidden = True
         ci.addItem(self.cos2Dplot, row=1, col=1)
         self.cos2Dplot.getAxis("left").setStyle(showValues=False)
@@ -241,9 +266,15 @@ class OWCos(OWWidget):
         self.vLine.setZValue(1000)
 
         # top spectrum plot
-        self.top_plot = PlotItem(viewBox=COS2DViewBox(self),
-                                 axisItems={"left": AxisItem("left"), "bottom": AxisItem("bottom"),
-                                            "right": AxisItem("right"), "top": AxisItem("top")})
+        self.top_plot = PlotItem(
+            viewBox=COS2DViewBox(self),
+            axisItems={
+                "left": AxisItem("left"),
+                "bottom": AxisItem("bottom"),
+                "right": AxisItem("right"),
+                "top": AxisItem("top"),
+            },
+        )
         ci.addItem(self.top_plot, row=0, col=1)
         # visual settings
         self.top_plot.showAxis("right")
@@ -262,9 +293,15 @@ class OWCos(OWWidget):
         self.top_vLine.setZValue(1000)
 
         # left spectrum plot
-        self.left_plot = PlotItem(viewBox=COS2DViewBox(self),
-                                  axisItems={"left": AxisItem("left"), "bottom": AxisItem("bottom"),
-                                             "right": AxisItem("right"), "top": AxisItem("top")})
+        self.left_plot = PlotItem(
+            viewBox=COS2DViewBox(self),
+            axisItems={
+                "left": AxisItem("left"),
+                "bottom": AxisItem("bottom"),
+                "right": AxisItem("right"),
+                "top": AxisItem("top"),
+            },
+        )
         ci.addItem(self.left_plot, row=1, col=0)
         # visual settings
         self.left_plot.showAxis("right")
@@ -342,8 +379,14 @@ class OWCos(OWWidget):
         if not d2:
             d2 = d1
 
-        if (not d1 or not d2 or not d1.X.size or not d2.X.size or
-                np.all(np.isnan(d1.X)) or np.all(np.isnan(d2.X))):
+        if (
+            not d1
+            or not d2
+            or not d1.X.size
+            or not d2.X.size
+            or np.all(np.isnan(d1.X))
+            or np.all(np.isnan(d2.X))
+        ):
             self.Error.empty_data()
         else:
             self.cosmat = calc_cos(d1, d2)
@@ -398,7 +441,9 @@ class OWCos(OWWidget):
             leftSPwn = self.cosmat[5]
 
             COSimage = pg.ImageItem(image=cosmat)
-            COSimage.setLevels([-1 * np.absolute(cosmat).max(), np.absolute(cosmat).max()])
+            COSimage.setLevels(
+                [-1 * np.absolute(cosmat).max(), np.absolute(cosmat).max()]
+            )
             COSimage.setLookupTable(np.array(colorcet.diverging_bwr_40_95_c42) * 255)
 
             self.cos2Dplot.addItem(COSimage)
@@ -418,18 +463,28 @@ class OWCos(OWWidget):
                 ic = pg.IsocurveItem(data=cosmat, level=-level, pen=iso_pen_neg)
                 ic.setParentItem(COSimage)
 
-            COSimage.setRect(QRectF(topSPwn.min(),
-                                    leftSPwn.min(),
-                                    (topSPwn.max() - topSPwn.min()),
-                                    (leftSPwn.max() - leftSPwn.min())))
+            COSimage.setRect(
+                QRectF(
+                    topSPwn.min(),
+                    leftSPwn.min(),
+                    (topSPwn.max() - topSPwn.min()),
+                    (leftSPwn.max() - leftSPwn.min()),
+                )
+            )
 
-            self.cbarCOS.set_range(-1 * np.nanmax(np.absolute(cosmat)), np.nanmax(np.absolute(cosmat)))
+            self.cbarCOS.set_range(
+                -1 * np.nanmax(np.absolute(cosmat)), np.nanmax(np.absolute(cosmat))
+            )
             self.cbarCOS.set_colors(np.array(colorcet.diverging_bwr_40_95_c42) * 255)
 
-            left_indices = np.linspace(0, len(leftSP)-1, min(100, len(leftSP)), dtype=int)
+            left_indices = np.linspace(
+                0, len(leftSP) - 1, min(100, len(leftSP)), dtype=int
+            )
 
             for s in leftSP[left_indices]:
-                pt = pg.PlotCurveItem(s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+                pt = pg.PlotCurveItem(
+                    s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5)
+                )
                 self.left_plot.addItem(pt, ignoreBounds=True)
 
             self.left_plot.plot(leftSP.mean(axis=0), leftSPwn, pen=p)
@@ -437,10 +492,14 @@ class OWCos(OWWidget):
 
             self.left_plot.setXRange(np.min(leftSP), np.max(leftSP))
 
-            top_indices = np.linspace(0, len(topSP)-1, min(100, len(topSP)), dtype=int)
+            top_indices = np.linspace(
+                0, len(topSP) - 1, min(100, len(topSP)), dtype=int
+            )
 
             for s in topSP[top_indices]:
-                pt = pg.PlotCurveItem(topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+                pt = pg.PlotCurveItem(
+                    topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5)
+                )
                 self.top_plot.addItem(pt, ignoreBounds=True)
 
             self.top_plot.plot(topSPwn, topSP.mean(axis=0), pen=p)

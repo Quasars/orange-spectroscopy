@@ -21,7 +21,8 @@ def test_normalization_vector():
         t = time.time()
         r = p(data)
         print("with interpolate", time.time() - t)
-        assert(np.all(np.argwhere(np.isnan(r.X)) == [[0, 2]]))
+        assert np.all(np.argwhere(np.isnan(r.X)) == [[0, 2]])
+
 
 if __name__ == "__main__":
     test_normalization_vector()

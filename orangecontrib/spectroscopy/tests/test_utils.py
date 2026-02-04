@@ -5,12 +5,15 @@ import numpy as np
 
 from orangecontrib.spectroscopy.data import build_spec_table, getx
 from orangecontrib.spectroscopy.io.util import _spectra_from_image
-from orangecontrib.spectroscopy.utils import get_hypercube, index_values, \
-    InvalidAxisException, split_to_size
+from orangecontrib.spectroscopy.utils import (
+    get_hypercube,
+    index_values,
+    InvalidAxisException,
+    split_to_size,
+)
 
 
 class TestHyperspec(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -32,8 +35,9 @@ class TestHyperspec(unittest.TestCase):
         x_locs = coords[:, 0, 0]
         y_locs = coords[0, :, 1]
 
-        features, spectra, data = _spectra_from_image(hypercube, features,
-            x_locs, y_locs)
+        features, spectra, data = _spectra_from_image(
+            hypercube, features, x_locs, y_locs
+        )
         nd = build_spec_table(features, spectra, data)
 
         np.testing.assert_equal(d.X, nd.X)
@@ -47,7 +51,6 @@ class TestHyperspec(unittest.TestCase):
 
 
 class TestSplitToSize(unittest.TestCase):
-
     def test_single(self):
         self.assertEqual([], split_to_size(0, 10))
         self.assertEqual([slice(0, 1)], split_to_size(1, 10))
@@ -56,4 +59,6 @@ class TestSplitToSize(unittest.TestCase):
     def test_more(self):
         self.assertEqual([slice(0, 10), slice(10, 11)], split_to_size(11, 10))
         self.assertEqual([slice(0, 10), slice(10, 20)], split_to_size(20, 10))
-        self.assertEqual([slice(0, 10), slice(10, 20), slice(20, 21)], split_to_size(21, 10))
+        self.assertEqual(
+            [slice(0, 10), slice(10, 20), slice(20, 21)], split_to_size(21, 10)
+        )

@@ -29,6 +29,7 @@ https://irfpy.irf.se/projects/ica/_modules/irfpy/ica/baseline.html
 import numpy as np
 from scipy.sparse.linalg import spsolve
 from scipy.linalg import cholesky
+
 # from scikits.sparse.cholmod import cholesky
 from scipy import sparse
 
@@ -76,9 +77,11 @@ def als(y, lam=1e6, p=0.1, itermax=10):
 
     """
     L = len(y)
-#  D = sparse.csc_matrix(np.diff(np.eye(L), 2))
+    #  D = sparse.csc_matrix(np.diff(np.eye(L), 2))
     D = sparse.eye(L, format='csc')
-    D = D[1:] - D[:-1]  # numpy.diff( ,2) does not work with sparse matrix. This is a workaround.
+    D = (
+        D[1:] - D[:-1]
+    )  # numpy.diff( ,2) does not work with sparse matrix. This is a workaround.
     D = D[1:] - D[:-1]
     D = D.T
     w = np.ones(L)
@@ -128,9 +131,11 @@ def arpls(y, lam=1e4, ratio=0.05, itermax=100):
 
     """
     N = len(y)
-#  D = sparse.csc_matrix(np.diff(np.eye(N), 2))
+    #  D = sparse.csc_matrix(np.diff(np.eye(N), 2))
     D = sparse.eye(N, format='csc')
-    D = D[1:] - D[:-1]  # numpy.diff( ,2) does not work with sparse matrix. This is a workaround.
+    D = (
+        D[1:] - D[:-1]
+    )  # numpy.diff( ,2) does not work with sparse matrix. This is a workaround.
     D = D[1:] - D[:-1]
 
     H = lam * D.T * D
@@ -147,7 +152,7 @@ def arpls(y, lam=1e4, ratio=0.05, itermax=100):
         dn = d[d < 0]
         m = np.mean(dn)
         s = np.std(dn)
-        wt = 1. / (1 + np.exp(2 * (d - (2 * s - m)) / s))
+        wt = 1.0 / (1 + np.exp(2 * (d - (2 * s - m)) / s))
         if np.linalg.norm(w - wt) / np.linalg.norm(w) < ratio:
             break
         w = wt
@@ -176,10 +181,12 @@ def WhittakerSmooth(x, w, lam, differences=1):
     # X = np.matrix(x)  # replaced with the line below to avoid  np.matrix
     X = np.asarray(x)
     m = X.size
-#    D = csc_matrix(np.diff(np.eye(m), differences))
+    #    D = csc_matrix(np.diff(np.eye(m), differences))
     D = sparse.eye(m, format='csc')
     for i in range(differences):
-        D = D[1:] - D[:-1]  # numpy.diff() does not work with sparse matrix. This is a workaround.
+        D = (
+            D[1:] - D[:-1]
+        )  # numpy.diff() does not work with sparse matrix. This is a workaround.
     W = sparse.diags(w, 0, shape=(m, m))
     A = sparse.csc_matrix(W + (lam * D.T * D))
     # B = sparse.csc_matrix(W * X.T)  # replaced with the line below to avoid np.matrix
@@ -234,14 +241,16 @@ def airpls(x, lam=100, porder=1, itermax=100):
         z = WhittakerSmooth(x, w, lam, porder)
         d = x - z
         dssn = np.abs(d[d < 0].sum())
-        if(dssn < 0.001 * (abs(x)).sum() or i == itermax):
-            if(i == itermax):
-                #print('airpls: max iteration reached!')  # commented in Orange-spectroscopy
+        if dssn < 0.001 * (abs(x)).sum() or i == itermax:
+            if i == itermax:
+                # print('airpls: max iteration reached!')  # commented in Orange-spectroscopy
                 pass
             break
         w[d >= 0] = 0  # d>0 means that this point is part of a peak,
         # so its weight is set to 0 in order to ignore it
-        if np.shape(w[d >= 0]) == (0,) or np.shape(w[d < 0]) == (0,):  # addded in Orange-spectroscopy
+        if np.shape(w[d >= 0]) == (0,) or np.shape(w[d < 0]) == (
+            0,
+        ):  # addded in Orange-spectroscopy
             break
         w[d < 0] = np.exp(i * np.abs(d[d < 0]) / dssn)
         w[0] = np.exp(i * (d[d < 0]).max() / dssn)

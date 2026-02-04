@@ -2,7 +2,6 @@ import numpy as np
 
 
 class Function:
-
     def __init__(self, fn):
         self.fn = fn
 
@@ -10,33 +9,29 @@ class Function:
         return self.fn(x)
 
     def __eq__(self, other):
-        return type(self) is type(other) \
-            and self.fn == other.fn
+        return type(self) is type(other) and self.fn == other.fn
 
     def __hash__(self):
         return hash((type(self), self.fn))
 
 
 class Constant(Function):
-
     def __init__(self, c):
         super().__init__(None)
         self.c = c
 
     def __call__(self, x):
         x = np.asarray(x)
-        return np.ones(x.shape)*self.c
+        return np.ones(x.shape) * self.c
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.c == other.c
+        return super().__eq__(other) and self.c == other.c
 
     def __hash__(self):
         return hash((super().__hash__(), self.c))
 
 
 class Identity(Function):
-
     def __init__(self):
         super().__init__(None)
 
@@ -65,15 +60,13 @@ class Segments(Function):
         return output
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.segments == other.segments
+        return super().__eq__(other) and self.segments == other.segments
 
     def __hash__(self):
         return hash((super().__hash__(), self.segments))
 
 
 class Sum(Function):
-
     def __init__(self, *elements):
         super().__init__(None)
         self.elements = elements
@@ -89,8 +82,7 @@ class Sum(Function):
         return acc
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.segments == other.elements
+        return super().__eq__(other) and self.segments == other.elements
 
     def __hash__(self):
         return hash((super().__hash__(), self.elements))

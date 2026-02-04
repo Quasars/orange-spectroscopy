@@ -30,7 +30,6 @@ def full_like_type(orig, shape, val):
 
 
 class PreprocessException(Exception):
-
     def message(self):
         if self.args:
             return self.args[0]
@@ -47,7 +46,6 @@ class WrongReferenceException(PreprocessException):
 
 
 class SelectColumn(SharedComputeValue):
-
     def __init__(self, feature, commonfn):
         super().__init__(commonfn)
         self.feature = feature
@@ -56,8 +54,7 @@ class SelectColumn(SharedComputeValue):
         return common[:, self.feature]
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.feature == other.feature
+        return super().__eq__(other) and self.feature == other.feature
 
     def __hash__(self):
         return hash((super().__hash__(), self.feature))
@@ -68,6 +65,7 @@ class CommonDomain:
     SharedComputeValue features. It does the domain transformation
     (input domain needs to be the same as it was with training data).
     """
+
     def __init__(self, domain: Domain):
         self.domain = domain
 
@@ -84,8 +82,7 @@ class CommonDomain:
         raise NotImplementedError
 
     def __eq__(self, other):
-        return type(self) is type(other) \
-               and self.domain == other.domain
+        return type(self) is type(other) and self.domain == other.domain
 
     def __hash__(self):
         return hash((type(self), self.domain))
@@ -93,6 +90,7 @@ class CommonDomain:
 
 class CommonDomainRef(CommonDomain):
     """CommonDomain which also ensures reference domain transformation"""
+
     def __init__(self, reference: Table, domain: Domain):
         super().__init__(domain)
         self.reference = reference
@@ -101,8 +99,7 @@ class CommonDomainRef(CommonDomain):
         return interpolate_extend_to(interpolate, wavenumbers)
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and table_eq_x(self.reference, other.reference)
+        return super().__eq__(other) and table_eq_x(self.reference, other.reference)
 
     def __hash__(self):
         domain = self.reference.domain if self.reference is not None else None
@@ -111,8 +108,8 @@ class CommonDomainRef(CommonDomain):
 
 
 class CommonDomainOrder(CommonDomain):
-    """CommonDomain + it also handles wavenumber order.
-    """
+    """CommonDomain + it also handles wavenumber order."""
+
     def __call__(self, data):
         data = self.transform_domain(data)
 
@@ -147,6 +144,7 @@ class CommonDomainOrderUnknowns(CommonDomainOrder):
     """CommonDomainOrder + it also handles unknown values: it interpolates
     values before computation and afterwards sets them back to unknown.
     """
+
     def __call__(self, data):
         data = self.transform_domain(data)
 
@@ -161,8 +159,10 @@ class CommonDomainOrderUnknowns(CommonDomainOrder):
         # with some values so that the function does not crash.
         # Results are going to be discarded later.
         remaining_nans = np.isnan(X)
-        if np.any(remaining_nans):  # if there were no nans X is a view, so do not modify
-            X[remaining_nans] = 1.
+        if np.any(
+            remaining_nans
+        ):  # if there were no nans X is a view, so do not modify
+            X[remaining_nans] = 1.0
 
         # do the transformation
         X = self.transformed(X, xs[xsind])
@@ -193,8 +193,9 @@ def table_eq_x(first: Optional[Table], second: Optional[Table]):
     elif first is None or second is None:
         return False
     else:
-        return first.domain.attributes == second.domain.attributes \
-               and np.array_equal(first.X, second.X)
+        return first.domain.attributes == second.domain.attributes and np.array_equal(
+            first.X, second.X
+        )
 
 
 def subset_for_hash(array, size=10):
@@ -246,7 +247,7 @@ def fill_edges_1d(l):
         return l
     else:
         l[:fi] = l[fi]
-        l[li + 1:] = l[li]
+        l[li + 1 :] = l[li]
         return l
 
 
@@ -298,8 +299,15 @@ def interp1d_with_unknowns_scipy(x, ys, points, kind="linear"):
         xt = x[~nan]
         yt = y[~nan]
         if len(xt):  # check if all values are removed
-            out[i] = interp1d(xt, yt, fill_value=np.nan, assume_sorted=True,
-                              bounds_error=False, kind=kind, copy=False)(points)
+            out[i] = interp1d(
+                xt,
+                yt,
+                fill_value=np.nan,
+                assume_sorted=True,
+                bounds_error=False,
+                kind=kind,
+                copy=False,
+            )(points)
     return out
 
 
@@ -316,11 +324,13 @@ def linear_baseline(x, y, zero_points=None):
     if len(x) == 0:
         return 0
     values_zero_points = interp1d(x, y, axis=1, fill_value="extrapolate")(zero_points)
-    return interp1d(zero_points, values_zero_points, axis=1, fill_value="extrapolate")(x)
+    return interp1d(zero_points, values_zero_points, axis=1, fill_value="extrapolate")(
+        x
+    )
 
 
 def replace_infs(array):
-    """ Replaces inf and -inf with nan.
+    """Replaces inf and -inf with nan.
     This should be used anywhere a divide-by-zero can happen (/, np.log10, etc)"""
     array[np.isinf(array)] = np.nan
     return array
@@ -328,7 +338,10 @@ def replace_infs(array):
 
 def replacex(data: Table, replacement: list):
     assert len(data.domain.attributes) == len(replacement)
-    natts = [at.renamed(str(n)) for n, at in zip(replacement, data.domain.attributes, strict=True)]
+    natts = [
+        at.renamed(str(n))
+        for n, at in zip(replacement, data.domain.attributes, strict=True)
+    ]
     ndom = Domain(natts, data.domain.class_vars, data.domain.metas)
     return data.transform(ndom)
 

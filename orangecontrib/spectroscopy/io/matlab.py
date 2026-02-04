@@ -84,7 +84,7 @@ class MatlabReader(FileFormat):
                     if f.shape[1] == 1:
                         names = [m]
                     else:
-                        names = [m + "_" + str(i+1) for i in range(f.shape[1])]
+                        names = [m + "_" + str(i + 1) for i in range(f.shape[1])]
                     for n in names:
                         metas.append(ContinuousVariable.make(n))
                     meta_data.append(f)

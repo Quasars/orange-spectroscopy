@@ -7,7 +7,6 @@ from orangecontrib.spectroscopy.widgets.utils import pack_selection, unpack_sele
 
 
 class TestSelectionPacking(unittest.TestCase):
-
     def test_pack(self):
         # None
         self.assertEqual(pack_selection(None), None)

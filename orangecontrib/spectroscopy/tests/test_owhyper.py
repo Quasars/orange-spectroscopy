@@ -22,16 +22,22 @@ from Orange.util import OrangeDeprecationWarning
 
 from orangecontrib.spectroscopy.data import _spectra_from_image, build_spec_table
 from orangecontrib.spectroscopy.io.util import VisibleImage
-from orangecontrib.spectroscopy.preprocess.integrate import IntegrateFeaturePeakSimple, \
-    Integrate, IntegrateFeatureSimple
+from orangecontrib.spectroscopy.preprocess.integrate import (
+    IntegrateFeaturePeakSimple,
+    Integrate,
+    IntegrateFeatureSimple,
+)
 from orangecontrib.spectroscopy.widgets import owhyper
-from orangecontrib.spectroscopy.widgets.owhyper import \
-    OWHyper
+from orangecontrib.spectroscopy.widgets.owhyper import OWHyper
 from orangecontrib.spectroscopy.preprocess import Interpolate
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon, is_left
 from orangecontrib.spectroscopy.tests.util import hold_modifiers, set_png_graph_save
-from orangecontrib.spectroscopy.utils import values_to_linspace, \
-    index_values, location_values, index_values_nan
+from orangecontrib.spectroscopy.utils import (
+    values_to_linspace,
+    index_values,
+    location_values,
+    index_values_nan,
+)
 
 NAN = float("nan")
 
@@ -42,7 +48,6 @@ def wait_for_image(widget, timeout=5000):
 
 
 class TestReadCoordinates(unittest.TestCase):
-
     def test_linspace(self):
         v = values_to_linspace(np.array([1, 2, 3]))
         np.testing.assert_equal(np.linspace(*v), [1, 2, 3])
@@ -81,7 +86,6 @@ class TestReadCoordinates(unittest.TestCase):
 
 
 class TestPolygonSelection(unittest.TestCase):
-
     def test_is_left(self):
         self.assertGreater(is_left(0, 0, 0, 1, -1, 0), 0)
         self.assertLess(is_left(0, 0, 0, -1, -1, 0), 0)
@@ -106,7 +110,6 @@ class TestPolygonSelection(unittest.TestCase):
 
 
 class TestOWHyper(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -125,7 +128,8 @@ class TestOWHyper(WidgetTest):
         irisunknown = Interpolate(np.arange(20))(cls.iris)[:20]
         # dataset without any attributes, but XY
         whitelight0 = cls.whitelight.transform(
-            Orange.data.Domain([], None, metas=cls.whitelight.domain.metas))[:100]
+            Orange.data.Domain([], None, metas=cls.whitelight.domain.metas)
+        )[:100]
         unknowns = cls.iris[::10].copy()
         with unknowns.unlocked():
             unknowns.X[:, :] = float("nan")
@@ -133,8 +137,17 @@ class TestOWHyper(WidgetTest):
         unknown_pixel = single_pixel.copy()
         with unknown_pixel.unlocked():
             unknown_pixel.Y[:] = float("nan")
-        cls.strange_data = [None, cls.iris1, iris0, empty, irisunknown, whitelight0,
-                            unknowns, single_pixel, unknown_pixel]
+        cls.strange_data = [
+            None,
+            cls.iris1,
+            iris0,
+            empty,
+            irisunknown,
+            whitelight0,
+            unknowns,
+            single_pixel,
+            unknown_pixel,
+        ]
 
     def setUp(self):
         self.widget = self.create_widget(OWHyper)  # type: OWHyper
@@ -167,7 +180,9 @@ class TestOWHyper(WidgetTest):
                 correct = [True, True, False, True, True]
             else:
                 correct = [True, True, False, False, False]
-            visible = [a.isVisible() for a in [w.line1, w.line2, w.line3, w.line4, w.line5]]
+            visible = [
+                a.isVisible() for a in [w.line1, w.line2, w.line3, w.line4, w.line5]
+            ]
             self.assertEqual(visible, correct)
 
     def try_big_selection(self):
@@ -235,13 +250,16 @@ class TestOWHyper(WidgetTest):
         self.assertIsNone(out, None)
 
         # select specific points
-        self.widget.imageplot.select_square(QPointF(53.20, 30.0), QPointF(53.205, 30.02))
+        self.widget.imageplot.select_square(
+            QPointF(53.20, 30.0), QPointF(53.205, 30.02)
+        )
         out = self.get_output("Selection")
-        np.testing.assert_almost_equal(out.metas,
-                                       [[53.2043, 30.0185], [53.2043, 30.0085]],
-                                       decimal=3)
-        np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
-                                ["G1", "G1"])
+        np.testing.assert_almost_equal(
+            out.metas, [[53.2043, 30.0185], [53.2043, 30.0085]], decimal=3
+        )
+        np.testing.assert_equal(
+            [o[out.domain["Group"]].value for o in out], ["G1", "G1"]
+        )
 
     def test_select_polygon_as_rectangle(self):
         # rectangle and a polygon need to give the same results
@@ -249,8 +267,15 @@ class TestOWHyper(WidgetTest):
         wait_for_image(self.widget)
         self.widget.imageplot.select_square(QPointF(53, 30), QPointF(54, 31))
         out = self.get_output("Selection")
-        self.widget.imageplot.select_polygon([QPointF(53, 30), QPointF(53, 31), QPointF(54, 31),
-                                              QPointF(54, 30), QPointF(53, 30)])
+        self.widget.imageplot.select_polygon(
+            [
+                QPointF(53, 30),
+                QPointF(53, 31),
+                QPointF(54, 31),
+                QPointF(54, 30),
+                QPointF(53, 30),
+            ]
+        )
         outpoly = self.get_output("Selection")
         self.assertEqual(list(out), list(outpoly))
 
@@ -290,24 +315,35 @@ class TestOWHyper(WidgetTest):
         oldvars = data.domain.variables + data.domain.metas
         group_at = [a for a in newvars if a not in oldvars][0]
         unselected = group_at.to_val("Unselected")
-        out = out[np.asarray(np.flatnonzero(
-            out.transform(Orange.data.Domain([group_at])).X != unselected))]
+        out = out[
+            np.asarray(
+                np.flatnonzero(
+                    out.transform(Orange.data.Domain([group_at])).X != unselected
+                )
+            )
+        ]
         self.assertEqual(len(out), 4)
-        np.testing.assert_almost_equal([o["map_x"].value for o in out],
-                                       [53.1993, 53.3993, 53.5993, 53.7993],
-                                       decimal=3)
-        np.testing.assert_equal([o[group_at].value for o in out], ["G1", "G2", "G3", "G3"])
+        np.testing.assert_almost_equal(
+            [o["map_x"].value for o in out],
+            [53.1993, 53.3993, 53.5993, 53.7993],
+            decimal=3,
+        )
+        np.testing.assert_equal(
+            [o[group_at].value for o in out], ["G1", "G2", "G3", "G3"]
+        )
         out = self.get_output(self.widget.Outputs.selected_data)
-        np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
-                                ["G1", "G2", "G3", "G3"])
+        np.testing.assert_equal(
+            [o[out.domain["Group"]].value for o in out], ["G1", "G2", "G3", "G3"]
+        )
 
         # remove one element
         with hold_modifiers(self.widget, Qt.AltModifier):
             self.widget.imageplot.select_by_click(QPointF(53.2, 30))
         out = self.get_output(self.widget.Outputs.selected_data)
         np.testing.assert_equal(len(out), 3)
-        np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
-                                ["G2", "G3", "G3"])
+        np.testing.assert_equal(
+            [o[out.domain["Group"]].value for o in out], ["G2", "G3", "G3"]
+        )
 
     def test_select_a_curve(self):
         self.send_signal("Data", self.iris)
@@ -323,24 +359,33 @@ class TestOWHyper(WidgetTest):
 
     def test_set_variable_color(self):
         data = self.iris
-        ndom = Orange.data.Domain(data.domain.attributes[:-1], data.domain.class_var,
-                                  metas=[data.domain.attributes[-1]])
+        ndom = Orange.data.Domain(
+            data.domain.attributes[:-1],
+            data.domain.class_var,
+            metas=[data.domain.attributes[-1]],
+        )
         data = data.transform(ndom)
         self.send_signal("Data", data)
         self.widget.controls.value_type.buttons[1].click()
-        with patch("orangecontrib.spectroscopy.widgets.owhyper.ImageItemNan.setLookupTable") as p:
+        with patch(
+            "orangecontrib.spectroscopy.widgets.owhyper.ImageItemNan.setLookupTable"
+        ) as p:
             # a discrete variable
             self.widget.attr_value = data.domain["iris"]
             self.widget.imageplot.update_color_schema()
             self.widget.update_feature_value()
             wait_for_image(self.widget)
-            np.testing.assert_equal(len(p.call_args[0][0]), 3)  # just 3 colors for 3 values
+            np.testing.assert_equal(
+                len(p.call_args[0][0]), 3
+            )  # just 3 colors for 3 values
             # a continuous variable
             self.widget.attr_value = data.domain["petal width"]
             self.widget.imageplot.update_color_schema()
             self.widget.update_feature_value()
             wait_for_image(self.widget)
-            np.testing.assert_equal(len(p.call_args[0][0]), 256)  # 256 for a continuous variable
+            np.testing.assert_equal(
+                len(p.call_args[0][0]), 256
+            )  # 256 for a continuous variable
 
     def test_color_variable_levels(self):
         class_values = ["a"], ["a", "b", "c"]
@@ -356,7 +401,9 @@ class TestOWHyper(WidgetTest):
             np.testing.assert_equal(self.widget.imageplot.img.levels, correct)
 
     def test_single_update_view(self):
-        with patch("orangecontrib.spectroscopy.widgets.owhyper.ImagePlot.update_view") as p:
+        with patch(
+            "orangecontrib.spectroscopy.widgets.owhyper.ImagePlot.update_view"
+        ) as p:
             self.send_signal("Data", self.iris)
             self.assertEqual(p.call_count, 1)
 
@@ -373,7 +420,9 @@ class TestOWHyper(WidgetTest):
         setattr(c, "selection", [False, True, True, False])  # noqa: B010
         settings = {"context_settings": [c]}
         OWHyper.migrate_settings(settings, 2)
-        self.assertEqual(settings["imageplot"]["selection_group_saved"], [(1, 1), (2, 1)])
+        self.assertEqual(
+            settings["imageplot"]["selection_group_saved"], [(1, 1), (2, 1)]
+        )
 
     def test_color_no_data(self):
         self.send_signal("Data", None)
@@ -407,34 +456,39 @@ class TestOWHyper(WidgetTest):
     def test_migrate_context_feature_color(self):
         # avoid class_vars in tests, because the setting does not allow them
         iris = self.iris.transform(
-            Domain(self.iris.domain.attributes, None, self.iris.domain.class_vars))
-        c = self.widget.settingsHandler.new_context(iris.domain, None, iris.domain.metas)
+            Domain(self.iris.domain.attributes, None, self.iris.domain.class_vars)
+        )
+        c = self.widget.settingsHandler.new_context(
+            iris.domain, None, iris.domain.metas
+        )
         c.values["curveplot"] = {"feature_color": ("iris", 1)}
-        self.widget = self.create_widget(OWHyper,
-                                         stored_settings={"context_settings": [c]})
+        self.widget = self.create_widget(
+            OWHyper, stored_settings={"context_settings": [c]}
+        )
         self.send_signal("Data", iris)
         self.assertIsInstance(self.widget.curveplot.feature_color, DiscreteVariable)
 
     def test_image_computation(self):
-        spectra = [[[0, 0, 2, 0],
-                    [0, 0, 1, 0]],
-                   [[1, 2, 2, 0],
-                    [0, 1, 1, 0]]]
+        spectra = [[[0, 0, 2, 0], [0, 0, 1, 0]], [[1, 2, 2, 0], [0, 1, 1, 0]]]
         wns = [0, 1, 2, 3]
         x_locs = [0, 1]
         y_locs = [0, 1]
         data = build_spec_table(*_spectra_from_image(spectra, wns, x_locs, y_locs))
 
         def last_called_array(m):
-            arrays = [a[0][0] for a in m.call_args_list
-                      if a and a[0] and isinstance(a[0][0], np.ndarray)]
+            arrays = [
+                a[0][0]
+                for a in m.call_args_list
+                if a and a[0] and isinstance(a[0][0], np.ndarray)
+            ]
             return arrays[-1]
 
         wrap = self.widget.imageplot.img
 
         # integral from zero
-        self.widget.integration_method = \
-            self.widget.integration_methods.index(IntegrateFeatureSimple)
+        self.widget.integration_method = self.widget.integration_methods.index(
+            IntegrateFeatureSimple
+        )
         self.send_signal("Data", data)
         with patch.object(wrap, 'setImage', wraps=wrap.setImage) as m:
             wait_for_image(self.widget)
@@ -443,8 +497,9 @@ class TestOWHyper(WidgetTest):
             np.testing.assert_equal(called.squeeze(), target)
 
         # peak from zero
-        self.widget.integration_method = \
-            self.widget.integration_methods.index(IntegrateFeaturePeakSimple)
+        self.widget.integration_method = self.widget.integration_methods.index(
+            IntegrateFeaturePeakSimple
+        )
         self.widget._change_integral_type()
         with patch.object(wrap, 'setImage', wraps=wrap.setImage) as m:
             wait_for_image(self.widget)
@@ -476,10 +531,7 @@ class TestOWHyper(WidgetTest):
             np.testing.assert_equal(called, target)
 
     def test_scatterplot_computation(self):
-        spectra = [[[0, 0, 2, 0],
-                    [0, 0, 1, 0]],
-                   [[1, 2, 2, 0],
-                    [0, 1, 1, 0]]]
+        spectra = [[[0, 0, 2, 0], [0, 0, 1, 0]], [[1, 2, 2, 0], [0, 1, 1, 0]]]
         wns = [0, 1, 2, 3]
         x_locs = [0, 1]
         y_locs = [0, 1]
@@ -497,8 +549,9 @@ class TestOWHyper(WidgetTest):
         self.widget.imageplot.controls.draw_as_scatterplot.click()
 
         # integral from zero
-        self.widget.integration_method = \
-            self.widget.integration_methods.index(IntegrateFeatureSimple)
+        self.widget.integration_method = self.widget.integration_methods.index(
+            IntegrateFeatureSimple
+        )
         self.send_signal("Data", data)
         with patch.object(wrap, 'setData', wraps=wrap.setData) as m:
             wait_for_image(self.widget)
@@ -507,8 +560,10 @@ class TestOWHyper(WidgetTest):
             np.testing.assert_equal(call.kwargs['x'], [0, 1, 0, 1])
             np.testing.assert_equal(call.kwargs['y'], [0, 0, 1, 1])
             # the current state hardcoded
-            np.testing.assert_equal(colors_from_brush(call.kwargs['brush']),
-                                    [(0, 177, 80), (0, 124, 12), (255, 35, 241), (0, 177, 80)])
+            np.testing.assert_equal(
+                colors_from_brush(call.kwargs['brush']),
+                [(0, 177, 80), (0, 124, 12), (255, 35, 241), (0, 177, 80)],
+            )
 
         # single wavenumber (feature)
         self.widget.controls.value_type.buttons[1].click()
@@ -521,8 +576,10 @@ class TestOWHyper(WidgetTest):
             np.testing.assert_equal(call.kwargs['x'], [0, 1, 0, 1])
             np.testing.assert_equal(call.kwargs['y'], [0, 0, 1, 1])
             # the current state hardcoded
-            np.testing.assert_equal(colors_from_brush(call.kwargs['brush']),
-                                    [(0, 124, 12), (0, 124, 12), (255, 35, 241), (27, 97, 142)])
+            np.testing.assert_equal(
+                colors_from_brush(call.kwargs['brush']),
+                [(0, 124, 12), (0, 124, 12), (255, 35, 241), (27, 97, 142)],
+            )
 
         # RGB
         self.widget.controls.value_type.buttons[2].click()
@@ -536,20 +593,28 @@ class TestOWHyper(WidgetTest):
             call = m.call_args_list[-1]
             np.testing.assert_equal(call.kwargs['x'], [0, 1, 0, 1])
             np.testing.assert_equal(call.kwargs['y'], [0, 0, 1, 1])
-            np.testing.assert_equal(colors_from_brush(call.kwargs['brush']),
-                                    [(0, 255, 0), (0, 0, 0), (255, 255, 255), (0, 0, 128)])
+            np.testing.assert_equal(
+                colors_from_brush(call.kwargs['brush']),
+                [(0, 255, 0), (0, 0, 0), (255, 255, 255), (0, 0, 128)],
+            )
 
     def test_migrate_visual_setttings(self):
-        settings = {"curveplot":
-                        {"label_title": "title",
-                         "label_xaxis": "x",
-                         "label_yaxis": "y"}
-                    }
+        settings = {
+            "curveplot": {
+                "label_title": "title",
+                "label_xaxis": "x",
+                "label_yaxis": "y",
+            }
+        }
         OWHyper.migrate_settings(settings, 6)
-        self.assertEqual(settings["visual_settings"],
-                         {('Annotations', 'Title', 'Title'): 'title',
-                          ('Annotations', 'x-axis title', 'Title'): 'x',
-                          ('Annotations', 'y-axis title', 'Title'): 'y'})
+        self.assertEqual(
+            settings["visual_settings"],
+            {
+                ('Annotations', 'Title', 'Title'): 'title',
+                ('Annotations', 'x-axis title', 'Title'): 'x',
+                ('Annotations', 'y-axis title', 'Title'): 'y',
+            },
+        )
         settings = {}
         OWHyper.migrate_settings(settings, 6)
         self.assertNotIn("visual_settings", settings)
@@ -568,7 +633,6 @@ class TestOWHyper(WidgetTest):
         self.assertTrue(self.widget.compat_no_group)
 
 
-
 @unittest.skipUnless(dask, "installed Orange does not support dask")
 class TestOWHyperWithDask(TestOWHyper):
     @classmethod
@@ -578,12 +642,13 @@ class TestOWHyperWithDask(TestOWHyper):
         cls.whitelight = temp_dasktable("whitelight.gsf")
         cls.whitelight_unknown = temp_dasktable(cls.whitelight_unknown)
         cls.iris1 = temp_dasktable(cls.iris1)
-        cls.strange_data = [temp_dasktable(d) if d is not None else None
-                            for d in cls.strange_data]
+        cls.strange_data = [
+            temp_dasktable(d) if d is not None else None for d in cls.strange_data
+        ]
 
 
 class _VisibleImageStream(VisibleImage):
-    """ Do not use this class in practice because too many things
+    """Do not use this class in practice because too many things
     will get copied when transforming tables."""
 
     def __init__(self, name, pos_x, pos_y, size_x, size_y, stream):
@@ -596,17 +661,24 @@ class _VisibleImageStream(VisibleImage):
 
 
 class TestVisibleImage(WidgetTest):
-
     @classmethod
     def mock_visible_image_data_oldformat(cls):
-        red_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAAA"
-                                       "oAAAAKCAYAAACNMs+9AAAAFUlE"
-                                       "QVR42mP8z8AARIQB46hC+ioEAG"
-                                       "X8E/cKr6qsAAAAAElFTkSuQmCC"))
-        black_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAA"
-                                         "AoAAAAKCAQAAAAnOwc2AAAAEU"
-                                         "lEQVR42mNk+M+AARiHsiAAcCI"
-                                         "KAYwFoQ8AAAAASUVORK5CYII="))
+        red_img = io.BytesIO(
+            b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAA"
+                "oAAAAKCAYAAACNMs+9AAAAFUlE"
+                "QVR42mP8z8AARIQB46hC+ioEAG"
+                "X8E/cKr6qsAAAAAElFTkSuQmCC"
+            )
+        )
+        black_img = io.BytesIO(
+            b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAA"
+                "AoAAAAKCAQAAAAnOwc2AAAAEU"
+                "lEQVR42mNk+M+AARiHsiAAcCI"
+                "KAYwFoQ8AAAAASUVORK5CYII="
+            )
+        )
 
         return [
             {
@@ -615,7 +687,7 @@ class TestVisibleImage(WidgetTest):
                 "pos_x": 100,
                 "pos_y": 100,
                 "pixel_size_x": 1.7,
-                "pixel_size_y": 2.3
+                "pixel_size_y": 2.3,
             },
             {
                 "name": "Image 02",
@@ -623,7 +695,7 @@ class TestVisibleImage(WidgetTest):
                 "pos_x": 0.5,
                 "pos_y": 0.5,
                 "pixel_size_x": 1,
-                "pixel_size_y": 0.3
+                "pixel_size_y": 0.3,
             },
             {
                 "name": "Image 03",
@@ -631,35 +703,42 @@ class TestVisibleImage(WidgetTest):
                 "pos_x": 100,
                 "pos_y": 100,
                 "img_size_x": 17.0,
-                "img_size_y": 23.0
+                "img_size_y": 23.0,
             },
         ]
 
     @classmethod
     def mock_visible_image_data(cls):
-        red_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAAA"
-                                       "oAAAAKCAYAAACNMs+9AAAAFUlE"
-                                       "QVR42mP8z8AARIQB46hC+ioEAG"
-                                       "X8E/cKr6qsAAAAAElFTkSuQmCC"))
-        black_img = io.BytesIO(b64decode("iVBORw0KGgoAAAANSUhEUgAAA"
-                                         "AoAAAAKCAQAAAAnOwc2AAAAEU"
-                                         "lEQVR42mNk+M+AARiHsiAAcCI"
-                                         "KAYwFoQ8AAAAASUVORK5CYII="))
+        red_img = io.BytesIO(
+            b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAA"
+                "oAAAAKCAYAAACNMs+9AAAAFUlE"
+                "QVR42mP8z8AARIQB46hC+ioEAG"
+                "X8E/cKr6qsAAAAAElFTkSuQmCC"
+            )
+        )
+        black_img = io.BytesIO(
+            b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAA"
+                "AoAAAAKCAQAAAAnOwc2AAAAEU"
+                "lEQVR42mNk+M+AARiHsiAAcCI"
+                "KAYwFoQ8AAAAASUVORK5CYII="
+            )
+        )
 
         return [
-            _VisibleImageStream("Image 01", 100, 100, 17., 23., red_img),
+            _VisibleImageStream("Image 01", 100, 100, 17.0, 23.0, red_img),
             _VisibleImageStream("Image 02", 0.5, 0.5, 10, 3, black_img),
-            _VisibleImageStream("Image 03", 100, 100, 17., 23., red_img),
+            _VisibleImageStream("Image 03", 100, 100, 17.0, 23.0, red_img),
         ]
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.data_with_visible_images = Orange.data.Table(
-            "agilent/4_noimage_agg256.dat"
-        )
-        cls.data_with_visible_images.attributes["visible_images"] = \
+        cls.data_with_visible_images = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        cls.data_with_visible_images.attributes["visible_images"] = (
             cls.mock_visible_image_data()
+        )
 
     def setUp(self):
         self.widget = self.create_widget(OWHyper)  # type: OWHyper
@@ -667,8 +746,7 @@ class TestVisibleImage(WidgetTest):
     def assert_same_visible_image(self, img_info, vis_img, mock_rect):
         img = img_info.image.convert('RGBA')
         img = np.array(img)[::-1]
-        rect = QRectF(img_info.pos_x, img_info.pos_y,
-                      img_info.size_x, img_info.size_y)
+        rect = QRectF(img_info.pos_x, img_info.pos_y, img_info.size_x, img_info.size_y)
         self.assertTrue((vis_img.image == img).all())
         mock_rect.assert_called_with(rect)
 
@@ -693,9 +771,11 @@ class TestVisibleImage(WidgetTest):
 
         self.assertTrue(w.controls.show_visible_image.isEnabled())
         self.assertFalse(w.show_visible_image)
-        controls = [w.controls.visible_image,
-                    w.controls.visible_image_composition,
-                    w.controls.visible_image_opacity]
+        controls = [
+            w.controls.visible_image,
+            w.controls.visible_image_composition,
+            w.controls.visible_image_opacity,
+        ]
         for control in controls:
             self.assertFalse(control.isEnabled())
 
@@ -712,15 +792,16 @@ class TestVisibleImage(WidgetTest):
             wait_for_image(w)
 
             w.controls.show_visible_image.setChecked(True)
-            self.assertEqual(len(w.visible_image_model),
-                             len(data.attributes["visible_images"]))
+            self.assertEqual(
+                len(w.visible_image_model), len(data.attributes["visible_images"])
+            )
             self.assertEqual(w.visible_image, data.attributes["visible_images"][0])
             self.assertEqual(w.controls.visible_image.currentIndex(), 0)
             self.assertEqual(w.controls.visible_image.currentText(), "Image 01")
 
-            self.assert_same_visible_image(data.attributes["visible_images"][0],
-                                           w.imageplot.vis_img,
-                                           mock_rect)
+            self.assert_same_visible_image(
+                data.attributes["visible_images"][0], w.imageplot.vis_img, mock_rect
+            )
 
     def test_visible_image_displayed(self):
         w = self.widget
@@ -764,9 +845,9 @@ class TestVisibleImage(WidgetTest):
             # we need to trigger it by hand here.
             w.controls.visible_image.activated.emit(1)
 
-            self.assert_same_visible_image(data.attributes["visible_images"][1],
-                                           w.imageplot.vis_img,
-                                           mock_rect)
+            self.assert_same_visible_image(
+                data.attributes["visible_images"][1], w.imageplot.vis_img, mock_rect
+            )
 
     def test_visible_image_opacity(self):
         w = self.widget
@@ -811,16 +892,13 @@ class TestVisibleImage(WidgetTest):
             # we need to trigger it by hand here.
             w.controls.visible_image.activated.emit(2)
 
-            self.assert_same_visible_image(data.attributes["visible_images"][0],
-                                           w.imageplot.vis_img,
-                                           mock_rect)
+            self.assert_same_visible_image(
+                data.attributes["visible_images"][0], w.imageplot.vis_img, mock_rect
+            )
 
     def test_oldformat(self):
-        data = Orange.data.Table(
-            "agilent/4_noimage_agg256.dat"
-        )
-        data.attributes["visible_images"] = \
-            self.mock_visible_image_data_oldformat()
+        data = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        data.attributes["visible_images"] = self.mock_visible_image_data_oldformat()
         w = self.widget
 
         with self.assertWarns(OrangeDeprecationWarning):
@@ -837,7 +915,6 @@ class TestVisibleImage(WidgetTest):
 
 
 class TestVectorPlot(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -914,7 +991,7 @@ class TestVectorPlot(WidgetTest):
         self.assertFalse(self.widget.imageplot.vect_legend.isVisible())
         self.widget.controls.imageplot.show_vector_plot.setChecked(False)
         self.widget.imageplot.enable_vector()
-    
+
     def test_vect_color(self):
         feat = self.iris.get_column(self.iris.domain.attributes[0])
         self.send_signal(self.widget.Inputs.data, self.iris)
@@ -926,7 +1003,9 @@ class TestVectorPlot(WidgetTest):
             self.assertEqual(len(self.widget.imageplot.get_vector_color(feat)), 4)
         self.widget.imageplot.vector_color_index = 8
         self.widget.imageplot._update_vector()
-        self.assertEqual(self.widget.imageplot.get_vector_color(feat)[0].shape, (feat.shape[0], 4))
+        self.assertEqual(
+            self.widget.imageplot.get_vector_color(feat)[0].shape, (feat.shape[0], 4)
+        )
         self.widget.controls.imageplot.show_vector_plot.setChecked(False)
         self.widget.imageplot.enable_vector()
 
@@ -943,10 +1022,14 @@ class TestVectorPlot(WidgetTest):
         self.widget.imageplot.update_view()
         wait_for_image(self.widget)
         print(self.widget.imageplot.vector_plot.params[0].shape)
-        self.assertEqual(self.widget.imageplot.vector_plot.params[0].shape[0],
-                         self.iris.X.shape[0]*2)
-        self.assertEqual(self.widget.imageplot.vector_plot.params[1].shape[0],
-                         self.iris.X.shape[0]*2)
+        self.assertEqual(
+            self.widget.imageplot.vector_plot.params[0].shape[0],
+            self.iris.X.shape[0] * 2,
+        )
+        self.assertEqual(
+            self.widget.imageplot.vector_plot.params[1].shape[0],
+            self.iris.X.shape[0] * 2,
+        )
 
         self.widget.imageplot.v_bin = 1
         self.widget.imageplot._update_binsize()
@@ -961,7 +1044,7 @@ class TestVectorPlot(WidgetTest):
         wait_for_image(self.widget)
         self.assertEqual(self.widget.imageplot.vector_plot.params[0].shape[0], 2)
         self.assertEqual(self.widget.imageplot.vector_plot.params[1].shape[0], 2)
-        
+
         self.widget.imageplot.v_bin = 3
         self.widget.imageplot._update_binsize()
         self.widget.imageplot.update_view()

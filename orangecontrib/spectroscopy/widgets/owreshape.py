@@ -17,12 +17,15 @@ class OWReshape(OWWidget):
     # Short widget description
     description = (
         "Builds or modifies the shape of the input dataset to create 2D maps "
-        "from series data or change the dimensions of existing 2D datasets.")
+        "from series data or change the dimensions of existing 2D datasets."
+    )
 
     icon = "icons/reshape.svg"
 
-    replaces = ["orangecontrib.infrared.widgets.owmapbuilder.OWMapBuilder",
-                "orangecontrib.infrared.widgets.owreshape.OWReshape"]
+    replaces = [
+        "orangecontrib.infrared.widgets.owmapbuilder.OWMapBuilder",
+        "orangecontrib.infrared.widgets.owreshape.OWReshape",
+    ]
 
     # Define inputs and outputs
     class Inputs:
@@ -62,10 +65,20 @@ class OWReshape(OWWidget):
         self.le3 = lineEditIntOrNone(box, self, "ypoints", callback=self.le3_changed)
         formlayout.addRow("Y dimension", self.le3)
 
-        gui.checkBox(box, self, "invert_x", "Invert X axis",
-                     callback=lambda: self.commit.deferred())
-        gui.checkBox(box, self, "invert_y", "Invert Y axis",
-                     callback=lambda: self.commit.deferred())
+        gui.checkBox(
+            box,
+            self,
+            "invert_x",
+            "Invert X axis",
+            callback=lambda: self.commit.deferred(),
+        )
+        gui.checkBox(
+            box,
+            self,
+            "invert_y",
+            "Invert Y axis",
+            callback=lambda: self.commit.deferred(),
+        )
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Send Data")
 
@@ -83,20 +96,20 @@ class OWReshape(OWWidget):
         self.commit.now()
 
     # maybe doable with one callback...
-    def le1_changed(self): # X dimension
+    def le1_changed(self):  # X dimension
         if self.data is not None and self.xpoints:
             self.Warning.wrong_div.clear()
-            ytemp = len(self.data.X)//self.xpoints
+            ytemp = len(self.data.X) // self.xpoints
             if len(self.data.X) % self.xpoints == 0:
                 self.ypoints = ytemp
                 self.commit.deferred()
             else:
                 self.Warning.wrong_div(len(self.data.X))
 
-    def le3_changed(self): # Y dimension
+    def le3_changed(self):  # Y dimension
         if self.data is not None and self.ypoints:
             self.Warning.wrong_div.clear()
-            xtemp = len(self.data.X)//self.ypoints
+            xtemp = len(self.data.X) // self.ypoints
             if len(self.data.X) % self.ypoints == 0:
                 self.xpoints = xtemp
                 self.commit.deferred()
@@ -107,14 +120,26 @@ class OWReshape(OWWidget):
     @gui.deferred
     def commit(self):
         map_data = None
-        if self.data and self.xpoints is not None and self.ypoints is not None \
-                and self.xpoints * self.ypoints == len(self.data):
-            used_names = [var.name for var in self.data.domain.variables + self.data.domain.metas]
-            xmeta = Orange.data.ContinuousVariable.make(get_unique_names(used_names, "X"))
-            ymeta = Orange.data.ContinuousVariable.make(get_unique_names(used_names, "Y"))
+        if (
+            self.data
+            and self.xpoints is not None
+            and self.ypoints is not None
+            and self.xpoints * self.ypoints == len(self.data)
+        ):
+            used_names = [
+                var.name for var in self.data.domain.variables + self.data.domain.metas
+            ]
+            xmeta = Orange.data.ContinuousVariable.make(
+                get_unique_names(used_names, "X")
+            )
+            ymeta = Orange.data.ContinuousVariable.make(
+                get_unique_names(used_names, "Y")
+            )
             # add new variables for X and Y dimension ot the data domain
             metas = self.data.domain.metas + (xmeta, ymeta)
-            domain = Orange.data.Domain(self.data.domain.attributes, self.data.domain.class_vars, metas)
+            domain = Orange.data.Domain(
+                self.data.domain.attributes, self.data.domain.class_vars, metas
+            )
             map_data = self.data.transform(domain)
             xpoints = np.arange(self.xpoints)
             ypoints = np.arange(self.ypoints)
@@ -123,20 +148,27 @@ class OWReshape(OWWidget):
             if self.invert_y:
                 ypoints = np.flip(ypoints)
             with map_data.unlocked(map_data.metas):
-                map_data[:, xmeta] = np.tile(xpoints, len(self.data)//self.xpoints).reshape(-1, 1)
-                map_data[:, ymeta] = np.repeat(ypoints, len(self.data)//self.ypoints).reshape(-1, 1)
+                map_data[:, xmeta] = np.tile(
+                    xpoints, len(self.data) // self.xpoints
+                ).reshape(-1, 1)
+                map_data[:, ymeta] = np.repeat(
+                    ypoints, len(self.data) // self.ypoints
+                ).reshape(-1, 1)
         self.Outputs.map.send(map_data)
 
     def send_report(self):
         if self.xpoints and self.ypoints is not None:
-            self.report_items((
-                ("Number of points in the X direction", int(self.xpoints)),
-                ("Number of points in the Y direction", int(self.ypoints))
-            ))
+            self.report_items(
+                (
+                    ("Number of points in the X direction", int(self.xpoints)),
+                    ("Number of points in the Y direction", int(self.ypoints)),
+                )
+            )
         else:
             return
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWReshape).run(Orange.data.Table("collagen"))

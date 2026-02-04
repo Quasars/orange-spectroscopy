@@ -1,13 +1,18 @@
 import Orange
 from Orange.widgets.tests.base import WidgetTest
-from orangecontrib.spectroscopy.tests.spectral_preprocess import pack_editor, wait_for_preview
-from orangecontrib.spectroscopy.widgets.owintegrate import OWIntegrate, PREPROCESSORS,\
-    IntegrateSimpleEditor
+from orangecontrib.spectroscopy.tests.spectral_preprocess import (
+    pack_editor,
+    wait_for_preview,
+)
+from orangecontrib.spectroscopy.widgets.owintegrate import (
+    OWIntegrate,
+    PREPROCESSORS,
+    IntegrateSimpleEditor,
+)
 from orangecontrib.spectroscopy.tests import spectral_preprocess
 
 
 class TestOWIntegrate(WidgetTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWIntegrate)
 
@@ -35,9 +40,10 @@ class TestOWIntegrate(WidgetTest):
         # no attributes
         data = Orange.data.Table("peach_juice.dpt")
         data = data.transform(
-            Orange.data.Domain([],
-                               class_vars=data.domain.class_vars,
-                               metas=data.domain.metas))
+            Orange.data.Domain(
+                [], class_vars=data.domain.class_vars, metas=data.domain.metas
+            )
+        )
         for p in PREPROCESSORS:
             self.widget = self.create_widget(OWIntegrate)
             self.send_signal("Data", data)
@@ -73,7 +79,9 @@ class TestOWIntegrate(WidgetTest):
         self.assertEqual(1, len(out_data.domain.metas))
         preprocessor = self.get_output(self.widget.Outputs.preprocessor)
         preprocessed = preprocessor(data)
-        self.assertEqual(len(data.domain.attributes), len(preprocessed.domain.attributes))
+        self.assertEqual(
+            len(data.domain.attributes), len(preprocessed.domain.attributes)
+        )
         self.assertEqual(1, len(out_data.domain.metas))
 
     def test_output_as_non_metas(self):

@@ -22,26 +22,59 @@ from orangewidget.widget import Msg
 
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.preprocess import Cut
-from orangecontrib.spectroscopy.preprocess.integrate import INTEGRATE_DRAW_CURVE_PENARGS, \
-    INTEGRATE_DRAW_BASELINE_PENARGS
+from orangecontrib.spectroscopy.preprocess.integrate import (
+    INTEGRATE_DRAW_CURVE_PENARGS,
+    INTEGRATE_DRAW_BASELINE_PENARGS,
+)
 from orangecontrib.spectroscopy.widgets.owhyper import refresh_integral_markings
-from orangecontrib.spectroscopy.widgets.owpreprocess import SpectralPreprocess, \
-    InterruptException, PreviewRunner
+from orangecontrib.spectroscopy.widgets.owpreprocess import (
+    SpectralPreprocess,
+    InterruptException,
+    PreviewRunner,
+)
 from orangecontrib.spectroscopy.widgets.owspectra import SELECTONE
-from orangecontrib.spectroscopy.widgets.peak_editors import GaussianModelEditor, \
-    LorentzianModelEditor, SplitLorentzianModelEditor, VoigtModelEditor, PseudoVoigtModelEditor, \
-    MoffatModelEditor, Pearson7ModelEditor, StudentsTModelEditor, BreitWignerModelEditor, \
-    LognormalModelEditor, DampedOscillatorModelEditor, DampedHarmOscillatorModelEditor, \
-    ExponentialGaussianModelEditor, SkewedGaussianModelEditor, SkewedVoigtModelEditor, \
-    ThermalDistributionModelEditor, DoniachModelEditor, ConstantModelEditor, \
-    LinearModelEditor, QuadraticModelEditor, PolynomialModelEditor, set_default_vary
-from orangecontrib.spectroscopy.widgets.peakfit_compute import n_best_fit_parameters, \
-    best_fit_results, pool_initializer, pool_fit, pool_fit2
+from orangecontrib.spectroscopy.widgets.peak_editors import (
+    GaussianModelEditor,
+    LorentzianModelEditor,
+    SplitLorentzianModelEditor,
+    VoigtModelEditor,
+    PseudoVoigtModelEditor,
+    MoffatModelEditor,
+    Pearson7ModelEditor,
+    StudentsTModelEditor,
+    BreitWignerModelEditor,
+    LognormalModelEditor,
+    DampedOscillatorModelEditor,
+    DampedHarmOscillatorModelEditor,
+    ExponentialGaussianModelEditor,
+    SkewedGaussianModelEditor,
+    SkewedVoigtModelEditor,
+    ThermalDistributionModelEditor,
+    DoniachModelEditor,
+    ConstantModelEditor,
+    LinearModelEditor,
+    QuadraticModelEditor,
+    PolynomialModelEditor,
+    set_default_vary,
+)
+from orangecontrib.spectroscopy.widgets.peakfit_compute import (
+    n_best_fit_parameters,
+    best_fit_results,
+    pool_initializer,
+    pool_fit,
+    pool_fit2,
+)
 
 # number of processes used for computation
 # Use 2 or less unless overridden by QUASAR_N_PROCESSES
 env_proc = os.getenv('QUASAR_N_PROCESSES')
-N_PROCESSES = None if env_proc == "all" else int(env_proc) if env_proc else min(2, multiprocessing.cpu_count())
+N_PROCESSES = (
+    None
+    if env_proc == "all"
+    else int(env_proc)
+    if env_proc
+    else min(2, multiprocessing.cpu_count())
+)
 
 
 def fit_results_table(output, model_result, orig_data):
@@ -55,9 +88,7 @@ def fit_results_table(output, model_result, orig_data):
             features.append(ContinuousVariable(name=param.replace("_", " ")))
     features.append(ContinuousVariable(name="Reduced chi-square"))
 
-    domain = Domain(features,
-                    orig_data.domain.class_vars,
-                    orig_data.domain.metas)
+    domain = Domain(features, orig_data.domain.class_vars, orig_data.domain.metas)
     out = orig_data.transform(domain)
     with out.unlocked_reference(out.X):
         out.X = output
@@ -94,34 +125,37 @@ def pack_model_editor(editor):
         name=editor.name,
         qualname=f"orangecontrib.spectroscopy.widgets.peak_editors.{editor.prefix_generic}",
         category=editor.category,
-        description=Description(getattr(editor, 'description', editor.name),
-                                icon_path(editor.icon)),
+        description=Description(
+            getattr(editor, 'description', editor.name), icon_path(editor.icon)
+        ),
         viewclass=editor,
     )
 
 
-PREPROCESSORS = [pack_model_editor(e) for e in [
-    GaussianModelEditor,
-    LorentzianModelEditor,
-    SplitLorentzianModelEditor,
-    VoigtModelEditor,
-    PseudoVoigtModelEditor,
-    MoffatModelEditor,
-    Pearson7ModelEditor,
-    StudentsTModelEditor,
-    BreitWignerModelEditor,
-    LognormalModelEditor,
-    DampedOscillatorModelEditor,
-    DampedHarmOscillatorModelEditor,
-    ExponentialGaussianModelEditor,
-    SkewedGaussianModelEditor,
-    SkewedVoigtModelEditor,
-    ThermalDistributionModelEditor,
-    DoniachModelEditor,
-    ConstantModelEditor,
-    LinearModelEditor,
-    QuadraticModelEditor,
-    PolynomialModelEditor,
+PREPROCESSORS = [
+    pack_model_editor(e)
+    for e in [
+        GaussianModelEditor,
+        LorentzianModelEditor,
+        SplitLorentzianModelEditor,
+        VoigtModelEditor,
+        PseudoVoigtModelEditor,
+        MoffatModelEditor,
+        Pearson7ModelEditor,
+        StudentsTModelEditor,
+        BreitWignerModelEditor,
+        LognormalModelEditor,
+        DampedOscillatorModelEditor,
+        DampedHarmOscillatorModelEditor,
+        ExponentialGaussianModelEditor,
+        SkewedGaussianModelEditor,
+        SkewedVoigtModelEditor,
+        ThermalDistributionModelEditor,
+        DoniachModelEditor,
+        ConstantModelEditor,
+        LinearModelEditor,
+        QuadraticModelEditor,
+        PolynomialModelEditor,
     ]
 ]
 
@@ -169,7 +203,6 @@ def create_composite_model(m_def):
 
 
 class PeakPreviewRunner(PreviewRunner):
-
     def __init__(self, master):
         super().__init__(master=master)
         self.pool = pebble.ProcessPool(max_workers=1)
@@ -201,15 +234,17 @@ class PeakPreviewRunner(PreviewRunner):
         self.preview_updated.emit()
 
     def show_preview(self, show_info_anyway=False):
-        """ Shows preview and also passes preview data to the widgets """
+        """Shows preview and also passes preview data to the widgets"""
         master = self.master
         self.preview_pos = master.flow_view.preview_n()
         self.last_partial = None
         self.show_info_anyway = show_info_anyway
         self.preview_data = None
         self.after_data = None
-        pp_def = [master.preprocessormodel.item(i)
-                  for i in range(master.preprocessormodel.rowCount())]
+        pp_def = [
+            master.preprocessormodel.item(i)
+            for i in range(master.preprocessormodel.rowCount())
+        ]
         if master.data is not None:
             # Clear markings to indicate preview is running
             refresh_integral_markings([], master.markings_list, master.curveplot)
@@ -228,9 +263,7 @@ class PeakPreviewRunner(PreviewRunner):
         self.pool.join()
 
     @staticmethod
-    def run_preview(data: Table,
-                    m_def, pool, state: TaskState):
-
+    def run_preview(data: Table, m_def, pool, state: TaskState):
         def progress_interrupt(_: float):
             if state.is_interruption_requested():
                 raise InterruptException
@@ -247,11 +280,9 @@ class PeakPreviewRunner(PreviewRunner):
 
         model, parameters = create_composite_model(m_def)
 
-
         model_result = {}
         x = getx(data)
         if data is not None and model is not None:
-
             for row in data:
                 progress_interrupt(0)
                 res = pool.schedule(pool_fit2, (row.x, model.dumps(), parameters, x))
@@ -260,7 +291,10 @@ class PeakPreviewRunner(PreviewRunner):
                         progress_interrupt(0)
                     except InterruptException:
                         # CANCEL
-                        if multiprocessing.get_start_method() != "fork" and res.running():
+                        if (
+                            multiprocessing.get_start_method() != "fork"
+                            and res.running()
+                        ):
                             # If slower start methods are used, give the current computation
                             # some time to exit gracefully; this avoids reloading processes
                             concurrent.futures.wait([res], 1.0)
@@ -296,10 +330,9 @@ class OWPeakFit(SpectralPreprocess):
 
     class Warning(SpectralPreprocess.Warning):
         subset_not_subset = Msg(
-            "Subset data contains some instances that do not appear in "
-            "input data")
-        subset_independent = Msg(
-            "No subset data instances appear in input data")
+            "Subset data contains some instances that do not appear in input data"
+        )
+        subset_independent = Msg("No subset data instances appear in input data")
 
     preview_on_image = True
 
@@ -354,13 +387,16 @@ class OWPeakFit(SpectralPreprocess):
     def get_subset_mask(self):
         if not self.subset_indices:
             return None
-        return np.fromiter((ex.id in self.subset_indices for ex in self.data),
-                           dtype=bool, count=len(self.data))
+        return np.fromiter(
+            (ex.id in self.subset_indices for ex in self.data),
+            dtype=bool,
+            count=len(self.data),
+        )
 
     def sample_data(self, data):
         subset = self.get_subset_mask()
         if subset is not None:
-            return data[subset][:self.preview_curves]
+            return data[subset][: self.preview_curves]
         return super().sample_data(data)
 
     def redraw_integral(self):
@@ -379,8 +415,11 @@ class OWPeakFit(SpectralPreprocess):
                     color = self.flow_view.preview_color(i)
                     dis.append({"draw": di, "color": color})
         result = None
-        if np.any(self.curveplot.selection_group) and self.curveplot.data \
-                and self.preview_runner.preview_model_result:
+        if (
+            np.any(self.curveplot.selection_group)
+            and self.curveplot.data
+            and self.preview_runner.preview_model_result
+        ):
             # select result
             ind = np.flatnonzero(self.curveplot.selection_group)[0]
             row_id = self.curveplot.data[ind].id
@@ -405,12 +444,14 @@ class OWPeakFit(SpectralPreprocess):
         refresh_integral_markings(dis, self.markings_list, self.curveplot)
 
     def create_outputs(self):
-        m_def = [self.preprocessormodel.item(i) for i in range(self.preprocessormodel.rowCount())]
+        m_def = [
+            self.preprocessormodel.item(i)
+            for i in range(self.preprocessormodel.rowCount())
+        ]
         self.start(self.run_task, self.data, m_def)
 
     @staticmethod
     def run_task(data: Table, m_def, state: TaskState):
-
         def progress_interrupt(i: float):
             state.set_progress_value(i)
             if state.is_interruption_requested():
@@ -435,9 +476,11 @@ class OWPeakFit(SpectralPreprocess):
             fits = []
             residuals = []
 
-            with multiprocessing.Pool(processes=N_PROCESSES,
-                                      initializer=pool_initializer,
-                                      initargs=(model.dumps(), parameters, x)) as p:
+            with multiprocessing.Pool(
+                processes=N_PROCESSES,
+                initializer=pool_initializer,
+                initargs=(model.dumps(), parameters, x),
+            ) as p:
                 res = p.map_async(pool_fit, data.X, chunksize=1)
 
                 def done():
@@ -467,13 +510,14 @@ class OWPeakFit(SpectralPreprocess):
             data_resid = orig_data.from_table_rows(orig_data, ...)  # a shallow copy
             with data_resid.unlocked_reference(data_resid.X):
                 data_resid.X = np.vstack(residuals)
-            dom_anno = Domain(orig_data.domain.attributes,
-                              orig_data.domain.class_vars,
-                              orig_data.domain.metas + data.domain.attributes,
-                              )
+            dom_anno = Domain(
+                orig_data.domain.attributes,
+                orig_data.domain.class_vars,
+                orig_data.domain.metas + data.domain.attributes,
+            )
             data_anno = orig_data.transform(dom_anno)
             with data_anno.unlocked(data_anno.metas):
-                data_anno.metas[:, len(orig_data.domain.metas):] = data.X
+                data_anno.metas[:, len(orig_data.domain.metas) :] = data.X
 
         progress_interrupt(100)
 

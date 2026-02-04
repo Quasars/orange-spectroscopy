@@ -7,6 +7,7 @@ class ApodFunc(IntEnum):
     """
     Implemented apodization functions in apodize
     """
+
     BOXCAR = 0
     BLACKMAN_HARRIS_3 = 1
     BLACKMAN_HARRIS_4 = 2
@@ -17,6 +18,7 @@ class PhaseCorrection(IntEnum):
     """
     Implemented phase correction methods
     """
+
     MERTZ = 0
     MERTZSIGNED = 1
     STORED = 2
@@ -27,6 +29,7 @@ class PeakSearch(IntEnum):
     """
     Implemented peak search functions
     """
+
     MAXIMUM = 0
     MINIMUM = 1
     ABSOLUTE = 2
@@ -54,6 +57,7 @@ def find_zpd(ifg, peak_search):
         return ifg.argmin() if abs(ifg.min()) > abs(ifg.max()) else ifg.argmax()
     else:
         raise NotImplementedError
+
 
 def apodize(ifg, zpd, apod_func):
     """
@@ -93,14 +97,18 @@ def apodize(ifg, zpd, apod_func):
         A3 = 0.0
         n_n = np.arange(wing_n)
         n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
+        Bs_n = (
+            A0
+            + A1 * np.cos(np.pi * n_n / wing_n)
+            + A2 * np.cos(np.pi * 2 * n_n / wing_n)
+            + A3 * np.cos(np.pi * 3 * n_n / wing_n)
+        )
+        Bs_p = (
+            A0
+            + A1 * np.cos(np.pi * n_p / wing_p)
+            + A2 * np.cos(np.pi * 2 * n_p / wing_p)
+            + A3 * np.cos(np.pi * 3 * n_p / wing_p)
+        )
         Bs = np.hstack((Bs_n[::-1], Bs_p))
 
     elif apod_func == ApodFunc.BLACKMAN_HARRIS_4:
@@ -113,14 +121,18 @@ def apodize(ifg, zpd, apod_func):
         A3 = 0.01168
         n_n = np.arange(wing_n)
         n_p = np.arange(wing_p)
-        Bs_n = A0\
-            + A1 * np.cos(np.pi*n_n/wing_n)\
-            + A2 * np.cos(np.pi*2*n_n/wing_n)\
-            + A3 * np.cos(np.pi*3*n_n/wing_n)
-        Bs_p = A0\
-            + A1 * np.cos(np.pi*n_p/wing_p)\
-            + A2 * np.cos(np.pi*2*n_p/wing_p)\
-            + A3 * np.cos(np.pi*3*n_p/wing_p)
+        Bs_n = (
+            A0
+            + A1 * np.cos(np.pi * n_n / wing_n)
+            + A2 * np.cos(np.pi * 2 * n_n / wing_n)
+            + A3 * np.cos(np.pi * 3 * n_n / wing_n)
+        )
+        Bs_p = (
+            A0
+            + A1 * np.cos(np.pi * n_p / wing_p)
+            + A2 * np.cos(np.pi * 2 * n_p / wing_p)
+            + A3 * np.cos(np.pi * 3 * n_p / wing_p)
+        )
         Bs = np.hstack((Bs_n[::-1], Bs_p))
 
     elif apod_func == ApodFunc.BLACKMAN_NUTTALL:
@@ -131,10 +143,12 @@ def apodize(ifg, zpd, apod_func):
         # Create Blackman Nuttall Window according to the formula given by Wolfram.
         xs = np.arange(ifg_N)
         Bs = np.zeros(ifg_N)
-        Bs = 0.3635819\
-            - 0.4891775 * np.cos(2*np.pi*xs/(2*delta - 1))\
-            + 0.1365995 * np.cos(4*np.pi*xs/(2*delta - 1))\
-            - 0.0106411 * np.cos(6*np.pi*xs/(2*delta - 1))
+        Bs = (
+            0.3635819
+            - 0.4891775 * np.cos(2 * np.pi * xs / (2 * delta - 1))
+            + 0.1365995 * np.cos(4 * np.pi * xs / (2 * delta - 1))
+            - 0.0106411 * np.cos(6 * np.pi * xs / (2 * delta - 1))
+        )
 
     # Apodize the sampled Interferogram
     try:
@@ -144,15 +158,18 @@ def apodize(ifg, zpd, apod_func):
 
     return ifg_apod
 
+
 def _zero_fill_size(ifg_N, zff):
     # Calculate desired array size
     Nzff = ifg_N * zff
     # Calculate final size to next power of two for DFT efficiency
     return int(np.exp2(np.ceil(np.log2(Nzff))))
 
+
 def _zero_fill_pad(ifg, zerofill):
     zeroshape = (ifg.shape[0], zerofill) if ifg.ndim == 2 else zerofill
     return np.hstack((ifg, np.zeros(zeroshape, dtype=ifg.dtype)))
+
 
 def zero_fill(ifg, zff):
     """
@@ -172,24 +189,29 @@ def zero_fill(ifg, zff):
     # Pad array
     return _zero_fill_pad(ifg, zero_fill)
 
-class IRFFT():
+
+class IRFFT:
     """
     Calculate FFT of a single interferogram sweep.
 
     Based on mertz module by Eric Peach, 2014
     """
+
     # Calculated attributes
     zpd = None
     wavenumbers = None
     spectrum = None
     phase = None
 
-
-    def __init__(self, dx,
-                 apod_func=ApodFunc.BLACKMAN_HARRIS_3, zff=2,
-                 phase_res=None, phase_corr=PhaseCorrection.MERTZ,
-                 peak_search=PeakSearch.MAXIMUM,
-                ):
+    def __init__(
+        self,
+        dx,
+        apod_func=ApodFunc.BLACKMAN_HARRIS_3,
+        zff=2,
+        phase_res=None,
+        phase_corr=PhaseCorrection.MERTZ,
+        peak_search=PeakSearch.MAXIMUM,
+    ):
         self.dx = dx
         self.apod_func = apod_func
         self.zff = zff
@@ -213,11 +235,11 @@ class IRFFT():
 
         # Calculate phase on interferogram of specified size 2*L
         L = self.phase_ifg_size(ifg.shape[0])
-        if L == 0: # Use full ifg for phase
+        if L == 0:  # Use full ifg for phase
             ifg = apodize(ifg, self.zpd, self.apod_func)
             ifg = zero_fill(ifg, self.zff)
             # Rotate the Complete IFG so that the centerburst is at edges.
-            ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
+            ifg = np.hstack((ifg[self.zpd :], ifg[0 : self.zpd]))
             Nzff = ifg.shape[0]
             # Take FFT of Rotated Complete Graph
             ifg = np.fft.rfft(ifg)
@@ -228,7 +250,7 @@ class IRFFT():
             Ixs = ifg[self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
             ifg = zero_fill(ifg, self.zff)
-            ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
+            ifg = np.hstack((ifg[self.zpd :], ifg[0 : self.zpd]))
             Nzff = ifg.shape[0]
 
             Ixs = apodize(Ixs, L, self.apod_func)
@@ -247,7 +269,9 @@ class IRFFT():
             self.phase = ifg.imag
         else:
             try:
-                self.spectrum = np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
+                self.spectrum = (
+                    np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
+                )
             except ValueError as e:
                 raise ValueError("Incompatible phase: {}".format(e))
 
@@ -276,13 +300,12 @@ class IRFFT():
         elif self.phase_corr == PhaseCorrection.MERTZ:
             self.phase = np.arctan2(ifg_sub_fft.imag, ifg_sub_fft.real)
         elif self.phase_corr == PhaseCorrection.MERTZSIGNED:
-            self.phase = np.arctan(ifg_sub_fft.imag/ifg_sub_fft.real)
+            self.phase = np.arctan(ifg_sub_fft.imag / ifg_sub_fft.real)
         else:
             raise ValueError("Invalid PhaseCorrection: {}".format(self.phase_corr))
 
 
 class MultiIRFFT(IRFFT):
-
     def __call__(self, ifg, zpd=None, phase=None):
         if ifg.ndim != 2:
             raise ValueError("ifg must be 2D array of row-wise interferograms")
@@ -291,18 +314,20 @@ class MultiIRFFT(IRFFT):
         try:
             self.zpd = int(zpd)
         except TypeError:
-            raise TypeError("zpd must be specified as a single value valid for all interferograms")
+            raise TypeError(
+                "zpd must be specified as a single value valid for all interferograms"
+            )
 
         # Subtract DC value from interferogram
         ifg = ifg - ifg.mean(axis=1, keepdims=True)
 
         # Calculate phase on interferogram of specified size 2*L
         L = self.phase_ifg_size(ifg.shape[1])
-        if L == 0: # Use full ifg for phase #TODO multi is this code tested
+        if L == 0:  # Use full ifg for phase #TODO multi is this code tested
             ifg = apodize(ifg, self.zpd, self.apod_func)
             ifg = zero_fill(ifg, self.zff)
             # Rotate the Complete IFG so that the centerburst is at edges.
-            ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
+            ifg = np.hstack((ifg[self.zpd :], ifg[0 : self.zpd]))
             Nzff = ifg.shape[0]
             # Take FFT of Rotated Complete Graph
             ifg = np.fft.rfft(ifg)
@@ -313,7 +338,7 @@ class MultiIRFFT(IRFFT):
             Ixs = ifg[:, self.zpd - L : self.zpd + L].copy()
             ifg = apodize(ifg, self.zpd, self.apod_func)
             ifg = zero_fill(ifg, self.zff)
-            ifg = np.hstack((ifg[:, self.zpd:], ifg[:, 0:self.zpd]))
+            ifg = np.hstack((ifg[:, self.zpd :], ifg[:, 0 : self.zpd]))
             Nzff = ifg.shape[1]
 
             Ixs = apodize(Ixs, L, self.apod_func)
@@ -332,7 +357,9 @@ class MultiIRFFT(IRFFT):
             self.phase = ifg.imag
         else:
             try:
-                self.spectrum = np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
+                self.spectrum = (
+                    np.cos(self.phase) * ifg.real + np.sin(self.phase) * ifg.imag
+                )
             except ValueError as e:
                 raise ValueError("Incompatible phase: {}".format(e))
 
@@ -340,7 +367,6 @@ class MultiIRFFT(IRFFT):
 
 
 class ComplexFFT(IRFFT):
-
     def __call__(self, ifg, zpd=None, phase=None):
         ifg -= np.mean(ifg)
 
@@ -352,14 +378,14 @@ class ComplexFFT(IRFFT):
         ifg = apodize(ifg, self.zpd, self.apod_func)
         ifg = zero_fill(ifg, self.zff)
         # Rotate the Complete IFG so that the centerburst is at edges.
-        ifg = np.hstack((ifg[self.zpd:], ifg[0:self.zpd]))
+        ifg = np.hstack((ifg[self.zpd :], ifg[0 : self.zpd]))
         Nzff = ifg.shape[0]
         ifg = np.fft.fft(ifg)
-        
+
         magnitude = np.abs(ifg)
         angle = np.angle(ifg)
         self.wavenumbers = np.fft.rfftfreq(Nzff, self.dx)
-        self.spectrum = magnitude[:len(self.wavenumbers)]
-        self.phase = angle[:len(self.wavenumbers)]
+        self.spectrum = magnitude[: len(self.wavenumbers)]
+        self.phase = angle[: len(self.wavenumbers)]
 
         return self.spectrum, self.phase, self.wavenumbers

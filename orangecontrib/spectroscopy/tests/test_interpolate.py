@@ -10,18 +10,24 @@ except ImportError:
 
 import Orange
 
-from orangecontrib.spectroscopy.preprocess import Interpolate, \
-    interp1d_with_unknowns_numpy, interp1d_with_unknowns_scipy, \
-    interp1d_wo_unknowns_scipy, InterpolateToDomain, NotAllContinuousException, \
-    nan_extend_edges_and_interpolate
+from orangecontrib.spectroscopy.preprocess import (
+    Interpolate,
+    interp1d_with_unknowns_numpy,
+    interp1d_with_unknowns_scipy,
+    interp1d_wo_unknowns_scipy,
+    InterpolateToDomain,
+    NotAllContinuousException,
+    nan_extend_edges_and_interpolate,
+)
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.tests.util import spectra_table
-from orangecontrib.spectroscopy.tests.test_preprocess import TestCommonIndpSamplesMixin, \
-    SMALL_COLLAGEN
+from orangecontrib.spectroscopy.tests.test_preprocess import (
+    TestCommonIndpSamplesMixin,
+    SMALL_COLLAGEN,
+)
 
 
 class TestInterpolate(unittest.TestCase, TestCommonIndpSamplesMixin):
-
     preprocessors = [Interpolate(np.linspace(1000, 1700, 100))]
     data = SMALL_COLLAGEN
 
@@ -46,13 +52,15 @@ class TestInterpolate(unittest.TestCase, TestCommonIndpSamplesMixin):
     def test_floatname(self):
         data = self.collagen
         f1, f2 = 20, 21
-        c1, c2 = float(data.domain.attributes[f1].name), \
-                 float(data.domain.attributes[f2].name)
-        avg = (c1 + c2)/2
+        c1, c2 = (
+            float(data.domain.attributes[f1].name),
+            float(data.domain.attributes[f2].name),
+        )
+        avg = (c1 + c2) / 2
         interpolated = Interpolate([avg])(data)
         self.assertIsInstance(interpolated, type(data))
         av1 = interpolated.X.ravel()
-        av2 = data.X[:, [20,21]].mean(axis=1)
+        av2 = data.X[:, [20, 21]].mean(axis=1)
         np.testing.assert_allclose(av1, av2)
 
     def test_domain_conversion(self):
@@ -74,22 +82,23 @@ class TestInterpolate(unittest.TestCase, TestCommonIndpSamplesMixin):
         rs = np.random.RandomState(0)
         data = self.iris
         oldX = data.X
-        #permute data
+        # permute data
         p = rs.permutation(range(len(data.domain.attributes)))
-        nattr = [Orange.data.ContinuousVariable(str(p[i]))
-                 for i, a in enumerate(data.domain.attributes)]
-        data = Orange.data.Table.from_numpy(Orange.data.Domain(nattr),
-                                            X=data.X[:, p])
+        nattr = [
+            Orange.data.ContinuousVariable(str(p[i]))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        data = Orange.data.Table.from_numpy(Orange.data.Domain(nattr), X=data.X[:, p])
         interpolated = Interpolate(range(len(data.domain.attributes)))(data)
         np.testing.assert_allclose(interpolated.X, oldX)
-        #also permute output
+        # also permute output
         p1 = rs.permutation(range(len(data.domain.attributes)))
         interpolated = Interpolate(p1)(data)
         np.testing.assert_allclose(interpolated.X, oldX[:, p1])
 
     def test_out_of_band(self):
         data = self.iris
-        interpolated = Interpolate(range(-1, len(data.domain.attributes)+1))(data)
+        interpolated = Interpolate(range(-1, len(data.domain.attributes) + 1))(data)
         np.testing.assert_allclose(interpolated.X[:, 1:5], data.X)
         np.testing.assert_equal(np.asarray(interpolated.X[:, [0, -1]]), np.nan)
 
@@ -154,16 +163,24 @@ class TestInterpolate(unittest.TestCase, TestCommonIndpSamplesMixin):
         interp, unknowns = nan_extend_edges_and_interpolate(xs, data.X)
         self.assertIsInstance(interp, type(data.X))
         nan = float("nan")
-        res = np.array([[nan, nan, nan, nan],
-                        [4.9, 3.15, 1.4, 0.2],
-                        [3.2, 3.2, 1.3, 0.2],
-                        [4.6, 3.1, 1.5, 1.5],
-                        [5., 3.6, 1.4, 0.2]])
-        resu = np.array([[True, True, True, True],
-                         [False, True, False, False],
-                         [True, False, False, False],
-                         [False, False, False, True],
-                         [False, False, False, False]])
+        res = np.array(
+            [
+                [nan, nan, nan, nan],
+                [4.9, 3.15, 1.4, 0.2],
+                [3.2, 3.2, 1.3, 0.2],
+                [4.6, 3.1, 1.5, 1.5],
+                [5.0, 3.6, 1.4, 0.2],
+            ]
+        )
+        resu = np.array(
+            [
+                [True, True, True, True],
+                [False, True, False, False],
+                [True, False, False, False],
+                [False, False, False, True],
+                [False, False, False, False],
+            ]
+        )
         np.testing.assert_allclose(interp, res)
         np.testing.assert_allclose(unknowns, resu)
 
@@ -201,7 +218,6 @@ class TestInterpolate(unittest.TestCase, TestCommonIndpSamplesMixin):
 
 
 class TestInterpolateToDomain(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

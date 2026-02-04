@@ -11,19 +11,24 @@ from Orange.preprocess.preprocess import Preprocess
 from AnyQt.QtCore import Qt
 
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.preprocess.utils import nan_extend_edges_and_interpolate, \
-    CommonDomain, \
-    edge_baseline, linear_baseline
+from orangecontrib.spectroscopy.preprocess.utils import (
+    nan_extend_edges_and_interpolate,
+    CommonDomain,
+    edge_baseline,
+    linear_baseline,
+)
 
 INTEGRATE_DRAW_CURVE_WIDTH = 2
 INTEGRATE_DRAW_EDGE_WIDTH = 1
-INTEGRATE_DRAW_BASELINE_PENARGS = {"width": INTEGRATE_DRAW_CURVE_WIDTH, "style": Qt.DotLine}
+INTEGRATE_DRAW_BASELINE_PENARGS = {
+    "width": INTEGRATE_DRAW_CURVE_WIDTH,
+    "style": Qt.DotLine,
+}
 INTEGRATE_DRAW_CURVE_PENARGS = {"width": INTEGRATE_DRAW_CURVE_WIDTH}
 INTEGRATE_DRAW_EDGE_PENARGS = {"width": INTEGRATE_DRAW_EDGE_WIDTH}
 
 
 class IntegrateFeature(SharedComputeValue):
-
     def __init__(self, limits, commonfn):
         self.limits = limits
         super().__init__(commonfn)
@@ -60,7 +65,7 @@ class IntegrateFeature(SharedComputeValue):
 
     @staticmethod
     def parameters():
-        """ Return parameters for this type of integral """
+        """Return parameters for this type of integral"""
         raise NotImplementedError
 
     def compute_baseline(self, x_s, y_s):
@@ -74,24 +79,24 @@ class IntegrateFeature(SharedComputeValue):
         return self.compute_integral(x_s, y_s)
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.limits == other.limits
+        return super().__eq__(other) and self.limits == other.limits
 
     def __hash__(self):
         return hash((super().__hash__(), tuple(self.limits)))
 
 
 class IntegrateFeatureEdgeBaseline(IntegrateFeature):
-    """ A linear edge-to-edge baseline subtraction. """
+    """A linear edge-to-edge baseline subtraction."""
 
     name = "Integral from baseline"
     InheritEq = True
 
     @staticmethod
     def parameters():
-        return (("Low limit", "Low limit for integration (inclusive)"),
-                ("High limit", "High limit for integration (inclusive)"),
-                )
+        return (
+            ("Low limit", "Low limit for integration (inclusive)"),
+            ("High limit", "High limit for integration (inclusive)"),
+        )
 
     def compute_baseline(self, x, y):
         if np.any(np.isnan(y)):
@@ -106,13 +111,17 @@ class IntegrateFeatureEdgeBaseline(IntegrateFeature):
         return scipy.integrate.trapezoid(y_s, x, axis=1)
 
     def compute_draw_info(self, x, ys):
-        return [("curve", (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("fill", ((x, self.compute_baseline(x, ys)), (x, ys)))]
+        return [
+            (
+                "curve",
+                (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS),
+            ),
+            ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            ("fill", ((x, self.compute_baseline(x, ys)), (x, ys))),
+        ]
 
 
 class IntegrateFeatureEdgeBaselineAbsolute(IntegrateFeatureEdgeBaseline):
-
     name = "Absolute integral from baseline"
     InheritEq = True
 
@@ -125,23 +134,25 @@ class IntegrateFeatureEdgeBaselineAbsolute(IntegrateFeatureEdgeBaseline):
     def compute_draw_info(self, x, ys):
         baseline = self.compute_baseline(x, ys)
         abs_ys = np.abs(ys - baseline) + baseline
-        return [("curve", (x, baseline, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("curve", (x, abs_ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("fill", ((x, baseline), (x, abs_ys)))]
+        return [
+            ("curve", (x, baseline, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            ("curve", (x, abs_ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            ("fill", ((x, baseline), (x, abs_ys))),
+        ]
 
 
 class IntegrateFeatureSeparateBaseline(IntegrateFeature):
-
     name = "Integral from separate baseline"
     InheritEq = True
 
     @staticmethod
     def parameters():
-        return (("Low limit", "Low limit for integration (inclusive)"),
-                ("High limit", "High limit for integration (inclusive)"),
-                ("Low limit (baseline)", "Low limit for baseline (inclusive)"),
-                ("High limit (baseline)", "High limit for baseline (inclusive)"),
-                )
+        return (
+            ("Low limit", "Low limit for integration (inclusive)"),
+            ("High limit", "High limit for integration (inclusive)"),
+            ("Low limit (baseline)", "Low limit for baseline (inclusive)"),
+            ("High limit (baseline)", "High limit for baseline (inclusive)"),
+        )
 
     def compute_baseline(self, x_s, y_s):
         if np.any(np.isnan(y_s)):
@@ -168,13 +179,21 @@ class IntegrateFeatureSeparateBaseline(IntegrateFeature):
 
     def compute_draw_info(self, x_s, y_s):
         xl, ysl = self.limit_region(x_s, y_s)
-        return [("curve", (x_s, self.compute_baseline(x_s, y_s), INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("curve", (xl, ysl, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("fill", (self.limit_region(x_s, self.compute_baseline(x_s, y_s)), (xl, ysl)))]
+        return [
+            (
+                "curve",
+                (x_s, self.compute_baseline(x_s, y_s), INTEGRATE_DRAW_BASELINE_PENARGS),
+            ),
+            ("curve", (xl, ysl, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            (
+                "fill",
+                (self.limit_region(x_s, self.compute_baseline(x_s, y_s)), (xl, ysl)),
+            ),
+        ]
 
 
 class IntegrateFeatureSimple(IntegrateFeatureEdgeBaseline):
-    """ A simple y=0 integration on the provided data window. """
+    """A simple y=0 integration on the provided data window."""
 
     name = "Integral from 0"
     InheritEq = True
@@ -184,16 +203,17 @@ class IntegrateFeatureSimple(IntegrateFeatureEdgeBaseline):
 
 
 class IntegrateFeaturePeakEdgeBaseline(IntegrateFeature):
-    """ The maximum baseline-subtracted peak height in the provided window. """
+    """The maximum baseline-subtracted peak height in the provided window."""
 
     name = "Peak from baseline"
     InheritEq = True
 
     @staticmethod
     def parameters():
-        return (("Low limit", "Low limit for integration (inclusive)"),
-                ("High limit", "High limit for integration (inclusive)"),
-                )
+        return (
+            ("Low limit", "Low limit for integration (inclusive)"),
+            ("High limit", "High limit for integration (inclusive)"),
+        )
 
     def compute_baseline(self, x, y):
         return edge_baseline(x, y)
@@ -206,15 +226,23 @@ class IntegrateFeaturePeakEdgeBaseline(IntegrateFeature):
 
     def compute_draw_info(self, x, ys):
         bs = self.compute_baseline(x, ys)
-        im = bottleneck.nanargmax(ys-bs, axis=1)
-        lines = (x[im], bs[np.arange(bs.shape[0]), im]), (x[im], ys[np.arange(ys.shape[0]), im])
-        return [("curve", (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("line", lines)]
+        im = bottleneck.nanargmax(ys - bs, axis=1)
+        lines = (
+            (x[im], bs[np.arange(bs.shape[0]), im]),
+            (x[im], ys[np.arange(ys.shape[0]), im]),
+        )
+        return [
+            (
+                "curve",
+                (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS),
+            ),
+            ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            ("line", lines),
+        ]
 
 
 class IntegrateFeaturePeakSimple(IntegrateFeaturePeakEdgeBaseline):
-    """ The maximum peak height in the provided data window. """
+    """The maximum peak height in the provided data window."""
 
     name = "Peak from 0"
     InheritEq = True
@@ -224,16 +252,17 @@ class IntegrateFeaturePeakSimple(IntegrateFeaturePeakEdgeBaseline):
 
 
 class IntegrateFeaturePeakXEdgeBaseline(IntegrateFeature):
-    """ The X-value of the maximum baseline-subtracted peak height in the provided window. """
+    """The X-value of the maximum baseline-subtracted peak height in the provided window."""
 
     name = "X-value of maximum from baseline"
     InheritEq = True
 
     @staticmethod
     def parameters():
-        return (("Low limit", "Low limit for integration (inclusive)"),
-                ("High limit", "High limit for integration (inclusive)"),
-                )
+        return (
+            ("Low limit", "Low limit for integration (inclusive)"),
+            ("High limit", "High limit for integration (inclusive)"),
+        )
 
     def compute_baseline(self, x, y):
         return edge_baseline(x, y)
@@ -253,15 +282,23 @@ class IntegrateFeaturePeakXEdgeBaseline(IntegrateFeature):
 
     def compute_draw_info(self, x, ys):
         bs = self.compute_baseline(x, ys)
-        im = bottleneck.nanargmax(ys-bs, axis=1)
-        lines = (x[im], bs[np.arange(bs.shape[0]), im]), (x[im], ys[np.arange(ys.shape[0]), im])
-        return [("curve", (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
-                ("line", lines)]
+        im = bottleneck.nanargmax(ys - bs, axis=1)
+        lines = (
+            (x[im], bs[np.arange(bs.shape[0]), im]),
+            (x[im], ys[np.arange(ys.shape[0]), im]),
+        )
+        return [
+            (
+                "curve",
+                (x, self.compute_baseline(x, ys), INTEGRATE_DRAW_BASELINE_PENARGS),
+            ),
+            ("curve", (x, ys, INTEGRATE_DRAW_BASELINE_PENARGS)),
+            ("line", lines),
+        ]
 
 
 class IntegrateFeaturePeakXSimple(IntegrateFeaturePeakXEdgeBaseline):
-    """ The X-value of the maximum peak height in the provided data window. """
+    """The X-value of the maximum peak height in the provided data window."""
 
     name = "X-value of maximum from 0"
     InheritEq = True
@@ -271,15 +308,14 @@ class IntegrateFeaturePeakXSimple(IntegrateFeaturePeakXEdgeBaseline):
 
 
 class IntegrateFeatureAtPeak(IntegrateFeature):
-    """ Find the closest x and return the value there. """
+    """Find the closest x and return the value there."""
 
     name = "Closest value"
     InheritEq = True
 
     @staticmethod
     def parameters():
-        return (("Closest to", "Nearest value"),
-                )
+        return (("Closest to", "Nearest value"),)
 
     def extract_data(self, data, common):
         data, x, x_sorter = common
@@ -299,12 +335,13 @@ class IntegrateFeatureAtPeak(IntegrateFeature):
         im = np.array([bottleneck.nanargmin(abs(x - self.limits[0]))])
         dx = [self.limits[0], self.limits[0]]
         dys = np.hstack((bs[:, im], ys[:, im]))
-        return [("curve", (dx, dys, INTEGRATE_DRAW_EDGE_PENARGS)),  # line to value
-                ("dot", (x[im], ys[:, im]))]
+        return [
+            ("curve", (dx, dys, INTEGRATE_DRAW_EDGE_PENARGS)),  # line to value
+            ("dot", (x[im], ys[:, im])),
+        ]
 
 
 class _IntegrateCommon(CommonDomain):
-
     def transformed(self, data):
         x = getx(data)
         x_sorter = np.argsort(x)
@@ -320,20 +357,30 @@ class _IntegrateCommon(CommonDomain):
 
 
 class Integrate(Preprocess):
-
-    INTEGRALS = [IntegrateFeatureSimple,
-                 IntegrateFeatureEdgeBaseline,
-                 IntegrateFeaturePeakSimple,
-                 IntegrateFeaturePeakEdgeBaseline,
-                 IntegrateFeatureAtPeak,
-                 IntegrateFeaturePeakXSimple,
-                 IntegrateFeaturePeakXEdgeBaseline,
-                 IntegrateFeatureSeparateBaseline,
-                 IntegrateFeatureEdgeBaselineAbsolute,
-                 ]
+    INTEGRALS = [
+        IntegrateFeatureSimple,
+        IntegrateFeatureEdgeBaseline,
+        IntegrateFeaturePeakSimple,
+        IntegrateFeaturePeakEdgeBaseline,
+        IntegrateFeatureAtPeak,
+        IntegrateFeaturePeakXSimple,
+        IntegrateFeaturePeakXEdgeBaseline,
+        IntegrateFeatureSeparateBaseline,
+        IntegrateFeatureEdgeBaselineAbsolute,
+    ]
 
     # Integration methods
-    Simple, Baseline, PeakMax, PeakBaseline, PeakAt, PeakX, PeakXBaseline, Separate, BaselineAbsolute = INTEGRALS
+    (
+        Simple,
+        Baseline,
+        PeakMax,
+        PeakBaseline,
+        PeakAt,
+        PeakX,
+        PeakXBaseline,
+        Separate,
+        BaselineAbsolute,
+    ) = INTEGRALS
 
     def __init__(self, methods=Baseline, limits=None, names=None, metas=False):
         self.methods = methods
@@ -363,13 +410,19 @@ class Integrate(Preprocess):
                 names[i] = n
                 used_names.append(n)
             for limits, method, name in zip(self.limits, methods, names, strict=False):
-                atts.append(Orange.data.ContinuousVariable(
-                    name=name,
-                    compute_value=method(limits, common)))
+                atts.append(
+                    Orange.data.ContinuousVariable(
+                        name=name, compute_value=method(limits, common)
+                    )
+                )
         if not self.metas:
-            domain = Orange.data.Domain(atts, data.domain.class_vars,
-                                        metas=data.domain.metas)
+            domain = Orange.data.Domain(
+                atts, data.domain.class_vars, metas=data.domain.metas
+            )
         else:
-            domain = Orange.data.Domain(data.domain.attributes, data.domain.class_vars,
-                                        metas=data.domain.metas + tuple(atts))
+            domain = Orange.data.Domain(
+                data.domain.attributes,
+                data.domain.class_vars,
+                metas=data.domain.metas + tuple(atts),
+            )
         return data.from_table(domain, data)

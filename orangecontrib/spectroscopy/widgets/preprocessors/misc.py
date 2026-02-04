@@ -2,9 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import (
-    QComboBox, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel
-)
+from AnyQt.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel
 from AnyQt.QtGui import QColor
 
 from Orange.widgets import gui
@@ -13,16 +11,28 @@ from Orange.widgets.widget import Msg
 from orangecontrib.spectroscopy.data import getx
 
 from orangecontrib.spectroscopy.preprocess import (
-    PCADenoising, GaussianSmoothing, Cut, SavitzkyGolayFiltering,
-    Absorbance, Transmittance,
-    ShiftAndScale, SpSubtract,
-    MNFDenoising
+    PCADenoising,
+    GaussianSmoothing,
+    Cut,
+    SavitzkyGolayFiltering,
+    Absorbance,
+    Transmittance,
+    ShiftAndScale,
+    SpSubtract,
+    MNFDenoising,
 )
 from orangecontrib.spectroscopy.preprocess.transform import SpecTypes
-from orangecontrib.spectroscopy.widgets.gui import lineEditFloatRange, MovableVline, \
-    connect_line, floatornone, round_virtual_pixels
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import BaseEditorOrange, \
-    REFERENCE_DATA_PARAM
+from orangecontrib.spectroscopy.widgets.gui import (
+    lineEditFloatRange,
+    MovableVline,
+    connect_line,
+    floatornone,
+    round_virtual_pixels,
+)
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditorOrange,
+    REFERENCE_DATA_PARAM,
+)
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 
 
@@ -34,7 +44,7 @@ class GaussianSmoothingEditor(BaseEditorOrange):
     name = "Gaussian smoothing"
     qualname = "orangecontrib.infrared.gaussian"
 
-    DEFAULT_SD = 10.
+    DEFAULT_SD = 10.0
     MINIMUM_SD = 10e-10
 
     def __init__(self, parent=None, **kwargs):
@@ -45,8 +55,15 @@ class GaussianSmoothingEditor(BaseEditorOrange):
         self.sd = self.DEFAULT_SD
 
         # editing will always return a valid output (in the range)
-        w = lineEditFloatRange(self, self, "sd", bottom=0., top=1000., default=self.DEFAULT_SD,
-                               callback=self.edited.emit)
+        w = lineEditFloatRange(
+            self,
+            self,
+            "sd",
+            bottom=0.0,
+            top=1000.0,
+            default=self.DEFAULT_SD,
+            callback=self.edited.emit,
+        )
         layout.addRow("SD", w)
 
     def setParameters(self, params):
@@ -66,10 +83,10 @@ class CutEditor(BaseEditorOrange):
     """
     Editor for Cut
     """
+
     name = "Cut"
     qualname = "orangecontrib.spectroscopy.cut"
-    replaces = ["orangecontrib.infrared.cut",
-                "orangecontrib.infrared.cutinverse"]
+    replaces = ["orangecontrib.infrared.cut", "orangecontrib.infrared.cutinverse"]
 
     class Warning(BaseEditorOrange.Warning):
         out_of_range = Msg("Limits are out of range.")
@@ -77,17 +94,22 @@ class CutEditor(BaseEditorOrange):
     def __init__(self, parent=None, **kwargs):
         BaseEditorOrange.__init__(self, parent, **kwargs)
 
-        self.lowlim = 0.
-        self.highlim = 1.
+        self.lowlim = 0.0
+        self.highlim = 1.0
         self.inverse = False
 
         layout = QFormLayout()
         self.controlArea.setLayout(layout)
 
-        self._lowlime = lineEditFloatRange(self, self, "lowlim", callback=self.edited.emit)
-        self._highlime = lineEditFloatRange(self, self, "highlim", callback=self.edited.emit)
-        self._inverse = gui.radioButtons(self, self, "inverse",
-                                         orientation=Qt.Horizontal, callback=self.edited.emit)
+        self._lowlime = lineEditFloatRange(
+            self, self, "lowlim", callback=self.edited.emit
+        )
+        self._highlime = lineEditFloatRange(
+            self, self, "highlim", callback=self.edited.emit
+        )
+        self._inverse = gui.radioButtons(
+            self, self, "inverse", orientation=Qt.Horizontal, callback=self.edited.emit
+        )
 
         gui.appendRadioButton(self._inverse, "Keep")
         gui.appendRadioButton(self._inverse, "Remove")
@@ -116,10 +138,10 @@ class CutEditor(BaseEditorOrange):
             self.parent_widget.curveplot.add_marking(line)
 
     def setParameters(self, params):
-        if params: #parameters were manually set somewhere else
+        if params:  # parameters were manually set somewhere else
             self.user_changed = True
-        self.lowlim = params.get("lowlim", 0.)
-        self.highlim = params.get("highlim", 1.)
+        self.lowlim = params.get("lowlim", 0.0)
+        self.highlim = params.get("highlim", 1.0)
         self.inverse = params.get("inverse", False)
 
     @staticmethod
@@ -128,7 +150,9 @@ class CutEditor(BaseEditorOrange):
         lowlim = params.get("lowlim", None)
         highlim = params.get("highlim", None)
         inverse = params.get("inverse", None)
-        return Cut(lowlim=floatornone(lowlim), highlim=floatornone(highlim), inverse=inverse)
+        return Cut(
+            lowlim=floatornone(lowlim), highlim=floatornone(highlim), inverse=inverse
+        )
 
     def set_preview_data(self, data):
         self.Warning.out_of_range.clear()
@@ -149,8 +173,9 @@ class CutEditor(BaseEditorOrange):
                 self.highlim = init_highlim
                 self.edited.emit()
 
-            if (self.lowlim < minx and self.highlim < minx) \
-                    or (self.lowlim > maxx and self.highlim > maxx):
+            if (self.lowlim < minx and self.highlim < minx) or (
+                self.lowlim > maxx and self.highlim > maxx
+            ):
                 self.parent_widget.Warning.preprocessor()
                 self.Warning.out_of_range()
 
@@ -159,13 +184,14 @@ class SpSubtractEditor(BaseEditorOrange):
     """
     Editor for preprocess.SpSubtract
     """
+
     name = "Spectrum subtraction"
     qualname = "orangecontrib.spectroscopy.sp_subtract"
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.amount = 0.
+        self.amount = 0.0
 
         form = QFormLayout()
         amounte = lineEditFloatRange(self, self, "amount", callback=self.edited.emit)
@@ -178,7 +204,7 @@ class SpSubtractEditor(BaseEditorOrange):
         self.controlArea.layout().addWidget(self.reference_info)
 
         self.reference_curve = pg.PlotCurveItem()
-        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.))
+        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.0))
         self.reference_curve.setZValue(10)
 
     def activateOptions(self):
@@ -191,7 +217,7 @@ class SpSubtractEditor(BaseEditorOrange):
         self.update_reference_info()
 
     def setParameters(self, params):
-        self.amount = params.get("amount", 0.)
+        self.amount = params.get("amount", 0.0)
         self.reference = params.get("reference", None)
         self.update_reference_info()
 
@@ -200,8 +226,11 @@ class SpSubtractEditor(BaseEditorOrange):
             self.reference_info.setText("Reference: None")
             self.reference_curve.hide()
         else:
-            rinfo = "{0:d} spectra".format(len(self.reference)) \
-                if len(self.reference) > 1 else "1 spectrum"
+            rinfo = (
+                "{0:d} spectra".format(len(self.reference))
+                if len(self.reference) > 1
+                else "1 spectrum"
+            )
             self.reference_info.setText("Reference: " + rinfo)
             X_ref = self.reference.X[0]
             x = getx(self.reference)
@@ -212,7 +241,7 @@ class SpSubtractEditor(BaseEditorOrange):
     @staticmethod
     def createinstance(params):
         params = dict(params)
-        amount = float(params.get("amount", 0.))
+        amount = float(params.get("amount", 0.0))
         reference = params.get(REFERENCE_DATA_PARAM, None)
         return SpSubtract(reference, amount=amount)
 
@@ -221,6 +250,7 @@ class SavitzkyGolayFilteringEditor(BaseEditorOrange):
     """
     Editor for preprocess.savitzkygolayfiltering.
     """
+
     name = "Savitzky-Golay Filter"
     qualname = "orangecontrib.spectroscopy.savitzkygolay"
 
@@ -242,14 +272,35 @@ class SavitzkyGolayFilteringEditor(BaseEditorOrange):
 
         form = QFormLayout()
 
-        self.wspin = gui.spin(self, self, "window", minv=self.MIN_WINDOW, maxv=self.MAX_WINDOW,
-                              step=2, callback=self._window_edited)
+        self.wspin = gui.spin(
+            self,
+            self,
+            "window",
+            minv=self.MIN_WINDOW,
+            maxv=self.MAX_WINDOW,
+            step=2,
+            callback=self._window_edited,
+        )
 
-        self.pspin = gui.spin(self, self, "polyorder", minv=0, maxv=self.MAX_POLYORDER,
-                              step=1, callback=self._polyorder_edited)
+        self.pspin = gui.spin(
+            self,
+            self,
+            "polyorder",
+            minv=0,
+            maxv=self.MAX_POLYORDER,
+            step=1,
+            callback=self._polyorder_edited,
+        )
 
-        self.dspin = gui.spin(self, self, "deriv", minv=0, maxv=self.MAX_DERIV,
-                              step=1, callback=self._deriv_edited)
+        self.dspin = gui.spin(
+            self,
+            self,
+            "deriv",
+            minv=0,
+            maxv=self.MAX_DERIV,
+            step=1,
+            callback=self._deriv_edited,
+        )
 
         form.addRow("Window", self.wspin)
         form.addRow("Polynomial Order", self.pspin)
@@ -300,6 +351,7 @@ class ShiftAndScaleEditor(BaseEditorOrange):
     """
     Editor for ShiftAndScale
     """
+
     # TODO: the layout changes when I click the area of the preprocessor
     #       EFFECT: the sidebar snaps in
 
@@ -310,25 +362,27 @@ class ShiftAndScaleEditor(BaseEditorOrange):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.offset = 0.
-        self.scale = 1.
+        self.offset = 0.0
+        self.scale = 1.0
 
         form = QFormLayout()
-        offset_input = lineEditFloatRange(self, self, "offset", callback=self.edited.emit)
+        offset_input = lineEditFloatRange(
+            self, self, "offset", callback=self.edited.emit
+        )
         form.addRow("Vertical offset", offset_input)
         scale_input = lineEditFloatRange(self, self, "scale", callback=self.edited.emit)
         form.addRow("Vertical scaling", scale_input)
         self.controlArea.setLayout(form)
 
     def setParameters(self, params):
-        self.amount = params.get("offset", 0.)
-        self.scale = params.get("scale", 1.)
+        self.amount = params.get("offset", 0.0)
+        self.scale = params.get("scale", 1.0)
 
     @staticmethod
     def createinstance(params):
         params = dict(params)
-        offset = float(params.get("offset", 0.))
-        scale = float(params.get("scale", 1.))
+        offset = float(params.get("offset", 0.0))
+        scale = float(params.get("scale", 1.0))
         return ShiftAndScale(offset=offset, scale=scale)
 
 
@@ -344,8 +398,15 @@ class PCADenoisingEditor(BaseEditorOrange):
         form = QFormLayout()
         self.controlArea.setLayout(form)
 
-        compspin = gui.spin(self, self, "components", minv=1, maxv=100,
-                            step=1, callback=self.edited.emit)
+        compspin = gui.spin(
+            self,
+            self,
+            "components",
+            minv=1,
+            maxv=100,
+            step=1,
+            callback=self.edited.emit,
+        )
 
         endlabel = QLabel("components.")
         hboxLayout = QHBoxLayout()
@@ -380,8 +441,15 @@ class MNFDenoisingEditor(BaseEditorOrange):
         form = QFormLayout()
         self.controlArea.setLayout(form)
 
-        compspin = gui.spin(self, self, "components", minv=1, maxv=100,
-                            step=1, callback=self.edited.emit)
+        compspin = gui.spin(
+            self,
+            self,
+            "components",
+            minv=1,
+            maxv=100,
+            step=1,
+            callback=self.edited.emit,
+        )
 
         endlabel = QLabel("components.")
         hboxLayout = QHBoxLayout()
@@ -404,8 +472,7 @@ class SpectralTransformEditor(BaseEditorOrange):
     name = "Spectral Transformations"
     qualname = "orangecontrib.spectroscopy.transforms"
 
-    TRANSFORMS = [Absorbance,
-                  Transmittance]
+    TRANSFORMS = [Absorbance, Transmittance]
 
     transform_names = [a.__name__ for a in TRANSFORMS]
     from_names = [a.value for a in SpecTypes]
@@ -437,7 +504,7 @@ class SpectralTransformEditor(BaseEditorOrange):
         self.controlArea.layout().addWidget(self.reference_info)
 
         self.reference_curve = pg.PlotCurveItem()
-        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.))
+        self.reference_curve.setPen(pg.mkPen(color=QColor(Qt.red), width=2.0))
         self.reference_curve.setZValue(10)
 
     def activateOptions(self):
@@ -453,8 +520,10 @@ class SpectralTransformEditor(BaseEditorOrange):
         self.update_reference_info()
 
     def parameters(self):
-        return {"from_type": self.fromcb.currentIndex(),
-                "to_type": self.tocb.currentIndex()}
+        return {
+            "from_type": self.fromcb.currentIndex(),
+            "to_type": self.tocb.currentIndex(),
+        }
 
     @staticmethod
     def createinstance(params):
@@ -478,15 +547,17 @@ class SpectralTransformEditor(BaseEditorOrange):
             self.reference_info.setText("Reference: None")
             self.reference_curve.hide()
         else:
-            rinfo = "1st of {0:d} spectra".format(len(self.reference)) \
-                if len(self.reference) > 1 else "1 spectrum"
+            rinfo = (
+                "1st of {0:d} spectra".format(len(self.reference))
+                if len(self.reference) > 1
+                else "1 spectrum"
+            )
             self.reference_info.setText("Reference: " + rinfo)
             X_ref = self.reference.X[0]
             x = getx(self.reference)
             xsind = np.argsort(x)
             self.reference_curve.setData(x=x[xsind], y=X_ref[xsind])
             self.reference_curve.show()
-
 
 
 preprocess_editors.register(CutEditor, 25)
