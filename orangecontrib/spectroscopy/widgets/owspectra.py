@@ -4,6 +4,7 @@ from collections import defaultdict
 import random
 import time
 import warnings
+from functools import partial
 from xml.sax.saxutils import escape
 
 try:
@@ -17,7 +18,7 @@ from AnyQt.QtWidgets import QWidget, QGraphicsItem, QPushButton, QMenu, \
     QShortcut, QToolTip, QGraphicsRectItem, QGraphicsTextItem
 from AnyQt.QtGui import QColor, QPixmapCache, QPen, QKeySequence, QFontDatabase, \
     QPalette
-from AnyQt.QtCore import Qt, QRectF, QPointF, QObject
+from AnyQt.QtCore import Qt, QRectF, QPointF, QObject, QTimer
 from AnyQt.QtCore import pyqtSignal
 
 import bottleneck
@@ -139,7 +140,8 @@ class ParameterSetter(CommonParameterSetter):
         def set_line_width(**args):
             if self.LINE_WIDTH_LABEL in args:
                 lw = args[self.LINE_WIDTH_LABEL]
-                self.master.set_line_width(lw)
+                # wait some time so Qt can process mouseRelease event (and not do double changes)
+                QTimer.singleShot(100, partial(self.master.set_line_width, lw))
 
         self._setters[self.SPECTRA_BOX] = {self.LINE_WIDTH_LABEL: set_line_width}
 
