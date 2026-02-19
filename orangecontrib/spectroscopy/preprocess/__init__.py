@@ -974,3 +974,89 @@ class SpSubtract(Preprocess):
                                     data.domain.metas)
         return data.from_table(domain, data)
 
+class BaselineShiftFeature(SelectColumn):
+    InheritEq = True
+
+
+class _BaselineShiftCommon(CommonDomainOrderUnknowns):
+    """
+    Vectorized baseline shift transformation logic.
+    """
+
+    def __init__(self, method, wn=None, wn_range=None, domain=None):
+        super().__init__(domain)
+        self.method = method
+        self.wn = wn
+        self.wn_range = wn_range
+
+    def transformed(self, X, x):
+        """
+        Apply baseline shift per spectrum using fully vectorized operations.
+        X: (n_samples, n_wavenumbers)
+        x: (n_wavenumbers,)
+        """
+        # Defensive: return unchanged if parameters are missing
+        if self.method in ("specific", "min_range", "max_range", "avg_range"):
+            if self.method == "specific" and self.wn is None:
+                return X
+            if self.method in ("min_range", "max_range", "avg_range") and self.wn_range is None:
+                return X
+
+        # Case 1: Minimum over whole spectrum (fastest)
+        if self.method == "minimum":
+            baselines = np.nanmin(X, axis=1, keepdims=True)  # shape (n_samples, 1)
+
+        # Case 2: Specific wavenumber per spectrum
+        elif self.method == "specific":
+            idx = np.argmin(np.abs(x - self.wn))  # index of nearest wn
+            baselines = X[:, idx:idx+1]  # broadcast shape (n_samples, 1)
+
+        # Cases 3-5: Range-based operations
+        elif self.method in ("min_range", "max_range", "avg_range"):
+            mask = (x >= self.wn_range[0]) & (x <= self.wn_range[1])
+            if not np.any(mask):  # No valid range? Return unchanged
+                return X
+
+            X_range = X[:, mask]  # restrict to wn range, shape (n_samples, n_points)
+            if self.method == "min_range":
+                baselines = np.nanmin(X_range, axis=1, keepdims=True)
+            elif self.method == "max_range":
+                baselines = np.nanmax(X_range, axis=1, keepdims=True)
+            else:  # avg_range
+                baselines = np.nanmean(X_range, axis=1, keepdims=True)
+
+        else:
+            raise ValueError(f"Unknown baseline shift method: {self.method}")
+
+        # Vectorized subtraction
+        return X - baselines
+
+
+class BaselineShift(Preprocess):
+    """
+    Baseline shift preprocessor: subtracts a baseline level determined by
+    a given method (min, specific wavenumber, min/max/avg in range).
+    """
+
+    METHODS = ("minimum", "specific", "min_range", "max_range", "avg_range")
+
+    def __init__(self, method="minimum", wn=None, wn_range=None):
+        """
+        :param method: baseline shift method
+        :param wn: specific wavenumber (if method == 'specific')
+        :param wn_range: tuple (min_wn, max_wn) if method involves range
+        """
+        if method not in self.METHODS:
+            raise ValueError(f"Unknown method: {method}, must be one of {self.METHODS}")
+        self.method = method
+        self.wn = wn
+        self.wn_range = wn_range
+
+    def __call__(self, data):
+        common = _BaselineShiftCommon(self.method, self.wn, self.wn_range, data.domain)
+        atts = [
+            a.copy(compute_value=BaselineShiftFeature(i, common))
+            for i, a in enumerate(data.domain.attributes)
+        ]
+        domain = Orange.data.Domain(atts, data.domain.class_vars, data.domain.metas)
+        return data.from_table(domain, data)
