@@ -42,7 +42,7 @@ from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from orangecontrib.spectroscopy.preprocess import Integrate
-from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan, split_to_size
+from orangecontrib.spectroscopy.utils import values_to_linspace, index_values_nan, split_to_size, XYDomainModel
 
 from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, \
     MenuFocus, CurvePlot, SELECTONE, SELECTMANY, INDIVIDUAL, AVERAGE, \
@@ -678,8 +678,7 @@ class VectorMixin:
 class AxesSettingsMixin:
 
     def __init__(self):
-        self.xy_model = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                    valid_types=DomainModel.PRIMITIVE)
+        self.xy_model = XYDomainModel()
 
     def setup_axes_settings_box(self):
         box = gui.vBox(self)

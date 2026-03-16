@@ -1,6 +1,8 @@
 import numpy as np
 
-from Orange.data import Domain, Table
+from Orange.data import Domain, Table, ContinuousVariable
+from Orange.widgets.utils.itemmodels import DomainModel
+from orangewidget.utils.itemmodels import PyListModel
 
 MAP_X_VAR = "map_x"
 MAP_Y_VAR = "map_y"
@@ -148,3 +150,24 @@ def split_to_size(size, interval):
         intervals.append(slice(pos, pos + min(size - pos, interval)))
         pos += min(size, interval)
     return intervals
+
+
+class XYDomainModel(DomainModel):
+    XY = (DomainModel.METAS, PyListModel.Separator,
+          DomainModel.CLASSES)
+
+    def __init__(self, order=XY, valid_types=ContinuousVariable, **kwargs):
+        super().__init__(order=order, valid_types=valid_types, **kwargs)
+
+    def set_domain(self, domain):
+        restore_order = False
+        if domain is not None and self.order == self.XY:
+            attr_x = [domain[var] for var in domain if var.name == MAP_X_VAR]
+            attr_y = [domain[var] for var in domain if var.name == MAP_Y_VAR]
+            xy = attr_x + attr_y
+            if len(xy) == 2:
+                self.order = (xy, PyListModel.Separator) + self.order
+                restore_order = True
+        super().set_domain(domain)
+        if restore_order:
+            self.order = self.order[2:]
