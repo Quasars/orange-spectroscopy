@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 from Orange.data import Domain, ContinuousVariable, Table
 
+from orangecontrib.spectroscopy.table import ComplexTable
 from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 
@@ -77,15 +78,18 @@ def build_spec_table(domvals, data, additional_table=None):
         - Orange.data.Table with only meta or class attributes (size n)
     """
     data = np.atleast_2d(data)
+    table_class = Table
+    if np.iscomplexobj(data):
+        table_class = ComplexTable
     features = [ContinuousVariable.make("%f" % f) for f in domvals]
     if additional_table is None:
         domain = Domain(features, None)
-        return Table.from_numpy(domain, X=data)
+        return table_class.from_numpy(domain, X=data)
     else:
         domain = Domain(features,
                         class_vars=additional_table.domain.class_vars,
                         metas=additional_table.domain.metas)
-        ret_data = Table.from_numpy(domain, X=data, Y=additional_table.Y,
+        ret_data = table_class.from_numpy(domain, X=data, Y=additional_table.Y,
                                     metas=additional_table.metas,
                                     attributes=additional_table.attributes)
         return ret_data
