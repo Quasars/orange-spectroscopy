@@ -10,7 +10,7 @@ def getx(data):
     x = np.arange(len(data.domain.attributes), dtype=np.float64)
     try:
         x = np.array([float(a.name) for a in data.domain.attributes])
-    except:
+    except:  # noqa: E722
         pass
     return x
 

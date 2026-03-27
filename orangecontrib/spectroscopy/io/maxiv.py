@@ -8,11 +8,12 @@ from orangecontrib.spectroscopy.io.soleil import HDF5Reader_HERMES
 
 
 class HDRReader_STXM(FileFormat, SpectralFileFormat):
-    """ Reader for STXM/NEXAFS files from MAX IV and other synchrotrons.
+    """Reader for STXM/NEXAFS files from MAX IV and other synchrotrons.
     It is assumed that there are .xim files with plain text data in the same
     directory as the .hdr file. For foo.hdr these are called foo_a000.xim,
     foo_a001.xim etc.
     """
+
     EXTENSIONS = ('.hdr',)
     DESCRIPTION = 'STXM/NEXAFS .hdr+.xim files'
 
@@ -49,7 +50,7 @@ class HDRReader_STXM(FileFormat, SpectralFileFormat):
 
     def read_hdr_dict(self, inner=True):
         """Read a dict {name = 'value'; foo = (...);} from self._lex;
-            inner=False for the outermost level.
+        inner=False for the outermost level.
         """
         d = {}
         while True:
@@ -94,14 +95,17 @@ class HDRReader_STXM(FileFormat, SpectralFileFormat):
             except AssertionError as e:
                 raise IOError('Error parsing hdr file ' + self.filename) from e
         regions = hdrdata['ScanDefinition']['Regions'][0]
-        axes = [regions['QAxis'], regions['PAxis'],
-                hdrdata['ScanDefinition']['StackAxis']]
+        axes = [
+            regions['QAxis'],
+            regions['PAxis'],
+            hdrdata['ScanDefinition']['StackAxis'],
+        ]
         dims = [len(ax['Points']) for ax in axes]
         spectra = np.empty(dims)
         for nf in range(dims[2]):
             ximname = '%s_a%03d.xim' % (self.filename[:-4], nf)
             xim = np.loadtxt(ximname)
-            spectra[...,nf] = xim
+            spectra[..., nf] = xim
 
         x_loc = axes[1]['Points']
         y_loc = axes[0]['Points']
@@ -110,16 +114,19 @@ class HDRReader_STXM(FileFormat, SpectralFileFormat):
 
 
 class HDF5Reader_SoftiMAX(FileFormat, SpectralFileFormat):
-    """ A very case specific reader for HDF5 files from the SoftiMAX beamline in MAX-IV"""
+    """A very case specific reader for HDF5 files from the SoftiMAX beamline in MAX-IV"""
+
     EXTENSIONS = ('.hdf5',)
     DESCRIPTION = 'HDF5 file @SoftiMAX/MAX-IV'
     PRIORITY = HDF5Reader_HERMES.PRIORITY + 1
 
     def read_spectra(self):
         import h5py
+
         with h5py.File(self.filename, 'r') as hdf5_file:
-            if 'entry1/collection/beamline' in hdf5_file and \
-                    hdf5_file['entry1/collection/beamline'][()].astype('str') == ['SLS Sophie at Softimax MAXIV']:
+            if 'entry1/collection/beamline' in hdf5_file and hdf5_file[
+                'entry1/collection/beamline'
+            ][()].astype('str') == ['SLS Sophie at Softimax MAXIV']:
                 x_locs = np.array(hdf5_file['entry1/counter0/sample_x'])
                 y_locs = np.array(hdf5_file['entry1/counter0/sample_y'])
                 energy = np.array(hdf5_file['entry1/counter0/energy'])

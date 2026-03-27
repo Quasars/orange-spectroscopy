@@ -10,8 +10,13 @@ from .gsf import GSFReader
 from .matlab import MatlabReader
 
 # Instrument-specific readers
-from .agilent import AgilentImageReader, AgilentImageIFGReader, agilentMosaicReader,\
-    agilentMosaicIFGReader, agilentMosaicTileReader
+from .agilent import (
+    AgilentImageReader,
+    AgilentImageIFGReader,
+    agilentMosaicReader,
+    agilentMosaicIFGReader,
+    agilentMosaicTileReader,
+)
 from .neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannel
 from .omnic import OmnicMapReader, SPAReader, SPCReader
 from .opus import OPUSReader

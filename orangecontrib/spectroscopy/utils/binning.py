@@ -1,11 +1,8 @@
 import bottleneck
 import numpy as np
-
 from Orange.data import Domain, Table
 
-from orangecontrib.spectroscopy.utils import index_values, values_to_linspace, \
-    get_ndim_hyperspec, axes_to_ndim_linspace, \
-    NanInsideHypercube, InvalidAxisException
+from orangecontrib.spectroscopy.utils import get_ndim_hyperspec, axes_to_ndim_linspace
 from orangecontrib.spectroscopy.utils.skimage.shape import view_as_blocks
 
 

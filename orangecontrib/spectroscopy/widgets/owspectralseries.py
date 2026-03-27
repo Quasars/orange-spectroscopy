@@ -1,7 +1,13 @@
 from xml.sax.saxutils import escape
 
-from AnyQt.QtWidgets import QWidget, QPushButton, QGridLayout, QVBoxLayout, QWidgetAction, \
-    QToolTip
+from AnyQt.QtWidgets import (
+    QWidget,
+    QPushButton,
+    QGridLayout,
+    QVBoxLayout,
+    QWidgetAction,
+    QToolTip,
+)
 
 from AnyQt.QtCore import Qt, QRectF
 
@@ -14,25 +20,41 @@ import numpy as np
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets.widget import OWWidget, Msg, OWComponent, Input
 from Orange.widgets import gui
-from Orange.widgets.settings import \
-    Setting, ContextSetting, DomainContextHandler, SettingProvider
+from Orange.widgets.settings import (
+    Setting,
+    ContextSetting,
+    DomainContextHandler,
+    SettingProvider,
+)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
 
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.utils import values_to_linspace, index_values
-from orangecontrib.spectroscopy.widgets.owhyper import _shift, \
-    ImageColorSettingMixin, ImageZoomMixin, ImageItemNan, ImageColorLegend
-from orangecontrib.spectroscopy.widgets.owspectra import HelpEventDelegate, \
-    selection_modifiers, \
-    SELECTMANY, INDIVIDUAL, InteractiveViewBox, MenuFocus
-from orangecontrib.spectroscopy.widgets.utils import \
-    SelectionGroupMixin, SelectionOutputsMixin
+from orangecontrib.spectroscopy.widgets.owhyper import (
+    _shift,
+    ImageColorSettingMixin,
+    ImageZoomMixin,
+    ImageItemNan,
+    ImageColorLegend,
+)
+from orangecontrib.spectroscopy.widgets.owspectra import (
+    HelpEventDelegate,
+    selection_modifiers,
+    SELECTMANY,
+    INDIVIDUAL,
+    InteractiveViewBox,
+    MenuFocus,
+)
+from orangecontrib.spectroscopy.widgets.utils import (
+    SelectionGroupMixin,
+    SelectionOutputsMixin,
+)
 
 
-class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
-                   ImageColorSettingMixin, ImageZoomMixin):
-
+class LineScanPlot(
+    QWidget, OWComponent, SelectionGroupMixin, ImageColorSettingMixin, ImageZoomMixin
+):
     attr_x = ContextSetting(None, exclude_attributes=True)
     gamma = Setting(0)
 
@@ -64,8 +86,7 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
         self.legend = ImageColorLegend()
         ci.addItem(self.legend)
 
-        self.plot.scene().installEventFilter(
-            HelpEventDelegate(self.help_event, self))
+        self.plot.scene().installEventFilter(HelpEventDelegate(self.help_event, self))
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -89,23 +110,36 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
         self.button.setMenu(view_menu)
 
         # prepare interface according to the new context
-        self.parent.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
+        self.parent.contextAboutToBeOpened.connect(
+            lambda x: self.init_interface_data(x[0])
+        )
 
         self.add_zoom_actions(view_menu)
 
         common_options = dict(
-            labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            valueType=str)
+            labelWidth=50,
+            orientation=Qt.Horizontal,
+            sendSelectedValue=True,
+            valueType=str,
+        )
 
         choose_xy = QWidgetAction(self)
         box = gui.vBox(self)
         box.setFocusPolicy(Qt.TabFocus)
-        self.xy_model = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                    valid_types=DomainModel.PRIMITIVE,
-                                    placeholder="Position (index)")
+        self.xy_model = DomainModel(
+            DomainModel.METAS | DomainModel.CLASSES,
+            valid_types=DomainModel.PRIMITIVE,
+            placeholder="Position (index)",
+        )
         self.cb_attr_x = gui.comboBox(
-            box, self, "attr_x", label="Axis x:", callback=self.update_attr,
-            model=self.xy_model, **common_options)
+            box,
+            self,
+            "attr_x",
+            label="Axis x:",
+            callback=self.update_attr,
+            model=self.xy_model,
+            **common_options,
+        )
 
         box.setFocusProxy(self.cb_attr_x)
 
@@ -131,15 +165,17 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
         if sel is not None:
             prepared.append(str(self.wavenumbers[wavenumber_ind]))
             for d in self.data[sel]:
-                variables = [v for v in self.data.domain.metas + self.data.domain.class_vars
-                             if v not in [self.attr_x]]
+                variables = [
+                    v
+                    for v in self.data.domain.metas + self.data.domain.class_vars
+                    if v not in [self.attr_x]
+                ]
                 features = ['{} = {}'.format(attr.name, d[attr]) for attr in variables]
                 features.append('value = {}'.format(d[wavenumber_ind]))
                 prepared.append("\n".join(features))
         text = "\n\n".join(prepared)
         if text:
-            text = ('<span style="white-space:pre">{}</span>'
-                    .format(escape(text)))
+            text = '<span style="white-space:pre">{}</span>'.format(escape(text))
             QToolTip.showText(ev.screenPos(), text, widget=self.plotview)
             return True
         else:
@@ -192,7 +228,7 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
             imdata = np.ones((lsy[2], lsx[2])) * float("nan")
             xindex = index_values(coorx, lsx)
             yindex = index_values(wavenumbers, lsy)
-            for xind, d in zip(xindex, self.data.X):
+            for xind, d in zip(xindex, self.data.X, strict=False):
                 imdata[yindex, xind] = d
 
             self.data_imagepixels = xindex
@@ -206,8 +242,8 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
             shifty = _shift(lsy)
             left = lsx[0] - shiftx
             bottom = lsy[0] - shifty
-            width = (lsx[1]-lsx[0]) + 2*shiftx
-            height = (lsy[1]-lsy[0]) + 2*shifty
+            width = (lsx[1] - lsx[0]) + 2 * shiftx
+            height = (lsy[1] - lsy[0]) + 2 * shifty
             self.img.setRect(QRectF(left, bottom, width, height))
 
             self.refresh_img_selection()
@@ -240,7 +276,7 @@ class LineScanPlot(QWidget, OWComponent, SelectionGroupMixin,
         if self.data and self.lsx and self.lsy:
             x, y = pos.x(), pos.y()
             x_distance = np.abs(self.data_xs - x)
-            sel = (x_distance < _shift(self.lsx))
+            sel = x_distance < _shift(self.lsx)
             wavenumber_distance = np.abs(self.wavenumbers - y)
             wavenumber_ind = np.argmin(wavenumber_distance)
             return sel, wavenumber_ind
@@ -302,8 +338,11 @@ class OWSpectralSeries(OWWidget, SelectionOutputsMixin):
         def valid_context(data):
             if data is None:
                 return False
-            annotation_features = [v for v in data.domain.metas + data.domain.class_vars
-                                   if isinstance(v, (DiscreteVariable, ContinuousVariable))]
+            annotation_features = [
+                v
+                for v in data.domain.metas + data.domain.class_vars
+                if isinstance(v, (DiscreteVariable, ContinuousVariable))
+            ]
             return len(annotation_features) >= 1
 
         if valid_context(data):
@@ -324,4 +363,5 @@ class OWSpectralSeries(OWWidget, SelectionOutputsMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWSpectralSeries).run(Table("collagen"))

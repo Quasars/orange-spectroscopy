@@ -2,7 +2,11 @@ from AnyQt.QtWidgets import QLineEdit
 
 from orangewidget.utils.visual_settings_dlg import _add_control, _set_control_value
 
-from orangecontrib.spectroscopy.widgets.gui import FloatOrEmptyValidator, floatornone, str_or_empty
+from orangecontrib.spectroscopy.widgets.gui import (
+    FloatOrEmptyValidator,
+    floatornone,
+    str_or_empty,
+)
 
 
 class FloatOrUndefined:
@@ -10,7 +14,6 @@ class FloatOrUndefined:
 
 
 class FloatOrEmptyLineEdit(QLineEdit):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         validator = FloatOrEmptyValidator(self, allow_empty=True)

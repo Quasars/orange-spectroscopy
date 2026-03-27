@@ -1,0 +1,4 @@
+[tool.ruff]
+extend = "../pyproject.toml"
+# Exclude conf.py
+extend-exclude = ["conf.py"]

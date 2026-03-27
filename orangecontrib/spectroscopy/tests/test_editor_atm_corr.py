@@ -7,7 +7,6 @@ from orangecontrib.spectroscopy.widgets.preprocessors.atm_corr import AtmCorrEdi
 
 
 class TestAtmCorrEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(AtmCorrEditor, self.widget)

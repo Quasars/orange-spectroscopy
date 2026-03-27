@@ -1,0 +1,4 @@
+[tool.ruff]
+extend = "../../../pyproject.toml"
+# Exclude vendored code from linting
+extend-exclude = ["pymca5", "skimage", "spc", "specio"]

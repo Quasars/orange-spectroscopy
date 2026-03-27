@@ -11,13 +11,17 @@ from decimal import Decimal
 import Orange
 from Orange.widgets.widget import OWWidget
 
-from orangecontrib.spectroscopy.widgets.gui import connect_settings, lineEditFloatRange, \
-    ValueTransform, connect_line, MovableVline
+from orangecontrib.spectroscopy.widgets.gui import (
+    connect_settings,
+    lineEditFloatRange,
+    ValueTransform,
+    connect_line,
+    MovableVline,
+)
 from orangecontrib.spectroscopy.widgets.owspectra import CurvePlot
 
 
 class PlusAdd(ValueTransform):
-
     def __init__(self, contains_add):
         self.contains_add = contains_add
 
@@ -29,7 +33,6 @@ class PlusAdd(ValueTransform):
 
 
 class TestConnected(OWWidget):
-
     name = "Test"
 
     want_main_area = True
@@ -76,6 +79,7 @@ class TestConnected(OWWidget):
 
 def main():
     from AnyQt.QtWidgets import QApplication
+
     app = QApplication(sys.argv)
     ow = TestConnected()
     ow.show()

@@ -9,7 +9,6 @@ from orangecontrib.spectroscopy.widgets.preprocessors.emsc import EMSCEditor
 
 
 class TestEMSCEditor(PreprocessorEditorTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWPreprocess)
         self.editor = self.add_editor(EMSCEditor, self.widget)  # type: EMSCEditor
@@ -41,8 +40,11 @@ class TestEMSCEditor(PreprocessorEditorTest):
 
     def test_migrate_smoothing(self):
         name = "orangecontrib.spectroscopy.preprocess.emsc"
-        settings = {"storedsettings": {"preprocessors": [(name, {"ranges": [[0, 1, 2]]})]}}
+        settings = {
+            "storedsettings": {"preprocessors": [(name, {"ranges": [[0, 1, 2]]})]}
+        }
         OWPreprocess.migrate_settings(settings, 6)
         self.assertEqual(
             settings["storedsettings"]["preprocessors"][0],
-            (name, {"ranges": [[0, 1, 2, 0]]}))
+            (name, {"ranges": [[0, 1, 2, 0]]}),
+        )

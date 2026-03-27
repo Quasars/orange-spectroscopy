@@ -11,7 +11,6 @@ from orangecontrib.spectroscopy.widgets.owfft import OWFFT, CHUNK_SIZE, DEFAULT_
 
 
 class TestOWFFT(WidgetTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWFFT)
         self.ifg_single = Orange.data.Table("IFG_single.dpt")
@@ -25,14 +24,14 @@ class TestOWFFT(WidgetTest):
         self.send_signal("Interferogram", None)
 
     def test_laser_metadata(self):
-        """ Test dx in presence/absence of laser metadata """
+        """Test dx in presence/absence of laser metadata"""
         self.send_signal("Interferogram", self.ifg_seq)
-        self.assertEqual(self.widget.dx, (1 / 1.57980039e+04 / 2) * 4)
+        self.assertEqual(self.widget.dx, (1 / 1.57980039e04 / 2) * 4)
         self.send_signal("Interferogram", self.ifg_single)
         self.assertEqual(self.widget.dx, (1 / DEFAULT_HENE / 2))
 
     def test_respect_custom_dx(self):
-        """ Setting new data should not overwrite custom dx value """
+        """Setting new data should not overwrite custom dx value"""
         self.send_signal("Interferogram", self.ifg_single)
         self.widget.dx_auto = False
         self.widget.dx = 5
@@ -48,7 +47,7 @@ class TestOWFFT(WidgetTest):
 
     def test_auto_dx(self):
         self.send_signal("Interferogram", self.ifg_seq)
-        self.assertEqual(self.widget.dx, (1 / 1.57980039e+04 / 2) * 4)
+        self.assertEqual(self.widget.dx, (1 / 1.57980039e04 / 2) * 4)
         self.send_signal("Interferogram", self.ifg_gsf)
         self.assertEqual(self.widget.dx, (0.00019550342130987293))
 
@@ -59,10 +58,10 @@ class TestOWFFT(WidgetTest):
         spectra = self.get_output(self.widget.Outputs.spectra)
         phases = self.get_output(self.widget.Outputs.phases)
         np.testing.assert_equal(input.metas, spectra.metas)
-        np.testing.assert_equal(input.metas, phases.metas[:, :input.metas.shape[1]])
+        np.testing.assert_equal(input.metas, phases.metas[:, : input.metas.shape[1]])
 
     def test_custom_zpd(self):
-        """ Test setting custom zpd value"""
+        """Test setting custom zpd value"""
         custom_zpd = 1844
         self.send_signal(self.widget.Inputs.data, self.ifg_single)
         self.widget.peak_search_enable = False
@@ -73,26 +72,26 @@ class TestOWFFT(WidgetTest):
         self.assertEqual(phases[0, "zpd_fwd"], custom_zpd)
 
     def test_chunk_one(self):
-        """ Test batching when len(data) < chunk_size """
+        """Test batching when len(data) < chunk_size"""
         self.assertLess(len(self.ifg_seq), CHUNK_SIZE)
         self.send_signal(self.widget.Inputs.data, self.ifg_seq)
         self.widget.peak_search_enable = False
-        self.widget.zpd1 = 69 # TODO replace with value read from file
+        self.widget.zpd1 = 69  # TODO replace with value read from file
         self.widget.peak_search_changed()
         self.commit_and_wait()
 
     def test_chunk_many(self):
-        """ Test batching when len(data) >> chunk_size """
+        """Test batching when len(data) >> chunk_size"""
         data = Orange.data.table.Table.concatenate(5 * (self.ifg_seq,))
         self.assertGreater(len(data), CHUNK_SIZE)
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.peak_search_enable = False
-        self.widget.zpd1 = 69 # TODO replace with value read from file
+        self.widget.zpd1 = 69  # TODO replace with value read from file
         self.widget.peak_search_changed()
         self.commit_and_wait()
 
     def test_calculation(self):
-        """" Test calculation with custom settings and batching """
+        """ " Test calculation with custom settings and batching"""
         ifg_ref = Orange.data.Table("agilent/background_agg256.seq")
         abs = Orange.data.Table("agilent/4_noimage_agg256.dat")
 
@@ -102,7 +101,7 @@ class TestOWFFT(WidgetTest):
         self.widget.phase_corr = irfft.PhaseCorrection.MERTZ
         self.widget.setting_changed()
         self.widget.peak_search_enable = False
-        self.widget.zpd1 = 69 # TODO replace with value read from file
+        self.widget.zpd1 = 69  # TODO replace with value read from file
         self.widget.peak_search_changed()
 
         self.send_signal(self.widget.Inputs.data, ifg_ref)
@@ -119,24 +118,28 @@ class TestOWFFT(WidgetTest):
         abs_x = getx(abs)
         calc_x = getx(ssc)
         limits = np.searchsorted(calc_x, [abs_x[0] - 1, abs_x[-1]])
-        np.testing.assert_allclose(calc_x[limits[0]:limits[1]], abs_x)
+        np.testing.assert_allclose(calc_x[limits[0] : limits[1]], abs_x)
         # Compare to agilent absorbance
         # NB 4 mAbs error
-        np.testing.assert_allclose(calc_abs[:, limits[0]:limits[1]], abs.X, atol=0.004)
+        np.testing.assert_allclose(
+            calc_abs[:, limits[0] : limits[1]], abs.X, atol=0.004
+        )
 
     def test_complex_calculation(self):
-        """" Test calculation Complex FFT """
+        """ " Test calculation Complex FFT"""
 
         self.widget.zff = 2  # 2**2 = 4
         self.widget.limit_output = False
-        self.widget.peak_search = 1 # MINIMUM
-        self.widget.apod_func = 0 # boxcar
+        self.widget.peak_search = 1  # MINIMUM
+        self.widget.apod_func = 0  # boxcar
 
         self.send_signal(self.widget.Inputs.data, self.ifg_gsf)
         self.commit_and_wait()
         # testing info panel text associated with the input file metadata
         widget_text = self.widget.info_dx.text()
-        self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
+        self.assertIn(
+            'Using Calculated Datapoint Spacing (Δx) from metadata', widget_text
+        )
         self.assertTrue(self.widget.use_interleaved_data)
         self.assertTrue(self.widget.complexfft)
 
@@ -144,8 +147,12 @@ class TestOWFFT(WidgetTest):
         phases = self.get_output(self.widget.Outputs.phases)
         np.testing.assert_allclose(spectra.X.size, (2049))
         np.testing.assert_allclose(phases.X.size, (2049))
-        np.testing.assert_allclose(spectra.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789))
-        np.testing.assert_allclose(phases.X[0, 396:399], (2.61539453, 2.65495979, 2.72814989))
+        np.testing.assert_allclose(
+            spectra.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789)
+        )
+        np.testing.assert_allclose(
+            phases.X[0, 396:399], (2.61539453, 2.65495979, 2.72814989)
+        )
 
     def test_migrate_HeNe(self):
         settings = {"dx_HeNe": False}

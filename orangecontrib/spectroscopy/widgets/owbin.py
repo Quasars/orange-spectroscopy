@@ -8,11 +8,12 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 
-from orangecontrib.spectroscopy.utils import NanInsideHypercube, InvalidAxisException
+from orangecontrib.spectroscopy.utils import InvalidAxisException
 from orangecontrib.spectroscopy.utils.binning import bin_hyperspectra, InvalidBlockShape
 from orangecontrib.spectroscopy.widgets.gui import lineEditIntRange
 
 MAX_DIMENSIONS = 5
+
 
 class OWBin(OWWidget):
     # Widget's name as displayed in the canvas
@@ -20,7 +21,8 @@ class OWBin(OWWidget):
 
     # Short widget description
     description = (
-        "Bins a hyperspectral dataset by continous variable such as coordinates.")
+        "Bins a hyperspectral dataset by continous variable such as coordinates."
+    )
 
     icon = "icons/bin.svg"
 
@@ -65,33 +67,51 @@ class OWBin(OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Parameters")
 
-        gui.checkBox(box, self, "square_bin",
-                     label="Use square bin shape",
-                     callback=self._bin_changed)
+        gui.checkBox(
+            box,
+            self,
+            "square_bin",
+            label="Use square bin shape",
+            callback=self._bin_changed,
+        )
 
         gui.separator(box)
 
-        gui.spin(box, self, "ndim", minv=1, maxv=MAX_DIMENSIONS,
-                 label="Number of axes to bin:",
-                 callback=self._dim_changed)
+        gui.spin(
+            box,
+            self,
+            "ndim",
+            minv=1,
+            maxv=MAX_DIMENSIONS,
+            label="Number of axes to bin:",
+            callback=self._dim_changed,
+        )
 
         self.axes_box = gui.widgetBox(self.controlArea, "Axes")
 
-        self.xy_model = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                    valid_types=ContinuousVariable)
+        self.xy_model = DomainModel(
+            DomainModel.METAS | DomainModel.CLASSES, valid_types=ContinuousVariable
+        )
 
         self.contextAboutToBeOpened.connect(self._init_interface_data)
 
-        common_options = dict(labelWidth=50, orientation=Qt.Horizontal,
-                              sendSelectedValue=True)
+        common_options = dict(
+            labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True
+        )
         for i in range(MAX_DIMENSIONS):
             hbox = gui.hBox(self.axes_box)
             gui.comboBox(
-                hbox, self, f"attr_{i}", label=f"Axis {i}:",
+                hbox,
+                self,
+                f"attr_{i}",
+                label=f"Axis {i}:",
                 callback=self._attr_changed,
-                model=self.xy_model, **common_options)
-            le = lineEditIntRange(hbox, self, f"bin_{i}", bottom=1, default=1,
-                                  callback=self._bin_changed)
+                model=self.xy_model,
+                **common_options,
+            )
+            le = lineEditIntRange(
+                hbox, self, f"bin_{i}", bottom=1, default=1, callback=self._bin_changed
+            )
             le.setFixedWidth(40)
             gui.separator(hbox, width=40)
             gui.widgetLabel(hbox, label="Bin size:", labelWidth=50)
@@ -106,9 +126,8 @@ class OWBin(OWWidget):
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Send Data")
 
-
     def _sanitize_bin_value(self):
-        pass #TODO make sure bin value is compatible with dataset
+        pass  # TODO make sure bin value is compatible with dataset
 
     def _update_bins(self):
         if self.square_bin:
@@ -223,4 +242,5 @@ class OWBin(OWWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWBin).run(Table("agilent/5_mosaic_agg1024.dmt"))

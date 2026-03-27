@@ -9,8 +9,9 @@ from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 
 class AsciiColReader(FileFormat, SpectralFileFormat):
-    """ Reader for files with multiple columns of numbers. The first column
-    contains the wavelengths, the others contain the spectra. """
+    """Reader for files with multiple columns of numbers. The first column
+    contains the wavelengths, the others contain the spectra."""
+
     EXTENSIONS = ('.dat', '.dpt', '.xy', '.csv')
     DESCRIPTION = 'Spectra ASCII'
 
@@ -24,14 +25,22 @@ class AsciiColReader(FileFormat, SpectralFileFormat):
             for d in delimiters:
                 try:
                     comments = [a for a in [";", "#"] if a != d]
-                    tbl = np.loadtxt(self.filename, ndmin=2, delimiter=d, comments=comments, skiprows=skiprows)
+                    tbl = np.loadtxt(
+                        self.filename,
+                        ndmin=2,
+                        delimiter=d,
+                        comments=comments,
+                        skiprows=skiprows,
+                    )
                     break
                 except ValueError:
                     pass
             if tbl is not None:
                 break
         if tbl is None:
-            raise ValueError('File should be delimited by <whitespace>, ";", ":", or ",".')
+            raise ValueError(
+                'File should be delimited by <whitespace>, ";", ":", or ",".'
+            )
         wavenumbers = tbl.T[0]  # first column is attribute name
         datavals = tbl.T[1:]
         return wavenumbers, datavals, None
@@ -45,10 +54,11 @@ class AsciiColReader(FileFormat, SpectralFileFormat):
 
 
 class AsciiMapReader(FileFormat):
-    """ Reader ascii map files.
+    """Reader ascii map files.
 
     First row contains wavelengths, then each row describes a spectrum, starting with (x, y)
-    coordinates: http://www.cytospec.com/file.php#FileASCII3 """
+    coordinates: http://www.cytospec.com/file.php#FileASCII3"""
+
     EXTENSIONS = ('.xyz',)
     DESCRIPTION = 'Hyperspectral map ASCII'
 
@@ -59,10 +69,15 @@ class AsciiMapReader(FileFormat):
             header = [a.strip() for a in header]
             assert header[0] == header[1] == ""
             dom_vals = [float(v) for v in header[2:]]
-            domain = Orange.data.Domain([ContinuousVariable.make("%f" % f) for f in dom_vals], None)
+            domain = Orange.data.Domain(
+                [ContinuousVariable.make("%f" % f) for f in dom_vals], None
+            )
             tbl = np.loadtxt(f, ndmin=2)
             data = Table.from_numpy(domain, X=tbl[:, 2:])
-            metas = [ContinuousVariable.make(MAP_X_VAR), ContinuousVariable.make(MAP_Y_VAR)]
+            metas = [
+                ContinuousVariable.make(MAP_X_VAR),
+                ContinuousVariable.make(MAP_Y_VAR),
+            ]
             domain = Orange.data.Domain(domain.attributes, None, metas=metas)
             data = data.transform(domain)
             with data.unlocked(data.metas):
@@ -73,8 +88,16 @@ class AsciiMapReader(FileFormat):
     @staticmethod
     def write_file(filename, data):
         wavelengths = getx(data)
-        map_x = data.domain[MAP_X_VAR] if MAP_X_VAR in data.domain else ContinuousVariable(MAP_X_VAR)
-        map_y = data.domain[MAP_Y_VAR] if MAP_Y_VAR in data.domain else ContinuousVariable(MAP_Y_VAR)
+        map_x = (
+            data.domain[MAP_X_VAR]
+            if MAP_X_VAR in data.domain
+            else ContinuousVariable(MAP_X_VAR)
+        )
+        map_y = (
+            data.domain[MAP_Y_VAR]
+            if MAP_Y_VAR in data.domain
+            else ContinuousVariable(MAP_Y_VAR)
+        )
         ndom = Domain([map_x, map_y] + list(data.domain.attributes))
         data = data.transform(ndom)
         with open(filename, "wb") as f:

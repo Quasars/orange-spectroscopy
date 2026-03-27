@@ -6,7 +6,6 @@ from orangecontrib.spectroscopy.data import getx
 
 
 class TestOWInterpolate(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

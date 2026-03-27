@@ -1,6 +1,12 @@
 import sys
 
-from AnyQt.QtWidgets import QVBoxLayout, QFormLayout, QComboBox, QButtonGroup, QRadioButton
+from AnyQt.QtWidgets import (
+    QVBoxLayout,
+    QFormLayout,
+    QComboBox,
+    QButtonGroup,
+    QRadioButton,
+)
 
 from Orange.data import ContinuousVariable
 from Orange.widgets import gui
@@ -9,13 +15,20 @@ from Orange.widgets.data.owpreprocess import icon_path
 from Orange.widgets.utils.itemmodels import DomainModel
 
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.preprocess import Normalize, Integrate, NormalizeReference, \
-    NormalizePhaseReference
+from orangecontrib.spectroscopy.preprocess import (
+    Normalize,
+    Integrate,
+    NormalizeReference,
+    NormalizePhaseReference,
+)
 from orangecontrib.spectroscopy.widgets.gui import MovableVline
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 from orangecontrib.spectroscopy.widgets.preprocessors.integrate import IntegrateEditor
-from orangecontrib.spectroscopy.widgets.preprocessors.utils import \
-    BaseEditorOrange, SetXDoubleSpinBox, REFERENCE_DATA_PARAM
+from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
+    BaseEditorOrange,
+    SetXDoubleSpinBox,
+    REFERENCE_DATA_PARAM,
+)
 
 
 NORMALIZE_BY_REFERENCE = 42
@@ -26,6 +39,7 @@ class NormalizeEditor(BaseEditorOrange):
     """
     Normalize spectra.
     """
+
     name = "Normalize Spectra"
     qualname = "orangecontrib.infrared.normalize"
     icon = icon_path("Normalize.svg")
@@ -38,7 +52,8 @@ class NormalizeEditor(BaseEditorOrange):
         ("Attribute Normalization", Normalize.Attribute),
         ("Standard Normal Variate (SNV)", Normalize.SNV),
         ("Normalize by Reference", NORMALIZE_BY_REFERENCE),
-        ("Normalize by Reference (Complex Phase)", PHASE_REFERENCE)]
+        ("Normalize by Reference (Complex Phase)", PHASE_REFERENCE),
+    ]
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -49,14 +64,16 @@ class NormalizeEditor(BaseEditorOrange):
         self.lower = 0
         self.upper = 4000
         self.int_method = 0
-        self.attrs = DomainModel(DomainModel.METAS | DomainModel.CLASSES,
-                                 valid_types=ContinuousVariable)
+        self.attrs = DomainModel(
+            DomainModel.METAS | DomainModel.CLASSES, valid_types=ContinuousVariable
+        )
         self.attrform = QFormLayout()
         self.chosen_attr = None
         self.last_domain = None
         self.saved_attr = None
-        self.attrcb = gui.comboBox(None, self, "chosen_attr", callback=self.edited.emit,
-                                   model=self.attrs)
+        self.attrcb = gui.comboBox(
+            None, self, "chosen_attr", callback=self.edited.emit, model=self.attrs
+        )
         self.attrform.addRow("Normalize to", self.attrcb)
 
         self.areaform = QFormLayout()
@@ -64,11 +81,11 @@ class NormalizeEditor(BaseEditorOrange):
         self.int_method_cb.addItems(IntegrateEditor.Integrators)
         minf, maxf = -sys.float_info.max, sys.float_info.max
         self.lspin = SetXDoubleSpinBox(
-            minimum=minf, maximum=maxf, singleStep=0.5,
-            value=self.lower, enabled=False)
+            minimum=minf, maximum=maxf, singleStep=0.5, value=self.lower, enabled=False
+        )
         self.uspin = SetXDoubleSpinBox(
-            minimum=minf, maximum=maxf, singleStep=0.5,
-            value=self.upper, enabled=False)
+            minimum=minf, maximum=maxf, singleStep=0.5, value=self.upper, enabled=False
+        )
         self.areaform.addRow("Normalize to", self.int_method_cb)
         self.areaform.addRow("Lower limit", self.lspin)
         self.areaform.addRow("Upper limit", self.uspin)
@@ -115,13 +132,15 @@ class NormalizeEditor(BaseEditorOrange):
         if self.__method == Normalize.Area:
             if self.lline not in self.parent_widget.curveplot.markings:
                 self.parent_widget.curveplot.add_marking(self.lline)
-            if (self.uline not in self.parent_widget.curveplot.markings
-                    and IntegrateEditor.Integrators_classes[self.int_method]
-                    is not Integrate.PeakAt):
+            if (
+                self.uline not in self.parent_widget.curveplot.markings
+                and IntegrateEditor.Integrators_classes[self.int_method]
+                is not Integrate.PeakAt
+            ):
                 self.parent_widget.curveplot.add_marking(self.uline)
 
     def setParameters(self, params):
-        if params: #parameters were manually set somewhere else
+        if params:  # parameters were manually set somewhere else
             self.user_changed = True
         method = params.get("method", Normalize.Vector)
         lower = params.get("lower", 0)
@@ -134,12 +153,18 @@ class NormalizeEditor(BaseEditorOrange):
         self.int_method_cb.setCurrentIndex(int_method)
         self.setL(lower, user=False)
         self.setU(upper, user=False)
-        self.saved_attr = params.get("attr")  # chosen_attr will be set when data are connected
+        self.saved_attr = params.get(
+            "attr"
+        )  # chosen_attr will be set when data are connected
 
     def parameters(self):
-        return {"method": self.__method, "lower": self.lower,
-                "upper": self.upper, "int_method": self.int_method,
-                "attr": self.chosen_attr}
+        return {
+            "method": self.__method,
+            "lower": self.lower,
+            "upper": self.upper,
+            "int_method": self.int_method,
+            "attr": self.chosen_attr,
+        }
 
     def setMethod(self, method):
         if self.__method != method:
@@ -178,8 +203,7 @@ class NormalizeEditor(BaseEditorOrange):
             self.changed.emit()
 
     def reorderLimits(self):
-        if (IntegrateEditor.Integrators_classes[self.int_method]
-                is Integrate.PeakAt):
+        if IntegrateEditor.Integrators_classes[self.int_method] is Integrate.PeakAt:
             self.upper = self.lower + 10
         limits = [self.lower, self.upper]
         self.lower, self.upper = min(limits), max(limits)
@@ -211,8 +235,13 @@ class NormalizeEditor(BaseEditorOrange):
         int_method = IntegrateEditor.Integrators_classes[int_method_index]
         attr = params.get("attr", None)
         if method not in (NORMALIZE_BY_REFERENCE, PHASE_REFERENCE):
-            return Normalize(method=method, lower=lower, upper=upper,
-                             int_method=int_method, attr=attr)
+            return Normalize(
+                method=method,
+                lower=lower,
+                upper=upper,
+                int_method=int_method,
+                attr=attr,
+            )
         else:
             # avoids circular imports
             reference = params.get(REFERENCE_DATA_PARAM, None)

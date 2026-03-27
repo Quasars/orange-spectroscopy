@@ -9,38 +9,36 @@ from Orange.widgets.tests.base import WidgetTest
 
 from orangecontrib.spectroscopy.data import build_spec_table
 from orangecontrib.spectroscopy.io.util import _spectra_from_image
-from orangecontrib.spectroscopy.widgets.owstackalign import \
-    alignstack, RegisterTranslation, shift_fill, OWStackAlign, process_stack
+from orangecontrib.spectroscopy.widgets.owstackalign import (
+    alignstack,
+    RegisterTranslation,
+    shift_fill,
+    OWStackAlign,
+    process_stack,
+)
 
 
 def test_image():
-    return np.hstack((np.zeros((5, 1)),
-                      np.diag([1, 5., 3., 1, 1]),
-                      np.ones((5, 1))))
+    return np.hstack((np.zeros((5, 1)), np.diag([1, 5.0, 3.0, 1, 1]), np.ones((5, 1))))
 
 
 def _up(im, fill=0):
-    return np.vstack((im[1:],
-                      np.ones_like(im[0]) * fill))
+    return np.vstack((im[1:], np.ones_like(im[0]) * fill))
 
 
 def _down(im, fill=0):
-    return np.vstack((np.ones_like(im[0]) * fill,
-                      im[:-1]))
+    return np.vstack((np.ones_like(im[0]) * fill, im[:-1]))
 
 
 def _right(im, fill=0):
-    return np.hstack((np.ones_like(im[:, :1]) * fill,
-                      im[:, :-1]))
+    return np.hstack((np.ones_like(im[:, :1]) * fill, im[:, :-1]))
 
 
 def _left(im, fill=0):
-    return np.hstack((im[:, 1:],
-                      np.ones_like(im[:, :1]) * fill))
+    return np.hstack((im[:, 1:], np.ones_like(im[:, :1]) * fill))
 
 
 class TestUtils(unittest.TestCase):
-
     def test_image_shift(self):
         im = test_image()
         calculate_shift = RegisterTranslation()
@@ -57,8 +55,9 @@ class TestUtils(unittest.TestCase):
 
     def test_alignstack(self):
         im = test_image()
-        _, aligned = alignstack([im, _up(im), _down(im), _right(im)],
-                                shiftfn=RegisterTranslation())
+        _, aligned = alignstack(
+            [im, _up(im), _down(im), _right(im)], shiftfn=RegisterTranslation()
+        )
         self.assertEqual(aligned.shape, (4, 5, 7))
 
     def test_alignstack_calls_filterfn(self):
@@ -67,9 +66,7 @@ class TestUtils(unittest.TestCase):
         im = test_image()
         up = _up(im)
         down = _down(im)
-        alignstack([im, up, down],
-                   shiftfn=RegisterTranslation(),
-                   filterfn=filterfn)
+        alignstack([im, up, down], shiftfn=RegisterTranslation(), filterfn=filterfn)
         for i, t in enumerate([im, up, down]):
             self.assertIs(filterfn.call_args_list[i][0][0], t)
 
@@ -110,36 +107,45 @@ class TestUtils(unittest.TestCase):
 
 
 def diamond():
-    return np.array([
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 6, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 5, 1, 7, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 8, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=float)
+    return np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 6, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 5, 1, 7, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 8, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        dtype=float,
+    )
+
 
 def rectangle():
-    return np.array([
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=float)
+    return np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        dtype=float,
+    )
 
 
 def fake_stxm_from_image(image):
@@ -151,6 +157,7 @@ def fake_stxm_from_image(image):
     spectral[:, :, 4] = _down(_right(_down(diamond())))
     return spectral
 
+
 def fake_stxm_from_rectangle(image):
     spectral = np.zeros(image.shape + (5,))
     spectral[:, :, 0] = rectangle()
@@ -160,7 +167,8 @@ def fake_stxm_from_rectangle(image):
     spectral[:, :, 4] = _down(_right(_down(rectangle())))
     return spectral
 
-class SideEffect():
+
+class SideEffect:
     def __init__(self, fn):
         self.fn = fn
         self.return_value = None
@@ -177,17 +185,21 @@ def lineedit_type(le, text):
 
 
 def orange_table_from_3d(image3d):
-    info = _spectra_from_image(image3d,
-                               range(image3d.shape[2]),
-                               range(image3d[:, :, 0].shape[1]),
-                               range(image3d[:, :, 0].shape[0]))
+    info = _spectra_from_image(
+        image3d,
+        range(image3d.shape[2]),
+        range(image3d[:, :, 0].shape[1]),
+        range(image3d[:, :, 0].shape[0]),
+    )
     data = build_spec_table(*info)
     return data
 
 
 stxm_diamond = orange_table_from_3d(fake_stxm_from_image(diamond()))
 stxm_rectangle = orange_table_from_3d(fake_stxm_from_rectangle(rectangle()))
-stxm_rectangle_short = orange_table_from_3d(fake_stxm_from_rectangle(rectangle())[:, :, :3])
+stxm_rectangle_short = orange_table_from_3d(
+    fake_stxm_from_rectangle(rectangle())[:, :, :3]
+)
 
 
 def orange_table_to_3d(data):
@@ -196,7 +208,7 @@ def orange_table_to_3d(data):
     miny = int(min(data.metas[:, 1]))
     maxx = int(max(data.metas[:, 0]))
     maxy = int(max(data.metas[:, 1]))
-    image3d = np.ones((maxy-miny+1, maxx-minx+1, nz)) * np.nan
+    image3d = np.ones((maxy - miny + 1, maxx - minx + 1, nz)) * np.nan
     for d in data:
         x, y = int(d.metas[0]), int(d.metas[1])
         image3d[y - miny, x - minx, :] = d.x
@@ -204,7 +216,6 @@ def orange_table_to_3d(data):
 
 
 class TestOWStackAlign(WidgetTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWStackAlign)  # type: OWStackAlign
 
@@ -222,7 +233,7 @@ class TestOWStackAlign(WidgetTest):
         image3d = orange_table_to_3d(out)
         for z in range(1, image3d.shape[2]):
             np.testing.assert_almost_equal(image3d[:, :, 0], image3d[:, :, z])
-    
+
     def test_output_aligned_with_ref(self):
         self.send_signal(self.widget.Inputs.data, stxm_diamond)
         self.send_signal(self.widget.Inputs.refdata, stxm_rectangle)
@@ -245,8 +256,10 @@ class TestOWStackAlign(WidgetTest):
         np.testing.assert_almost_equal(image3d[:, :, 0], diamond()[1:-2, :-1])
 
     def test_sobel_called(self):
-        with patch("orangecontrib.spectroscopy.widgets.owstackalign.sobel",
-                   Mock(side_effect=sobel)) as mock:
+        with patch(
+            "orangecontrib.spectroscopy.widgets.owstackalign.sobel",
+            Mock(side_effect=sobel),
+        ) as mock:
             self.send_signal(self.widget.Inputs.data, stxm_diamond)
             _ = self.get_output(self.widget.Outputs.newstack)
             self.assertFalse(mock.called)
@@ -271,7 +284,9 @@ class TestOWStackAlign(WidgetTest):
         data = stxm_diamond
         cv = DiscreteVariable(name="class", values=["a", "b"])
         z = ContinuousVariable(name="z")
-        domain = Domain(data.domain.attributes, class_vars=[cv], metas=data.domain.metas + (z,))
+        domain = Domain(
+            data.domain.attributes, class_vars=[cv], metas=data.domain.metas + (z,)
+        )
         data = data.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
         out = self.get_output(self.widget.Outputs.newstack)
@@ -288,7 +303,7 @@ class TestOWStackAlign(WidgetTest):
         self.assertTrue(self.widget.Error.invalid_axis.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.invalid_axis.is_shown())
-    
+
     def test_reference_warning(self):
         data = stxm_diamond
         # only Data is set, reference input not used = No warning
@@ -316,12 +331,16 @@ class TestOWStackAlign(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_no_wavenumbers(self):
-        domain = Domain(stxm_diamond.domain.attributes[:0], metas=stxm_diamond.domain.metas)
+        domain = Domain(
+            stxm_diamond.domain.attributes[:0], metas=stxm_diamond.domain.metas
+        )
         data = stxm_diamond.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_single_wavenumber(self):
-        domain = Domain(stxm_diamond.domain.attributes[:1], metas=stxm_diamond.domain.metas)
+        domain = Domain(
+            stxm_diamond.domain.attributes[:1], metas=stxm_diamond.domain.metas
+        )
         data = stxm_diamond.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
         out = self.get_output(self.widget.Outputs.newstack)
@@ -351,8 +370,10 @@ class TestOWStackAlign(WidgetTest):
 
     def test_frame_shifts(self):
         se = SideEffect(process_stack)
-        with patch("orangecontrib.spectroscopy.widgets.owstackalign.process_stack",
-                   Mock(side_effect=se)) as mock:
+        with patch(
+            "orangecontrib.spectroscopy.widgets.owstackalign.process_stack",
+            Mock(side_effect=se),
+        ) as mock:
             self.send_signal(self.widget.Inputs.data, stxm_diamond)
             lineedit_type(self.widget.controls.ref_frame_num, "1")
             self.assertEqual(2, mock.call_count)

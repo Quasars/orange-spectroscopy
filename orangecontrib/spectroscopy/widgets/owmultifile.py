@@ -8,26 +8,39 @@ from typing import List
 import numpy as np
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QSizePolicy as Policy, QGridLayout, QLabel, \
-    QFileDialog, QStyle, QListWidget
+from AnyQt.QtWidgets import (
+    QSizePolicy as Policy,
+    QGridLayout,
+    QLabel,
+    QFileDialog,
+    QStyle,
+    QListWidget,
+)
 
-from Orange.data import Domain, Table, DiscreteVariable, Variable, ContinuousVariable, StringVariable
+from Orange.data import Domain, Table, Variable, ContinuousVariable, StringVariable
 from Orange.data.io import FileFormat, class_from_qualified_name
 from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, ContextSetting, \
-    PerfectDomainContextHandler, SettingProvider
+from Orange.widgets.settings import (
+    Setting,
+    ContextSetting,
+    PerfectDomainContextHandler,
+    SettingProvider,
+)
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.domaineditor import DomainEditor
-from Orange.widgets.utils.filedialogs import RecentPathsWidgetMixin, \
-    RecentPath, open_filename_dialog
+from Orange.widgets.utils.filedialogs import (
+    RecentPathsWidgetMixin,
+    RecentPath,
+    open_filename_dialog,
+)
 from Orange.widgets.utils.signals import Output
 
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat
 
 
 def numpy_union_keep_order(A, B):
-    """ Union of A and B. Elements not in A are
+    """Union of A and B. Elements not in A are
     added in the same order as in B."""
     # sorted list of elements missing in A
     to_add = np.setdiff1d(B, A)
@@ -57,7 +70,7 @@ def decimals_neeeded_for_unique_str(l):
 
 
 def wns_to_unique_str(l):
-    """ Convert a list on wns to a list of unique strings.
+    """Convert a list on wns to a list of unique strings.
 
     Use 6 decimal places by default. If that is not sufficient,
     increase precision as needed for wns in conflict.
@@ -93,15 +106,20 @@ def concatenate_data(tables, filenames, label):
 
     # prepare xs from the spectral specific tables for join into a common domain
     spectral_specific_domains = []
-    xss = [t.special_spectral_data[0] for t in tables
-           if hasattr(t, "special_spectral_data")]
+    xss = [
+        t.special_spectral_data[0]
+        for t in tables
+        if hasattr(t, "special_spectral_data")
+    ]
     xs = reduce(numpy_union_keep_order, xss, np.array([]))
     if len(xs):
         names = wns_to_unique_str(xs)
         attrs = [ContinuousVariable(n) for n in names]
         spectral_specific_domains = [Domain(attrs, None, None)]
 
-    domain = _merge_domains(spectral_specific_domains + [table.domain for table in tables])
+    domain = _merge_domains(
+        spectral_specific_domains + [table.domain for table in tables]
+    )
     name = get_unique_names(domain, "Filename")
     source_var = StringVariable(name)
     name = get_unique_names(domain, "Label")
@@ -121,17 +139,21 @@ def concatenate_data(tables, filenames, label):
             if hasattr(table, "special_spectral_data"):
                 special = table.special_spectral_data
                 indices = xs_sind[np.searchsorted(xs_sorted, special[0])]
-                data.X[pos:pos+len(table), indices] = special[1]
+                data.X[pos : pos + len(table), indices] = special[1]
             pos += len(table)
 
-        data[:, source_var] = np.array(list(
-            chain(*(repeat(fn, len(table))
-                    for fn, table in zip(filenames, tables)))
-        )).reshape(-1, 1)
-        data[:, label_var] = np.array(list(
-            chain(*(repeat(label, len(table))
-                    for _, table in zip(filenames, tables)))
-        )).reshape(-1, 1)
+        data[:, source_var] = np.array(
+            list(
+                chain(*(repeat(fn, len(table)) for fn, table in zip(filenames, tables)))  # noqa: B905
+            )
+        ).reshape(-1, 1)
+        data[:, label_var] = np.array(
+            list(
+                chain(
+                    *(repeat(label, len(table)) for _, table in zip(filenames, tables))  # noqa: B905
+                )
+            )
+        ).reshape(-1, 1)
 
     return data
 
@@ -142,8 +164,10 @@ def _merge_domains(domains):
             if attr.name != name:
                 part[i] = attr.renamed(name)
 
-    parts = [_get_part(domains, set.union, part)
-             for part in ("attributes", "class_vars", "metas")]
+    parts = [
+        _get_part(domains, set.union, part)
+        for part in ("attributes", "class_vars", "metas")
+    ]
     all_names = [var.name for var in chain(*parts)]
     name_iter = iter(get_unique_names_duplicates(all_names))
     for part in parts:
@@ -162,33 +186,33 @@ def _get_part(domains, oper, part):
 
 def _unique_vars(seq: List[Variable]):
     AttrDesc = namedtuple(
-        "AttrDesc",
-        ("template", "original", "values", "number_of_decimals")
+        "AttrDesc", ("template", "original", "values", "number_of_decimals")
     )
 
     attrs = {}
     for el in seq:
         desc = attrs.get(el)
         if desc is None:
-            attrs[el] = AttrDesc(el, True,
-                                 el.is_discrete and el.values,
-                                 el.is_continuous and el.number_of_decimals)
+            attrs[el] = AttrDesc(
+                el,
+                True,
+                el.is_discrete and el.values,
+                el.is_continuous and el.number_of_decimals,
+            )
             continue
         if desc.template.is_discrete:
             sattr_values = set(desc.values)
             # don't use sets: keep the order
-            missing_values = tuple(
-                val for val in el.values if val not in sattr_values
-            )
+            missing_values = tuple(val for val in el.values if val not in sattr_values)
             if missing_values:
                 attrs[el] = attrs[el]._replace(
-                    original=False,
-                    values=desc.values + missing_values)
+                    original=False, values=desc.values + missing_values
+                )
         elif desc.template.is_continuous:
             if el.number_of_decimals > desc.number_of_decimals:
                 attrs[el] = attrs[el]._replace(
-                    original=False,
-                    number_of_decimals=el.number_of_decimals)
+                    original=False, number_of_decimals=el.number_of_decimals
+                )
 
     new_attrs = []
     for desc in attrs.values():
@@ -197,7 +221,7 @@ def _unique_vars(seq: List[Variable]):
             new_attr = attr
         elif desc.template.is_discrete:
             new_attr = attr.copy()
-            for val in desc.values[len(attr.values):]:
+            for val in desc.values[len(attr.values) :]:
                 new_attr.add_value(val)
         else:
             assert desc.template.is_continuous
@@ -227,14 +251,14 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
     name = "Multifile"
     id = "orangecontrib.spectroscopy.widgets.files"
     icon = "icons/multifile.svg"
-    description = "Read data from input files " \
-                  "and send a data table to the output."
+    description = "Read data from input files and send a data table to the output."
     priority = 10000
-    replaces = ["orangecontrib.infrared.widgets.owfiles.OWFiles",
-                "orangecontrib.infrared.widgets.owmultifile.OWMultifile",
-                # next file: a file unintentionally added in one version
-                "orangecontrib.spectroscopy.widgets.owmultifile_vesna.OWMultifile",
-                ]
+    replaces = [
+        "orangecontrib.infrared.widgets.owfiles.OWFiles",
+        "orangecontrib.infrared.widgets.owmultifile.OWMultifile",
+        # next file: a file unintentionally added in one version
+        "orangecontrib.spectroscopy.widgets.owmultifile_vesna.OWMultifile",
+    ]
     keywords = ["file", "files", "multiple"]
 
     class Outputs:
@@ -271,40 +295,40 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
         self.loaded_file = ""
         self.sheets = []
 
-        self.lb = gui.listBox(self.controlArea, self, "file_idx",
-                              selectionMode=QListWidget.MultiSelection)
+        self.lb = gui.listBox(
+            self.controlArea, self, "file_idx", selectionMode=QListWidget.MultiSelection
+        )
         self.default_foreground = None
 
         layout = QGridLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
 
         file_button = gui.button(
-            None, self, '  ...', callback=self.browse_files, autoDefault=False)
-        file_button.setIcon(self.style().standardIcon(
-            QStyle.SP_DirOpenIcon))
+            None, self, '  ...', callback=self.browse_files, autoDefault=False
+        )
+        file_button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
         layout.addWidget(file_button, 0, 0)
 
-        remove_button = gui.button(
-            None, self, 'Remove', callback=self.remove_item)
+        remove_button = gui.button(None, self, 'Remove', callback=self.remove_item)
 
-        clear_button = gui.button(
-            None, self, 'Clear', callback=self.clear)
+        clear_button = gui.button(None, self, 'Clear', callback=self.clear)
 
         layout.addWidget(remove_button, 0, 1)
         layout.addWidget(clear_button, 0, 2)
 
         reload_button = gui.button(
-            None, self, "Reload", callback=self.load_data, autoDefault=False)
-        reload_button.setIcon(
-            self.style().standardIcon(QStyle.SP_BrowserReload))
+            None, self, "Reload", callback=self.load_data, autoDefault=False
+        )
+        reload_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
         reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
         layout.addWidget(reload_button, 0, 7)
 
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_index = 0
-        self.sheet_combo = gui.comboBox(None, self, "sheet_index",
-                                        callback=self.select_sheet)
+        self.sheet_combo = gui.comboBox(
+            None, self, "sheet_index", callback=self.select_sheet
+        )
         self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QLabel()
         self.sheet_label.setText('Sheet')
@@ -317,8 +341,14 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
         layout.addWidget(self.sheet_box, 0, 5)
 
         label_box = gui.hBox(None, addToLayout=False, margin=0)
-        gui.lineEdit(label_box, self, "label", callback=self.set_label,
-                     label="Label", orientation=Qt.Horizontal)
+        gui.lineEdit(
+            label_box,
+            self,
+            "label",
+            callback=self.set_label,
+            label="Label",
+            orientation=Qt.Horizontal,
+        )
         layout.addWidget(label_box, 0, 6)
 
         layout.setColumnStretch(3, 2)
@@ -336,11 +366,13 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
 
         gui.button(box, self, "Reset", callback=self.reset_domain_edit)
         self.apply_button = gui.button(
-            box, self, "Apply", callback=self.apply_domain_edit)
+            box, self, "Apply", callback=self.apply_domain_edit
+        )
         self.apply_button.setEnabled(False)
         self.apply_button.setFixedWidth(170)
         self.editor_model.dataChanged.connect(
-            lambda: self.apply_button.setEnabled(True))
+            lambda: self.apply_button.setEnabled(True)
+        )
 
         self._update_sheet_combo()
         self.load_data()
@@ -367,7 +399,7 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
             try:
                 reader = _get_reader(rp)
                 sheets.update(reader.sheets)
-            except:
+            except:  # noqa: E722
                 pass
 
         sheets = sorted(sheets.items(), key=lambda x: x[0])
@@ -406,11 +438,14 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
     def browse_files(self):
         start_file = self.last_path() or os.path.expanduser("~/")
 
-        readers = [f for f in FileFormat.formats if
-                   getattr(f, 'read', None) and getattr(f, "EXTENSIONS", None)]
-        filenames, reader, _ = \
-            open_filename_dialog(start_file, None, readers,
-                                 dialog=QFileDialog.getOpenFileNames)
+        readers = [
+            f
+            for f in FileFormat.formats
+            if getattr(f, 'read', None) and getattr(f, "EXTENSIONS", None)
+        ]
+        filenames, reader, _ = open_filename_dialog(
+            start_file, None, readers, dialog=QFileDialog.getOpenFileNames
+        )
 
         self.load_files(filenames, reader)
 
@@ -478,9 +513,12 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
                 show_error(li, "Read error:\n" + str(ex))
                 self.Error.read_error()
 
-        if not data_list or self.Error.file_not_found.is_shown() \
-                or self.Error.missing_reader.is_shown() \
-                or self.Error.read_error.is_shown():
+        if (
+            not data_list
+            or self.Error.file_not_found.is_shown()
+            or self.Error.missing_reader.is_shown()
+            or self.Error.read_error.is_shown()
+        ):
             self.data = None
             self.domain_editor.set_domain(None)
         else:
@@ -501,8 +539,7 @@ class OWMultifile(widget.OWWidget, RelocatablePathsWidgetMixin):
         if self.data is None:
             table = None
         else:
-            domain, cols = self.domain_editor.get_domain(self.data.domain,
-                                                         self.data)
+            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
             if not (domain.variables or domain.metas):
                 table = None
             else:
@@ -564,4 +601,5 @@ def _get_reader(rp):
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWMultifile).run()

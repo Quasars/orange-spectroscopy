@@ -11,7 +11,7 @@ from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
-from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 
 from orangewidget.settings import SettingProvider, ContextSetting
 
@@ -148,8 +148,8 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         gui.comboBox(
             box,
             self,
-            f"attr_x",
-            label=f"Axis X:",
+            "attr_x",
+            label="Axis X:",
             callback=self._attr_changed,
             model=self.xy_model,
             **common_options,
@@ -157,8 +157,8 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         gui.comboBox(
             box,
             self,
-            f"attr_y",
-            label=f"Axis Y:",
+            "attr_y",
+            label="Axis Y:",
             callback=self._attr_changed,
             model=self.xy_model,
             **common_options,
@@ -213,7 +213,6 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
 
     @staticmethod
     def with_overlay(imageplot, data, maindata, state):
-
         if data is None or maindata is None:
             return None
 
@@ -229,9 +228,7 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
                 break
 
         # the following could raise an InvalidAxisException
-        hypercube, ls = get_ndim_hyperspec(
-            data, (imageplot.attr_x, imageplot.attr_y)
-        )
+        hypercube, ls = get_ndim_hyperspec(data, (imageplot.attr_x, imageplot.attr_y))
 
         # if drawing failed for some reason
         if imageplot.img.image is None:
@@ -260,9 +257,7 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
         # Update name
         allnames = []
         if "visible_images" in newmaindata.attributes:
-            allnames = [
-                im.name for im in newmaindata.attributes["visible_images"]
-            ]
+            allnames = [im.name for im in newmaindata.attributes["visible_images"]]
         basename = "Overlay Image"
         name = get_unique_names(names=allnames, proposed=basename)
         # Need to modify the position and the scale since visual imageplot

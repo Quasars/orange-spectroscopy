@@ -15,13 +15,21 @@ import numpy as np
 import pyqtgraph as pg
 
 from Orange.widgets.tests.base import WidgetTest
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable
 
-from orangecontrib.spectroscopy.widgets.owspectra import OWSpectra, MAX_INSTANCES_DRAWN, \
-    PlotCurvesItem, NoSuchCurve, MAX_THICK_SELECTED, CurvePlot
+from orangecontrib.spectroscopy.widgets.owspectra import (
+    OWSpectra,
+    MAX_INSTANCES_DRAWN,
+    PlotCurvesItem,
+    NoSuchCurve,
+    MAX_THICK_SELECTED,
+    CurvePlot,
+)
 from orangecontrib.spectroscopy.data import getx
-from orangecontrib.spectroscopy.widgets.line_geometry import intersect_curves, \
-    distance_line_segment
+from orangecontrib.spectroscopy.widgets.line_geometry import (
+    intersect_curves,
+    distance_line_segment,
+)
 from orangecontrib.spectroscopy.tests.util import hold_modifiers, set_png_graph_save
 from orangecontrib.spectroscopy.preprocess import Interpolate
 
@@ -40,7 +48,6 @@ def wait_for_graph(widget, timeout=5000):
 
 
 class TestOWSpectra(WidgetTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -62,7 +69,9 @@ class TestOWSpectra(WidgetTest):
         irisunknown.name = "irisunknown"
         cls.unknown_last_instance = cls.iris.copy()
         with cls.unknown_last_instance.unlocked():
-            cls.unknown_last_instance.X[73] = NAN  # needs to be unknown after sampling and permutation
+            cls.unknown_last_instance.X[73] = (
+                NAN  # needs to be unknown after sampling and permutation
+            )
         cls.unknown_last_instance.name = "unknown_last_instance"
         # dataset with mixed unknowns
         cls.unknown_pts = cls.collagen.copy()
@@ -76,8 +85,15 @@ class TestOWSpectra(WidgetTest):
         with cls.only_inf.unlocked():
             cls.only_inf.X *= np.inf
         cls.only_inf.name = "only_inf"
-        cls.strange_data = [iris1, iris0, empty, irisunknown, cls.unknown_last_instance,
-                            cls.only_inf, cls.unknown_pts]
+        cls.strange_data = [
+            iris1,
+            iris0,
+            empty,
+            irisunknown,
+            cls.unknown_last_instance,
+            cls.only_inf,
+            cls.unknown_pts,
+        ]
 
     def setUp(self):
         self.widget = self.create_widget(OWSpectra)  # OWSpectra
@@ -99,26 +115,35 @@ class TestOWSpectra(WidgetTest):
         with patch(mi, 100):
             self.send_signal("Data", self.unknown_last_instance)
             wait_for_graph(self.widget)
-            self.assertTrue(np.all(np.isnan(self.unknown_last_instance[self.widget.curveplot.sampled_indices].X[-1])))
+            self.assertTrue(
+                np.all(
+                    np.isnan(
+                        self.unknown_last_instance[
+                            self.widget.curveplot.sampled_indices
+                        ].X[-1]
+                    )
+                )
+            )
 
     def do_mousemove(self):
         mr = self.widget.curveplot.MOUSE_RADIUS
         sbr = self.widget.curveplot.plot.sceneBoundingRect()
         self.widget.curveplot.MOUSE_RADIUS = 1000
-        self.widget.curveplot.mouse_moved_closest(
-            (sbr.center(),))
-        if self.widget.curveplot.data is not None \
-                and np.any(np.isfinite(self.widget.curveplot.data.X)):  # a valid curve exists
+        self.widget.curveplot.mouse_moved_closest((sbr.center(),))
+        if self.widget.curveplot.data is not None and np.any(
+            np.isfinite(self.widget.curveplot.data.X)
+        ):  # a valid curve exists
             self.assertIsNotNone(self.widget.curveplot.highlighted)
         else:  # no curve can be detected
             self.assertIsNone(self.widget.curveplot.highlighted)
 
         # assume nothing is at the chosen point
         # therefore nothing should be highlighted
-        nothing_point = (sbr.center() + sbr.topLeft())/2
-        self.widget.curveplot.MOUSE_RADIUS = 5  # locally, test_mouse_move failed with 30
-        self.widget.curveplot.mouse_moved_closest(
-            (nothing_point,))
+        nothing_point = (sbr.center() + sbr.topLeft()) / 2
+        self.widget.curveplot.MOUSE_RADIUS = (
+            5  # locally, test_mouse_move failed with 30
+        )
+        self.widget.curveplot.mouse_moved_closest((nothing_point,))
         self.assertIsNone(self.widget.curveplot.highlighted)
 
         self.widget.curveplot.MOUSE_RADIUS = mr
@@ -180,7 +205,7 @@ class TestOWSpectra(WidgetTest):
             np.testing.assert_equal(sa.X, 1)
 
     def do_zoom_rect(self, invertX):
-        """ Test zooming with two clicks. """
+        """Test zooming with two clicks."""
         self.send_signal("Data", self.iris)
         vb = self.widget.curveplot.plot.vb
         self.widget.curveplot.invertX = invertX
@@ -274,7 +299,9 @@ class TestOWSpectra(WidgetTest):
 
     def test_line_point_distance(self):
         # nan in point
-        a = distance_line_segment(np.array([0, 0]), np.array([0, float("nan")]), 10, 10, 5, 5)
+        a = distance_line_segment(
+            np.array([0, 0]), np.array([0, float("nan")]), 10, 10, 5, 5
+        )
         np.testing.assert_equal(a, [0, float("nan")])
 
         # distance to the middle of the line segment
@@ -308,7 +335,7 @@ class TestOWSpectra(WidgetTest):
         self.assertTrue(set(add_subset.ids) <= set(data[sinds].ids))
 
         # the whole subset can not be drawn anymore
-        add_subset = data[:MAX_INSTANCES_DRAWN+1]
+        add_subset = data[: MAX_INSTANCES_DRAWN + 1]
         self.send_signal("Data subset", add_subset)
         wait_for_graph(self.widget)
         sinds = self.widget.curveplot.sampled_indices
@@ -338,12 +365,15 @@ class TestOWSpectra(WidgetTest):
         self.send_signal("Data", self.iris)
         self.assertEqual(self.widget.curveplot.feature_color, None)
         self.widget.curveplot.feature_color = self.iris.domain.class_var
-        iris_context = self.widget.settingsHandler.pack_data(self.widget)["context_settings"]
+        iris_context = self.widget.settingsHandler.pack_data(self.widget)[
+            "context_settings"
+        ]
         self.send_signal("Data", self.titanic)
         self.assertEqual(self.widget.curveplot.feature_color, None)
         # because previous settings match any domain, use only context for iris
-        self.widget = self.create_widget(OWSpectra,
-                                         stored_settings={"context_settings": iris_context})
+        self.widget = self.create_widget(
+            OWSpectra, stored_settings={"context_settings": iris_context}
+        )
         self.send_signal("Data", self.iris)
         self.assertEqual(self.widget.curveplot.feature_color.name, "iris")
 
@@ -351,7 +381,9 @@ class TestOWSpectra(WidgetTest):
         self.send_signal("Data", self.iris)
         self.assertEqual(self.widget.curveplot.feature_color, None)
         self.widget.curveplot.cycle_color_attr()
-        self.assertEqual(self.widget.curveplot.feature_color, self.iris.domain.class_var)
+        self.assertEqual(
+            self.widget.curveplot.feature_color, self.iris.domain.class_var
+        )
         self.widget.curveplot.cycle_color_attr()
         self.assertEqual(self.widget.curveplot.feature_color, None)
 
@@ -366,7 +398,8 @@ class TestOWSpectra(WidgetTest):
     def test_open_selection(self):
         # saved selection in the file should be reloaded
         self.widget = self.create_widget(
-            OWSpectra, stored_settings={"curveplot": {"selection_group_saved": [(0, 1)]}}
+            OWSpectra,
+            stored_settings={"curveplot": {"selection_group_saved": [(0, 1)]}},
         )
         self.send_signal("Data", self.iris)
         out = self.get_output("Selection")
@@ -383,14 +416,15 @@ class TestOWSpectra(WidgetTest):
         wait_for_graph(self.widget)
         self.widget.curveplot.MOUSE_RADIUS = 1000
         self.widget.curveplot.mouse_moved_closest(
-            (self.widget.curveplot.plot.sceneBoundingRect().center(),))
+            (self.widget.curveplot.plot.sceneBoundingRect().center(),)
+        )
         self.widget.curveplot.select_by_click(None)
         out = self.get_output("Selection")
         self.assertEqual(len(out), 1)
         # resending the exact same data should not change the selection
         self.send_signal("Data", self.iris)
         wait_for_graph(self.widget)
-        out2 = self.get_output("Selection")
+        out2 = self.get_output("Selection")  # noqa: F841
         self.assertEqual(len(out), 1)
         # while resending the same data as a different object should
         self.send_signal("Data", self.iris.copy())
@@ -417,10 +451,13 @@ class TestOWSpectra(WidgetTest):
         out = out[np.flatnonzero(out.transform(Domain([group_at])).X != unselected)]
         self.assertEqual(len(out), 4)
         np.testing.assert_equal([o for o in out], [data[i] for i in [1, 2, 3, 4]])
-        np.testing.assert_equal([o[group_at].value for o in out], ["G1", "G2", "G3", "G3"])
+        np.testing.assert_equal(
+            [o[group_at].value for o in out], ["G1", "G2", "G3", "G3"]
+        )
         out = self.get_output(self.widget.Outputs.selected_data)
-        np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
-                                ["G1", "G2", "G3", "G3"])
+        np.testing.assert_equal(
+            [o[out.domain["Group"]].value for o in out], ["G1", "G2", "G3", "G3"]
+        )
 
         # remove one element
         with hold_modifiers(self.widget, Qt.AltModifier):
@@ -428,8 +465,9 @@ class TestOWSpectra(WidgetTest):
         out = self.get_output(self.widget.Outputs.selected_data)
         np.testing.assert_equal(len(out), 3)
         np.testing.assert_equal([o for o in out], [data[i] for i in [2, 3, 4]])
-        np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
-                                ["G2", "G3", "G3"])
+        np.testing.assert_equal(
+            [o[out.domain["Group"]].value for o in out], ["G2", "G3", "G3"]
+        )
 
     def test_select_thick_lines(self):
         data = self.collagen[:100]
@@ -449,7 +487,9 @@ class TestOWSpectra(WidgetTest):
         threshold = MAX_THICK_SELECTED
         self.send_signal("Data", data)
         wait_for_graph(self.widget)
-        set_curve_pens = 'orangecontrib.spectroscopy.widgets.owspectra.CurvePlot.set_curve_pens'
+        set_curve_pens = (
+            'orangecontrib.spectroscopy.widgets.owspectra.CurvePlot.set_curve_pens'
+        )
         with patch(set_curve_pens, Mock()) as m:
 
             def clen():
@@ -542,8 +582,12 @@ class TestOWSpectra(WidgetTest):
         label_text2 = self.widget.curveplot.peak_labels[1].label.textItem.toPlainText()
         settings = self.widget.settingsHandler.pack_data(self.widget)
         self.widget = self.create_widget(OWSpectra, stored_settings=settings)
-        label_text_loaded = self.widget.curveplot.peak_labels[0].label.textItem.toPlainText()
-        label_text2_loaded = self.widget.curveplot.peak_labels[1].label.textItem.toPlainText()
+        label_text_loaded = self.widget.curveplot.peak_labels[
+            0
+        ].label.textItem.toPlainText()
+        label_text2_loaded = self.widget.curveplot.peak_labels[
+            1
+        ].label.textItem.toPlainText()
         self.assertEqual(label_text, label_text_loaded)
         self.assertEqual(label_text2, label_text2_loaded)
 
@@ -581,11 +625,15 @@ class TestOWSpectra(WidgetTest):
     def test_migrate_context_feature_color(self):
         # avoid class_vars in tests, because the setting does not allow them
         iris = self.iris.transform(
-            Domain(self.iris.domain.attributes, None, self.iris.domain.class_vars))
-        c = self.widget.settingsHandler.new_context(iris.domain, None, iris.domain.metas)
+            Domain(self.iris.domain.attributes, None, self.iris.domain.class_vars)
+        )
+        c = self.widget.settingsHandler.new_context(
+            iris.domain, None, iris.domain.metas
+        )
         c.values["curveplot"] = {"feature_color": ("iris", 1)}
-        self.widget = self.create_widget(OWSpectra,
-                                         stored_settings={"context_settings": [c]})
+        self.widget = self.create_widget(
+            OWSpectra, stored_settings={"context_settings": [c]}
+        )
         self.send_signal("Data", iris)
         self.assertIsInstance(self.widget.curveplot.feature_color, DiscreteVariable)
 
@@ -671,18 +719,18 @@ class TestOWSpectra(WidgetTest):
         self.assertEqual(axis.labelText, "Foo3")
 
         self.assertFalse(self.widget.Information.view_locked.is_shown())
-        key, value = ("View Range", "X", "xMin"), 1.
+        key, value = ("View Range", "X", "xMin"), 1.0
         self.widget.set_visual_settings(key, value)
-        key, value = ("View Range", "X", "xMax"), 3.
+        key, value = ("View Range", "X", "xMax"), 3.0
         self.widget.set_visual_settings(key, value)
         vr = graph.plot.vb.viewRect()
         self.assertEqual(vr.left(), 1)
         self.assertEqual(vr.right(), 3)
         self.assertTrue(self.widget.Information.view_locked.is_shown())
 
-        key, value = ("View Range", "Y", "yMin"), 2.
+        key, value = ("View Range", "Y", "yMin"), 2.0
         self.widget.set_visual_settings(key, value)
-        key, value = ("View Range", "Y", "yMax"), 42.
+        key, value = ("View Range", "Y", "yMax"), 42.0
         self.widget.set_visual_settings(key, value)
         vr = graph.plot.vb.viewRect()
         self.assertEqual(vr.top(), 2)
@@ -694,16 +742,22 @@ class TestOWSpectra(WidgetTest):
         self.assertEqual(font1.italic(), font2.italic())
 
     def test_migrate_visual_setttings(self):
-        settings = {"curveplot":
-                        {"label_title": "title",
-                         "label_xaxis": "x",
-                         "label_yaxis": "y"}
-                    }
+        settings = {
+            "curveplot": {
+                "label_title": "title",
+                "label_xaxis": "x",
+                "label_yaxis": "y",
+            }
+        }
         OWSpectra.migrate_settings(settings, 4)
-        self.assertEqual(settings["visual_settings"],
-                         {('Annotations', 'Title', 'Title'): 'title',
-                          ('Annotations', 'x-axis title', 'Title'): 'x',
-                          ('Annotations', 'y-axis title', 'Title'): 'y'})
+        self.assertEqual(
+            settings["visual_settings"],
+            {
+                ('Annotations', 'Title', 'Title'): 'title',
+                ('Annotations', 'x-axis title', 'Title'): 'x',
+                ('Annotations', 'y-axis title', 'Title'): 'y',
+            },
+        )
         settings = {}
         OWSpectra.migrate_settings(settings, 4)
         self.assertNotIn("visual_settings", settings)

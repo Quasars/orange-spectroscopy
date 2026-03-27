@@ -6,17 +6,23 @@ from Orange.data import Table
 
 from orangecontrib.spectroscopy.io.agilent import agilentMosaicIFGReader
 
-from orangecontrib.spectroscopy.irfft import (IRFFT, MultiIRFFT, PhaseCorrection,
-                                              PeakSearch, ApodFunc,
-                                              )
+from orangecontrib.spectroscopy.irfft import (
+    IRFFT,
+    MultiIRFFT,
+    PhaseCorrection,
+    PeakSearch,
+    ApodFunc,
+)
 from orangecontrib.spectroscopy.tests.test_readers import initialize_reader
 
-FILENAMES = ["agilent/4_noimage_agg256.seq",
-             "C:\\Users\\reads\\tmp\\aff-testdata\\2017-11-10 4X-25X\\2017-11-10 4X-25X.dmt",
-             "/data/staff/reads/aff-testdata/2017-11-10 4X-25X/2017-11-10 4x-25x.dmt",
-             "/data/staff/reads/USAF 25X Mosaic/usaf 25x mosaic.dmt"
-             ]
+FILENAMES = [
+    "agilent/4_noimage_agg256.seq",
+    "C:\\Users\\reads\\tmp\\aff-testdata\\2017-11-10 4X-25X\\2017-11-10 4X-25X.dmt",
+    "/data/staff/reads/aff-testdata/2017-11-10 4X-25X/2017-11-10 4x-25x.dmt",
+    "/data/staff/reads/USAF 25X Mosaic/usaf 25x mosaic.dmt",
+]
 FILENAMES_FAST = FILENAMES[0:1]
+
 
 def load_data(filename):
     if filename[-3:] == 'dmt':
@@ -34,19 +40,23 @@ def test_time_multi_fft(fn):
     except (IOError, OSError):
         print("Skipping, not present")
         return
-    dx_ag = (1 / 1.57980039e+04 / 2) * 4
-    fft = IRFFT(dx=dx_ag,
-                apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                zff=1,
-                phase_res=None,
-                phase_corr=PhaseCorrection.MERTZ,
-                peak_search=PeakSearch.MINIMUM)
-    mfft = MultiIRFFT(dx=dx_ag,
-                      apod_func=ApodFunc.BLACKMAN_HARRIS_4,
-                      zff=1,
-                      phase_res=None,
-                      phase_corr=PhaseCorrection.MERTZ,
-                      peak_search=PeakSearch.MINIMUM)
+    dx_ag = (1 / 1.57980039e04 / 2) * 4
+    fft = IRFFT(
+        dx=dx_ag,
+        apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+        zff=1,
+        phase_res=None,
+        phase_corr=PhaseCorrection.MERTZ,
+        peak_search=PeakSearch.MINIMUM,
+    )
+    mfft = MultiIRFFT(
+        dx=dx_ag,
+        apod_func=ApodFunc.BLACKMAN_HARRIS_4,
+        zff=1,
+        phase_res=None,
+        phase_corr=PhaseCorrection.MERTZ,
+        peak_search=PeakSearch.MINIMUM,
+    )
 
     print(data.X.shape)
 

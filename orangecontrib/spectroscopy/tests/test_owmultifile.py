@@ -18,8 +18,12 @@ from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.io import SPAReader
 from orangecontrib.spectroscopy.io.ascii import AsciiColReader
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat
-from orangecontrib.spectroscopy.widgets.owmultifile import OWMultifile, numpy_union_keep_order, \
-    wns_to_unique_str, decimals_neeeded_for_unique_str
+from orangecontrib.spectroscopy.widgets.owmultifile import (
+    OWMultifile,
+    numpy_union_keep_order,
+    wns_to_unique_str,
+    decimals_neeeded_for_unique_str,
+)
 
 
 class ReadImaginaryFile(SPAReader):
@@ -33,7 +37,6 @@ class ReadImaginaryFile(SPAReader):
 
 
 class TestOWFilesAuxiliary(unittest.TestCase):
-
     def test_numpy_union(self):
         A = np.array([2, 1, 3])
         B = np.array([1, 3])
@@ -62,17 +65,32 @@ class TestOWFilesAuxiliary(unittest.TestCase):
 
     def test_wns_to_unique_str(self):
         names = wns_to_unique_str([1, 2, 2 + 1e-10, 3])
-        self.assertEqual(names, ['1.000000', '2.000000000000', '2.000000000100', '3.000000'])
+        self.assertEqual(
+            names, ['1.000000', '2.000000000000', '2.000000000100', '3.000000']
+        )
         names = wns_to_unique_str([1, 2, 2 + 0.99e-10, 3])
-        self.assertEqual(names, ['1.000000', '2.000000000000', '2.000000000099', '3.000000'])
+        self.assertEqual(
+            names, ['1.000000', '2.000000000000', '2.000000000099', '3.000000']
+        )
         names = wns_to_unique_str([4, 1, 2, 2 + 0.99e-10, 3])
-        self.assertEqual(names, ['4.000000', '1.000000', '2.000000000000', '2.000000000099', '3.000000'])
-        names = wns_to_unique_str([2+2e-10, 1, 2, 2 + 1e-10, 3])
-        self.assertEqual(names, ['2.000000000200', '1.000000', '2.000000000000', '2.000000000100', '3.000000'])
+        self.assertEqual(
+            names,
+            ['4.000000', '1.000000', '2.000000000000', '2.000000000099', '3.000000'],
+        )
+        names = wns_to_unique_str([2 + 2e-10, 1, 2, 2 + 1e-10, 3])
+        self.assertEqual(
+            names,
+            [
+                '2.000000000200',
+                '1.000000',
+                '2.000000000000',
+                '2.000000000100',
+                '3.000000',
+            ],
+        )
 
 
 class TestOWMultifile(WidgetTest):
-
     def setUp(self):
         self.widget = self.create_widget(OWMultifile)  # type: OWMultifile
 
@@ -94,7 +112,11 @@ class TestOWMultifile(WidgetTest):
         def open_with_specific_format(a, b, c, filters, e):
             return files, format_filter(reader)
 
-        patchfn = open_with_no_specific_format if reader is None else open_with_specific_format
+        patchfn = (
+            open_with_no_specific_format
+            if reader is None
+            else open_with_specific_format
+        )
 
         # pretend that files were chosen in the open dialog
         with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileNames", patchfn):
@@ -107,24 +129,28 @@ class TestOWMultifile(WidgetTest):
         titanic = Table("titanic")
         for a in list(iris.domain.variables) + list(titanic.domain.variables):
             self.assertIn(a, out.domain)
-        self.assertEqual(set(out.domain.class_vars),
-                         set(iris.domain.class_vars) | set(titanic.domain.class_vars))
+        self.assertEqual(
+            set(out.domain.class_vars),
+            set(iris.domain.class_vars) | set(titanic.domain.class_vars),
+        )
         self.assertEqual(len(out), len(iris) + len(titanic))
 
     def test_load_files_reader(self):
         self.load_files("iris")
         self.assertIs(self.widget.recent_paths[0].file_format, None)
         self.load_files("iris", reader=TabReader)
-        self.assertEqual(self.widget.recent_paths[1].file_format, "Orange.data.io.TabReader")
+        self.assertEqual(
+            self.widget.recent_paths[1].file_format, "Orange.data.io.TabReader"
+        )
 
     def test_filename(self):
         self.load_files("iris", "titanic")
         out = self.get_output("Data")
-        iris = out[:len(Table("iris"))]
+        iris = out[: len(Table("iris"))]
         fns = set([e["Filename"].value for e in iris])
         self.assertTrue(len(fns), 1)
         self.assertIn("iris", fns.pop().lower())
-        titanic = out[len(Table("iris")):]
+        titanic = out[len(Table("iris")) :]
         fns = set([e["Filename"].value for e in titanic])
         self.assertTrue(len(fns), 1)
         self.assertIn("titanic", fns.pop().lower())
@@ -155,7 +181,9 @@ class TestOWMultifile(WidgetTest):
         self.assertEqual(self.widget.recent_paths[0].basename, "iris.tab")
         self.assertEqual(self.widget.recent_paths[0].file_format, None)
         self.assertEqual(self.widget.recent_paths[1].basename, "iris.tab")
-        self.assertEqual(self.widget.recent_paths[1].file_format, "Orange.data.io.TabReader")
+        self.assertEqual(
+            self.widget.recent_paths[1].file_format, "Orange.data.io.TabReader"
+        )
 
     def test_files_relocated_on_saved_workflow(self):
         tempdir = tempfile.mkdtemp()
@@ -163,8 +191,10 @@ class TestOWMultifile(WidgetTest):
             oiris = FileFormat.locate("iris.tab", dataset_dirs)
             ciris = os.path.join(tempdir, "iris.tab")
             shutil.copy(oiris, ciris)
-            with patch("Orange.widgets.widget.OWWidget.workflowEnv",
-                       Mock(return_value={"basedir": tempdir})):
+            with patch(
+                "Orange.widgets.widget.OWWidget.workflowEnv",
+                Mock(return_value={"basedir": tempdir}),
+            ):
                 self.load_files(ciris)
                 self.assertEqual(self.widget.recent_paths[0].relpath, "iris.tab")
         finally:
@@ -178,9 +208,13 @@ class TestOWMultifile(WidgetTest):
             shutil.copy(oiris, ciris)
             self.load_files(ciris)
             self.assertEqual(self.widget.recent_paths[0].relpath, None)
-            with patch("Orange.widgets.widget.OWWidget.workflowEnv",
-                       Mock(return_value={"basedir": tempdir})):
-                self.widget.workflowEnvChanged("basedir", tempdir, None)  # run to propagate changes
+            with patch(
+                "Orange.widgets.widget.OWWidget.workflowEnv",
+                Mock(return_value={"basedir": tempdir}),
+            ):
+                self.widget.workflowEnvChanged(
+                    "basedir", tempdir, None
+                )  # run to propagate changes
                 self.assertEqual(self.widget.recent_paths[0].relpath, "iris.tab")
         finally:
             shutil.rmtree(tempdir)
@@ -211,7 +245,6 @@ class TestOWMultifile(WidgetTest):
         self.assertEqual(4, len(data.domain.attributes))
 
     def test_special_spectral_reading(self):
-
         class CountTabReader(TabReader):
             read_count = 0
 
@@ -232,8 +265,11 @@ class TestOWMultifile(WidgetTest):
                 return super().read_spectra()
 
         # can not patch readers directly as they are already in registry
-        with patch.object(FileFormat, "registry", {"TabReader": CountTabReader,
-                                                   "SPAReader": CountSPAReader}):
+        with patch.object(
+            FileFormat,
+            "registry",
+            {"TabReader": CountTabReader, "SPAReader": CountSPAReader},
+        ):
             # clear LRU cache so that new classes get use
             FileFormat._ext_to_attr_if_attr2.cache_clear()
             self.load_files("titanic.tab", "sample1.spa")
@@ -242,16 +278,16 @@ class TestOWMultifile(WidgetTest):
             self.assertEqual(CountTabReader.read_count, 1)
 
     def test_spectra_almost_same_wavenumbers(self):
-
         with patch.object(FileFormat, "registry", {"SPAReader": ReadImaginaryFile}):
             # clear LRU cache so that new classes get use
             FileFormat._ext_to_attr_if_attr2.cache_clear()
             self.load_files("sample1.spa", "sample1.spa")
             out = self.get_output("Data")
-            np.testing.assert_equal(out.X, [[42, 41, np.nan],
-                                            [43, np.nan, 44]])
-            self.assertEqual([a.name for a in out.domain.attributes],
-                             ['1.000000', '2.000000000000', '2.000000000100'])
+            np.testing.assert_equal(out.X, [[42, 41, np.nan], [43, np.nan, 44]])
+            self.assertEqual(
+                [a.name for a in out.domain.attributes],
+                ['1.000000', '2.000000000000', '2.000000000100'],
+            )
 
     def test_report_on_empty(self):
         self.widget.send_report()
@@ -281,8 +317,10 @@ class TestOWMultifile(WidgetTest):
     def test_reader_not_found_error(self):
         self.load_files("iris")
         self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
-        with patch("orangecontrib.spectroscopy.widgets.owmultifile._get_reader",
-                   side_effect=Exception()):
+        with patch(
+            "orangecontrib.spectroscopy.widgets.owmultifile._get_reader",
+            side_effect=Exception(),
+        ):
             self.widget.load_data()
             self.assertTrue(self.widget.Error.missing_reader.is_shown())
             self.assertIsNone(self.get_output(self.widget.Outputs.data))
@@ -292,8 +330,7 @@ class TestOWMultifile(WidgetTest):
     def test_unknown_reader_error(self):
         self.load_files("iris")
         self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
-        with patch("Orange.data.io.TabReader.read",
-                   side_effect=Exception("test")):
+        with patch("Orange.data.io.TabReader.read", side_effect=Exception("test")):
             self.widget.load_data()
             self.assertTrue(self.widget.Error.read_error.is_shown())
             self.assertIsNone(self.get_output(self.widget.Outputs.data))
@@ -345,15 +382,19 @@ class TestOWMultifile(WidgetTest):
         101\t3.05
         104\t3.20
         """
-        n =  """\
+        n = """\
         100.000000\t200.000000\t300.000000\tclass
         4\t5\t6\td
         """
 
         nan = float("nan")
-        concat = np.array([[3., 3.1, 3.2, nan, nan, nan, nan],
-                          [3., nan, 3.2, 3.05, nan, nan, nan],
-                          [4., nan, nan, nan, 5., 6., 0.]])
+        concat = np.array(
+            [
+                [3.0, 3.1, 3.2, nan, nan, nan, nan],
+                [3.0, nan, 3.2, 3.05, nan, nan, nan],
+                [4.0, nan, nan, nan, 5.0, 6.0, 0.0],
+            ]
+        )
 
         self.assertTrue(issubclass(AsciiColReader, SpectralFileFormat))
         with named_file(s1, suffix=".xy") as fn1:
@@ -367,9 +408,18 @@ class TestOWMultifile(WidgetTest):
                     self.load_files(fn)
                     out = self.get_output(self.widget.Outputs.data)
                     atts = [a.name for a in out.domain.attributes]
-                    self.assertEqual(atts, ['100.000000', '102.000000', '104.000000',
-                                            '101.000000', '200.000000', '300.000000',
-                                            'class'])
+                    self.assertEqual(
+                        atts,
+                        [
+                            '100.000000',
+                            '102.000000',
+                            '104.000000',
+                            '101.000000',
+                            '200.000000',
+                            '300.000000',
+                            'class',
+                        ],
+                    )
                     out = self.get_output(self.widget.Outputs.data)
                     np.testing.assert_equal(out.X, concat)
 
@@ -382,7 +432,7 @@ class TestOWMultifile(WidgetTest):
                     np.testing.assert_equal(out.X, concat[[0, 2, 1]])
 
     def test_special_spectral_reader_metas(self):
-        n =  """\
+        n = """\
         100.000000\t200.000000\t300.000000\tmeta
         \t\t\tstring\n
         \t\t\tmeta\n
@@ -392,8 +442,9 @@ class TestOWMultifile(WidgetTest):
             self.load_files("small_diamond_nxs.nxs")  # special spectral rader
             self.load_files(fn)
             out = self.get_output(self.widget.Outputs.data)
-            self.assertEqual([a.name for a in out.domain.metas[:3]],
-                             ["map_x", "map_y", "meta"])
+            self.assertEqual(
+                [a.name for a in out.domain.metas[:3]], ["map_x", "map_y", "meta"]
+            )
             self.assertAlmostEqual(out[0]['map_x'], -1.77900021)
             self.assertAlmostEqual(out[0]['map_y'], -2.74319824)
             self.assertEqual(out[0]['meta'].value, "")

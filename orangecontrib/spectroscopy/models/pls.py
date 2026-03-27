@@ -1,8 +1,7 @@
 import numpy as np
 import sklearn.cross_decomposition as skl_pls
 
-from Orange.data import Table, Domain, Variable, \
-    ContinuousVariable, StringVariable
+from Orange.data import Table, Domain, Variable, ContinuousVariable, StringVariable
 from Orange.data.util import get_unique_names, SharedComputeValue
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import SklLearner, SklModel
@@ -18,7 +17,6 @@ class _FeatureScorerMixin(LearnerScorer):
 
 
 class _PLSCommonTransform:
-
     def __init__(self, pls_model):
         self.pls_model = pls_model
 
@@ -92,8 +90,8 @@ class PLSModel(SklModel):
         domain = Domain(
             [trvar(i, var_names_X[i]) for i in range(n_components)],
             data.domain.class_vars,
-            list(data.domain.metas) +
-            [trvar(n_components + i, var_names_Y[i]) for i in range(n_components)]
+            list(data.domain.metas)
+            + [trvar(n_components + i, var_names_Y[i]) for i in range(n_components)],
         )
 
         return data.transform(domain)
@@ -112,11 +110,14 @@ class PLSModel(SklModel):
         dom = Domain(
             [ContinuousVariable(a.name) for a in orig_domain.attributes],
             [ContinuousVariable(a.name) for a in orig_domain.class_vars],
-            metas=meta_vars)
-        components = Table(dom,
-                           self.skl_model.x_loadings_.T,
-                           Y=self.skl_model.y_loadings_.T,
-                           metas=metas)
+            metas=meta_vars,
+        )
+        components = Table(
+            dom,
+            self.skl_model.x_loadings_.T,
+            Y=self.skl_model.y_loadings_.T,
+            metas=metas,
+        )
         components.name = 'components'
         return components
 
@@ -124,7 +125,7 @@ class PLSModel(SklModel):
         coeffs = self.coefficients.T
         domain = Domain(
             [ContinuousVariable(f"coef {i}") for i in range(coeffs.shape[1])],
-            metas=[StringVariable("name")]
+            metas=[StringVariable("name")],
         )
         waves = [[attr.name] for attr in self.domain.attributes]
         coef_table = Table.from_numpy(domain, X=coeffs, metas=waves)
@@ -140,14 +141,13 @@ class PLSRegressionLearner(SklLearner, _FeatureScorerMixin):
 
     def fit(self, X, Y, W=None):
         params = self.params.copy()
-        params["n_components"] = min(X.shape[1] - 1,
-                                     X.shape[0] - 1,
-                                     params["n_components"])
+        params["n_components"] = min(
+            X.shape[1] - 1, X.shape[0] - 1, params["n_components"]
+        )
         clf = self.__wraps__(**params)
         return self.__returns__(clf.fit(X, Y))
 
-    def __init__(self, n_components=2, scale=True,
-                 max_iter=500, preprocessors=None):
+    def __init__(self, n_components=2, scale=True, max_iter=500, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -161,11 +161,12 @@ class PLSRegressionLearner(SklLearner, _FeatureScorerMixin):
                     reason = "Only numeric target variables expected."
         return reason
 
+
 if __name__ == '__main__':
     import Orange
 
     data = Orange.data.Table('housing')
     learners = [PLSRegressionLearner(n_components=2, max_iter=100)]
     res = Orange.evaluation.CrossValidation()(data, learners)
-    for l, ca in zip(learners, Orange.evaluation.RMSE(res)):
+    for l, ca in zip(learners, Orange.evaluation.RMSE(res), strict=True):
         print("learner: {}\nRMSE: {}\n".format(l, ca))
