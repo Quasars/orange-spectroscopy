@@ -211,6 +211,12 @@ class TestAsciiMapReader(unittest.TestCase):
 
 
 class TestRenishawReader(unittest.TestCase):
+    def test_unspecified_type(self):
+        d = Orange.data.Table("renishaw_test_files/single-spectrum_undefined-type.wdf")
+        self.assertEqual(d.X[0][4], -2.4491686820983887)
+        self.assertEqual(min(getx(d)), 78.728516)
+        self.assertEqual(max(getx(d)), 1338.296875)
+
     def test_single_sp_reader(self):
         d = Orange.data.Table("renishaw_test_files/sp.wdf")
         self.assertEqual(d.X[0][4], 52.4945182800293)

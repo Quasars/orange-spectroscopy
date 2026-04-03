@@ -18,6 +18,7 @@ class WiREReaders(FileFormat, SpectralFileFormat):
 
         wdf_file = WDFReader(self.filename)
 
+        errors = []
         try:
             if wdf_file.measurement_type == 1:  # single point spectra
                 table = self.single_reader(wdf_file)
@@ -25,6 +26,20 @@ class WiREReaders(FileFormat, SpectralFileFormat):
                 table = self.series_reader(wdf_file)
             elif wdf_file.measurement_type == 3:  # line scan
                 table = self.map_reader(wdf_file)
+            else:
+                # wdf_file.measurement_type is unknown/undefined
+                for reader in [self.single_reader, self.series_reader, self.map_reader]:
+                    try:
+                        table = reader(wdf_file)
+                        break
+                    except Exception as e:
+                        errors.append(f"{reader.__name__}: {e}")
+                        continue
+                else:
+                    raise IOError(
+                        "Can not parse this file with the renishawWiRE readers.\n"
+                        + "\n".join(errors)
+                    )
         finally:
             wdf_file.close()
 
@@ -33,6 +48,16 @@ class WiREReaders(FileFormat, SpectralFileFormat):
     def single_reader(self, wdf_file):
         domvals = wdf_file.xdata  # energies
         y_data = wdf_file.spectra  # spectra
+
+        if y_data.ndim != 1:
+            raise ValueError(
+                f"WiREReaders.single_reader expects 1D spectra, got shape {y_data.shape}"
+            )
+
+        if len(domvals) != len(y_data):
+            raise ValueError(
+                f"# of energy and # of intensity values don't match: {len(domvals)} vs {len(y_data)}"
+            )
 
         return domvals, y_data, None
 
