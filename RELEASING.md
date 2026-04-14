@@ -16,11 +16,11 @@ PREPARE RELEASE
 
 Prepare changelog:
 
-    git log 0.4.1..master --first-parent --format='%b' > changelog.txt
+    git log 0.9.1..master --first-parent --format='%b' > changelog.txt
 
 Review and edit the changelog.
 
-Bump version in setup.py
+Bump version in pyproject.toml
 
 Commit, start the commit message with "Release x.x.x", add the 
 changelog to the commit message.
