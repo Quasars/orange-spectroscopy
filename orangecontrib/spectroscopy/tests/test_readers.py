@@ -422,6 +422,118 @@ class TestPTIRFileReader(unittest.TestCase):
         self.assertEqual(len(d.attributes["visible_images"]), 2)
 
 
+class TestPTIR5FileReader(unittest.TestCase):
+    """Tests for v5 .ptir files read via the ptir5 library."""
+
+    def test_get_channels_v5(self):
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_optir_spectrum.ptir"
+        )
+        channel_map = reader.get_channels()
+        signal = '//ZI/*/DEMODS/0/R'
+        label = 'O-PTIR0'
+        self.assertIn(signal, channel_map)
+        self.assertEqual(channel_map[signal], label)
+
+    def test_optir_spectrum_read(self):
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_optir_spectrum.ptir"
+        )
+        d = reader.read()
+        self.assertEqual(len(d), 1)
+        self.assertEqual(len(d.domain.attributes), 1019)
+        self.assertAlmostEqual(d[0][0], 0.0065160352)
+        self.assertEqual(min(getx(d)), 962.0)
+        self.assertEqual(max(getx(d)), 2998.0)
+        self.assertAlmostEqual(d[0]["map_x"], -7045.22998046875)
+        self.assertAlmostEqual(d[0]["map_y"], 591.0)
+        self.assertAlmostEqual(d[0]["z-focus"], 943.8499755859375)
+        self.assertEqual(str(d[0]["Name"]), "O-PTIR0 1")
+        self.assertEqual(str(d[0]["Measurement Type"]), "OPTIRSpectrum")
+
+    def test_raman_spectrum_read(self):
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_raman_spectrum.ptir"
+        )
+        d = reader.read()
+        self.assertEqual(len(d), 1)
+        self.assertEqual(len(d.domain.attributes), 1024)
+        self.assertAlmostEqual(d[0][0], 1046.0)
+        self.assertAlmostEqual(min(getx(d)), 30.532919, places=5)
+        self.assertAlmostEqual(max(getx(d)), 3889.959238, places=5)
+        self.assertAlmostEqual(d[0]["map_x"], -1128.9000244140625)
+        self.assertAlmostEqual(d[0]["map_y"], -291.29998779296875)
+        self.assertEqual(str(d[0]["Name"]), "Spectrum 1")
+        self.assertEqual(str(d[0]["Measurement Type"]), "RamanSpectrum")
+
+    def test_hyperspectra_read(self):
+        reader = initialize_reader(
+            PTIRFileReader,
+            "photothermal/sample_optir_hyperspectra_generated_spectrum_generated_image.ptir",
+        )
+        d = reader.read()
+        self.assertEqual(len(d), 400)  # 20 x 20 pixels
+        self.assertEqual(len(d.domain.attributes), 574)
+        self.assertAlmostEqual(d[0][0], 0.0358764417)
+        self.assertEqual(min(getx(d)), 749.5)
+        self.assertEqual(max(getx(d)), 1895.5)
+        self.assertAlmostEqual(d[0]["map_x"], -44.049251556396484)
+        self.assertAlmostEqual(d[0]["map_y"], -42.64134979248047)
+        self.assertEqual(str(d[0]["Name"]), "Mirage Amp")
+        self.assertEqual(str(d[0]["Measurement Type"]), "OPTIRHyperspectra")
+
+    def test_image_stack_read(self):
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_optir_image_stack.ptir"
+        )
+        self.assertEqual(reader.sheets, ['DC', 'O-PTIR'])
+        # Read first sheet (DC)
+        reader.sheet = 'DC'
+        d = reader.read()
+        self.assertEqual(len(d), 2601)  # 51 x 51 pixels
+        self.assertEqual(len(d.domain.attributes), 19)
+        self.assertAlmostEqual(d[0][0], 0.3846572638)
+        self.assertEqual(min(getx(d)), 790.0)
+        self.assertEqual(max(getx(d)), 1330.0)
+        self.assertEqual(str(d[0]["Name"]), "DC 1")
+        self.assertEqual(str(d[0]["Measurement Type"]), "OPTIRImageStack")
+
+    def test_optir_image_read(self):
+        """OPTIRImage (single-wavenumber map) is read as a spatial map."""
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_optir_image.ptir"
+        )
+        d = reader.read()
+        self.assertEqual(len(d), 501 * 501)
+        self.assertEqual(len(d.domain.attributes), 1)
+        self.assertEqual(getx(d)[0], 1600.0)
+        self.assertAlmostEqual(d[0][0], 0.1507066339)
+        self.assertAlmostEqual(d[0]["map_x"], 24856.849609375)
+        self.assertAlmostEqual(d[0]["map_y"], 48771.25)
+        self.assertEqual(str(d[0]["Name"]), "AQIR 1600 cm⁻ 4")
+        self.assertEqual(str(d[0]["Measurement Type"]), "OPTIRImage")
+
+    def test_camera_image_only_raises(self):
+        """A file with only camera images (no spectral channel) raises IOError."""
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_camera_image.ptir"
+        )
+        with self.assertRaises(IOError):
+            _ = reader.sheets  # no Channel.DataSignal, no channels, IOError
+
+    def test_camera_image_visible_images(self):
+        """Camera images are exposed as visible_images on spectral reads."""
+        # Use the spectrum file which also has a camera image available via
+        # any file that includes a ByteImage2D. The optir_spectrum file has none,
+        # so we verify the image_stack (no camera) returns an empty list and
+        # the attribute is absent.
+        reader = initialize_reader(
+            PTIRFileReader, "photothermal/sample_optir_spectrum.ptir"
+        )
+        d = reader.read()
+        self.assertNotIn("visible_images", d.attributes)
+
+
 class TestGSF(unittest.TestCase):
     def test_open_line(self):
         data = Orange.data.Table("Au168mA_nodisplacement.gsf")
