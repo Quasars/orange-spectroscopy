@@ -49,6 +49,6 @@ If you would like to install from cloned git repository, run
 To register this add-on with Orange, but keep the code in the development
 directory (do not copy it to Python's site-packages directory), run
 
-    pip install -e .
+    pip install -e .[dev,test]
 
 Further details can be found in [CONTRIBUTING.md](CONTRIBUTING.md)
