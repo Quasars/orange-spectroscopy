@@ -32,11 +32,15 @@ Run "Anaconda Prompt" or similar and:
 
 Navigate to your orange-spectroscopy src directory, then install in development mode:
 
-    pip install -e .
+    pip install -e .[dev,test]
+
+It is highly recommended to set up `pre-commit` hooks to automatically check your code quality before each commit:
+
+    pre-commit install
 
 If all went well, you should be able to run the tests:
 
-    python setup.py test  
+    python -m unittest orangecontrib.spectroscopy.tests
 
 And run Orange (with spectroscopy widgets present):
 
@@ -63,13 +67,12 @@ For large projects in particular, consider working in a public Pull Request mark
     my-contribution master`. Please avoid working directly on the
     `master` branch.
 * Make commits of logical and atomic units.
-* Check for unnecessary whitespace with `git diff --check` before committing.
 * Make sure your commit messages are clear and reference the code/module you are changing.
 * **Make sure you have added the necessary tests for your changes.**
 * Run _all_ the tests to assure nothing else was accidentally broken.
-  * `python setup.py test`
-* Check your code quality with pylint (Does not work on Windows at the moment, see [#188](https://github.com/Quasars/orange-spectroscopy/issues/188)):
-  * `python setup.py lint`
+  * `python -m unittest orangecontrib.spectroscopy.tests`
+* Check your code quality with ruff:
+  * `ruff check .`
 * Please add appropriate **documentation** for your new or changed feature.
 
 ## Submitting Changes
