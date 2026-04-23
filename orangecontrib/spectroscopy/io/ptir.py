@@ -1,7 +1,7 @@
 import Orange
 import numpy as np
 import io
-from Orange.data import FileFormat, ContinuousVariable, StringVariable, Domain
+from Orange.data import FileFormat, ContinuousVariable, Domain
 from PIL import Image
 import h5py
 
@@ -68,16 +68,24 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
 
     def _get_channels_v5(self):
         import ptir5 as ptir5lib
+        from ptir5.enums import DataShape
 
         channel_map = {}
         with ptir5lib.open(self.filename) as f:
-            for m in f.measurements:
-                signal = m.metadata.get('Channel.DataSignal')
-                label = m.metadata.get('Channel.Label')
-                if signal and label and signal not in channel_map:
-                    channel_map[signal] = label
+            for m_type in ptir5lib.enums.MeasurementType:
+                shape = ptir5lib.enums.TYPE_TO_SHAPE.get(m_type)
+                if not shape:
+                    continue
+                if f.measurements_by_type(m_type):
+                    if shape == DataShape.FLOAT_SPECTRUM_1D:
+                        channel_map['Spectra'] = 'Spectra'
+                    elif shape == DataShape.FLOAT_IMAGE_2D:
+                        channel_map['Images'] = 'Images'
+                    elif shape == DataShape.FLOAT_HYPERCUBE_3D:
+                        channel_map['Hyperspectra'] = 'Hyperspectra'
+
         if not channel_map:
-            raise IOError("Error reading channels from " + self.filename)
+            raise IOError(f"Error reading channels from {self.filename}")
         return channel_map
 
     @property
@@ -318,212 +326,188 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
 
         channels = self._get_channels_v5()
 
-        # Resolve selected channel signal
-        for signal, label in channels.items():
-            if label == self.sheet:
-                self.data_signal = signal
-                break
-        else:
-            self.data_signal = next(iter(channels))
+        target_sheet = (
+            self.sheet
+            if self.sheet in channels.values()
+            else next(iter(channels.values()))
+        )
+        load_as_maps = target_sheet == "Images"
+        self.data_signal = target_sheet  # V5 no longer uses signal labels for filtering
 
-        # Collect spectra as (x_values, data) pairs to handle inhomogeneous ranges
-        spectra_list = []  # list of (x_values, spectrum_data)
-        float_images = []  # FloatImage2D measurements for the selected channel
-        x_locs = []
-        y_locs = []
-        z_locs = []
-        labels = []
-        m_types = []
+        spectra_blocks = []
+        float_images = []
+        x_locs, y_locs, z_locs, labels, m_types = [], [], [], [], []
         visible_images = []
-        hyperspectra = False
-        intensities = []
-        wavenumbers = np.array([])
 
         with ptir5lib.open(self.filename) as f:
-            for m in f.measurements:
-                # Camera / byte images always become visible images
-                if m.data_shape == DataShape.BYTE_IMAGE_2D:
-                    vimage = self._camera_image_to_visible_v5(m)
-                    if vimage is not None:
-                        visible_images.append(vimage)
+            for m_type in ptir5lib.enums.MeasurementType:
+                shape = ptir5lib.enums.TYPE_TO_SHAPE.get(m_type)
+                if not shape:
                     continue
 
-                signal = m.metadata.get('Channel.DataSignal')
-                if signal != self.data_signal:
-                    continue
+                for m in f.measurements_by_type(m_type):
+                    if shape == DataShape.BYTE_IMAGE_2D:
+                        vimage = self._camera_image_to_visible_v5(m)
+                        if vimage is not None:
+                            visible_images.append(vimage)
+                        continue
 
-                if m.data_shape == DataShape.FLOAT_SPECTRUM_1D:
-                    # Point spectrum — defer assembly to after collecting all
-                    spectra_list.append((m.x_values, m.data))
-                    x_locs.append(float(m.metadata.get('PositionX', 0.0)))
-                    y_locs.append(float(m.metadata.get('PositionY', 0.0)))
-                    z_locs.append(float(m.metadata.get('TopFocus', 0.0)))
-                    labels.append(m.label)
-                    m_types.append(
-                        m.measurement_type.name
-                        if hasattr(m.measurement_type, 'name')
-                        else str(m.measurement_type)
-                    )
+                    if (
+                        shape == DataShape.FLOAT_SPECTRUM_1D
+                        and target_sheet == "Spectra"
+                    ):
+                        spectra_blocks.append((m.x_values, np.atleast_2d(m.data)))
+                        x_locs.append(float(m.metadata.get('PositionX', 0.0)))
+                        y_locs.append(float(m.metadata.get('PositionY', 0.0)))
+                        z_locs.append(float(m.metadata.get('TopFocus', 0.0)))
+                        labels.append(m.label)
+                        m_types.append(
+                            getattr(m.measurement_type, 'name', str(m.measurement_type))
+                        )
 
-                elif m.data_shape == DataShape.FLOAT_HYPERCUBE_3D:
-                    # Hyperspectra: data shape is (num_points, height, width)
-                    hyperspectra = True
-                    wavenumbers = m.x_values
-                    raw = m.data  # (num_points, height, width)
-                    # Rearrange to (height, width, num_points) for _spectra_from_image
-                    intensities = np.transpose(raw, (1, 2, 0))
+                    elif (
+                        shape == DataShape.FLOAT_HYPERCUBE_3D
+                        and target_sheet == "Hyperspectra"
+                    ):
+                        # data is (num_points, height, width) -> (height, width, num_points)
+                        intensities = np.transpose(m.data, (1, 2, 0))
+                        h, w, n_pts = intensities.shape
+                        flat_intensities = intensities.reshape(-1, n_pts)
+                        spectra_blocks.append((m.x_values, flat_intensities))
 
-                    img_w = float(m.metadata.get('ImageWidth', 0.0))
-                    img_h = float(m.metadata.get('ImageHeight', 0.0))
-                    pos_x = float(m.metadata.get('PositionX', 0.0))
-                    pos_y = float(m.metadata.get('PositionY', 0.0))
+                        img_w, img_h = (
+                            float(m.metadata.get('ImageWidth', 0.0)),
+                            float(m.metadata.get('ImageHeight', 0.0)),
+                        )
+                        pos_x, pos_y = (
+                            float(m.metadata.get('PositionX', 0.0)),
+                            float(m.metadata.get('PositionY', 0.0)),
+                        )
+                        xs = np.linspace(
+                            pos_x - img_w / 2, pos_x + img_w / 2, m.pixel_width
+                        )
+                        ys = np.linspace(
+                            pos_y - img_h / 2, pos_y + img_h / 2, m.pixel_height
+                        )
+                        xg, yg = np.meshgrid(xs, ys)
 
-                    x_locs = np.linspace(
-                        pos_x - img_w / 2, pos_x + img_w / 2, m.pixel_width
-                    )
-                    y_locs = np.linspace(
-                        pos_y - img_h / 2, pos_y + img_h / 2, m.pixel_height
-                    )
-                    # z_locs is broadcast per-row to all pixels after _spectra_from_image
-                    z_locs = np.full(
-                        m.pixel_height, float(m.metadata.get('TopFocus', 0.0))
-                    )
-                    labels.append(m.label)
-                    m_types.append(
-                        m.measurement_type.name
-                        if hasattr(m.measurement_type, 'name')
-                        else str(m.measurement_type)
-                    )
+                        n_pixels = h * w
+                        x_locs.extend(xg.flatten())
+                        y_locs.extend(yg.flatten())
+                        z_locs.extend(
+                            [float(m.metadata.get('TopFocus', 0.0))] * n_pixels
+                        )
 
-                elif m.data_shape == DataShape.FLOAT_IMAGE_2D:
-                    # Single-wavenumber spatial map — store data eagerly for later use
-                    float_images.append(
-                        {
-                            'wn': float(m.metadata.get('Wavenumber', 0.0)),
-                            'data': m.data,
-                            'img_w': float(m.metadata.get('ImageWidth', 0.0)),
-                            'img_h': float(m.metadata.get('ImageHeight', 0.0)),
-                            'pos_x': float(m.metadata.get('PositionX', 0.0)),
-                            'pos_y': float(m.metadata.get('PositionY', 0.0)),
-                            'top_focus': float(m.metadata.get('TopFocus', 0.0)),
-                            'label': m.label,
-                            'm_type': m.measurement_type.name
-                            if hasattr(m.measurement_type, 'name')
-                            else str(m.measurement_type),
-                        }
-                    )
+                        labels.extend([m.label] * n_pixels)
+                        m_types.extend(
+                            [
+                                getattr(
+                                    m.measurement_type, 'name', str(m.measurement_type)
+                                )
+                            ]
+                            * n_pixels
+                        )
 
-        # If no point spectra or hyperspectra were found, use FloatImage2D as spectral maps.
-        # Otherwise, add FloatImage2D measurements as visible images.
-        if not spectra_list and not hyperspectra and float_images:
+                    elif shape == DataShape.FLOAT_IMAGE_2D:
+                        float_images.append(
+                            {
+                                'wn': float(m.metadata.get('Wavenumber', 0.0)),
+                                'data': m.data,
+                                'img_w': float(m.metadata.get('ImageWidth', 0.0)),
+                                'img_h': float(m.metadata.get('ImageHeight', 0.0)),
+                                'pos_x': float(m.metadata.get('PositionX', 0.0)),
+                                'pos_y': float(m.metadata.get('PositionY', 0.0)),
+                                'top_focus': float(m.metadata.get('TopFocus', 0.0)),
+                                'label': m.label,
+                                'm_type': getattr(
+                                    m.measurement_type, 'name', str(m.measurement_type)
+                                ),
+                            }
+                        )
+
+        if load_as_maps and float_images:
             for fi in float_images:
                 img_w, img_h = fi['img_w'], fi['img_h']
                 pos_x, pos_y = fi['pos_x'], fi['pos_y']
                 h, w = fi['data'].shape
-                xs = np.linspace(pos_x - img_w / 2, pos_x + img_w / 2, w)
-                ys = np.linspace(pos_y - img_h / 2, pos_y + img_h / 2, h)
-                xg, yg = np.meshgrid(xs, ys)
+                xg, yg = np.meshgrid(
+                    np.linspace(pos_x - img_w / 2, pos_x + img_w / 2, w),
+                    np.linspace(pos_y - img_h / 2, pos_y + img_h / 2, h),
+                )
                 wn_arr = np.array([fi['wn']])
-                for pix_val, px, py in zip(
-                    fi['data'].flatten(), xg.flatten(), yg.flatten(), strict=True
-                ):
-                    spectra_list.append((wn_arr, np.array([pix_val])))
-                    x_locs.append(float(px))
-                    y_locs.append(float(py))
-                    z_locs.append(fi['top_focus'])
-                    labels.append(fi['label'])
-                    m_types.append(fi['m_type'])
+
+                flat_data = fi['data'].flatten().reshape(-1, 1)
+                spectra_blocks.append((wn_arr, flat_data))
+
+                n_pixels = len(flat_data)
+                x_locs.extend(xg.flatten())
+                y_locs.extend(yg.flatten())
+                z_locs.extend([fi['top_focus']] * n_pixels)
+                labels.extend([fi['label']] * n_pixels)
+                m_types.extend([fi['m_type']] * n_pixels)
         else:
-            for fi in float_images:
-                vimage = self._float_image_dict_to_visible_v5(fi)
-                if vimage is not None:
-                    visible_images.append(vimage)
-
-        # Assemble point spectra using the union (sparse) wavenumber range
-        if spectra_list and not hyperspectra:
-            # Find global x range: lowest start, highest end, shared increment
-            x_min_all = min(xv[0] for xv, _ in spectra_list)
-            x_max_all = max(xv[-1] for xv, _ in spectra_list)
-            x_inc = (
-                spectra_list[0][0][1] - spectra_list[0][0][0]
-                if len(spectra_list[0][0]) > 1
-                else 1.0
-            )
-            wavenumbers = np.arange(x_min_all, x_max_all + x_inc * 0.5, x_inc)
-            intensities_padded = []
-            for xv, sp in spectra_list:
-                # Find indices in wavenumbers that correspond to xv
-                i_start = int(round((xv[0] - x_min_all) / x_inc))
-                i_end = i_start + len(sp)
-
-                row = np.full(len(wavenumbers), np.nan)
-                row[i_start:i_end] = sp
-                intensities_padded.append(row)
-            intensities = intensities_padded
-
-        features = np.array(wavenumbers)
-        spectra = np.array(intensities)
-        x_locs = np.array(x_locs).flatten()
-        y_locs = np.array(y_locs).flatten()
-        z_locs = np.array(z_locs).flatten()
-
-        if hyperspectra:
-            features, spectra, additional_table = _spectra_from_image(
-                spectra, features, x_locs, y_locs
+            visible_images.extend(
+                v
+                for fi in float_images
+                if (v := self._float_image_dict_to_visible_v5(fi)) is not None
             )
 
-            new_attributes = [ContinuousVariable.make('z-focus')]
-            new_metas = [
-                StringVariable.make("Name"),
-                StringVariable.make("Measurement Type"),
-            ]
-            domain = Domain(
-                additional_table.domain.attributes,
-                additional_table.domain.class_vars,
-                additional_table.domain.metas
-                + tuple(new_attributes)
-                + tuple(new_metas),
-            )
-            data = additional_table.transform(domain)
-            # z_locs has one value per y-row; tile across x-columns to match all pixels
-            n_pixels = len(additional_table)
-            n_rows = len(z_locs)
-            n_cols = n_pixels // n_rows if n_rows > 0 else n_pixels
-            z_tiled = (
-                np.repeat(z_locs, n_cols)
-                if n_rows > 1
-                else np.full(n_pixels, float(z_locs[0]) if len(z_locs) else 0.0)
-            )
-            with data.unlocked():
-                data[:, new_attributes] = z_tiled.reshape(-1, 1)
-                data[:, new_metas[0]] = np.full(
-                    n_pixels, labels[0] if labels else "", dtype=object
-                ).reshape(-1, 1)
-                data[:, new_metas[1]] = np.full(
-                    n_pixels, m_types[0] if m_types else "", dtype=object
-                ).reshape(-1, 1)
-        else:
-            if len(spectra) == 0:
-                raise IOError("No spectral data found in " + self.filename)
-            metas_float = np.vstack((x_locs, y_locs, z_locs)).T
-            metas_str = np.vstack((labels, m_types)).T
-            all_metas = np.hstack((metas_float, metas_str))
-            domain = Orange.data.Domain(
-                [],
-                None,
-                metas=[
-                    Orange.data.ContinuousVariable.make(MAP_X_VAR),
-                    Orange.data.ContinuousVariable.make(MAP_Y_VAR),
-                    Orange.data.ContinuousVariable.make("z-focus"),
-                    Orange.data.StringVariable.make("Name"),
-                    Orange.data.StringVariable.make("Measurement Type"),
-                ],
-            )
-            data = Orange.data.Table.from_numpy(
-                domain,
-                X=np.zeros((len(spectra), 0)),
-                metas=np.asarray(all_metas, dtype=object),
-            )
+        if not spectra_blocks:
+            raise IOError(f"No spectral data found in {self.filename}")
+
+        # Estimate increment from the first block with >1 points
+        x_inc = 1.0
+        for xv, _ in spectra_blocks:
+            if len(xv) > 1:
+                x_inc = abs(xv[1] - xv[0])
+                break
+
+        # Assemble the master array with NaN padding
+        # Since x_values is computed linearly as x_start + i * x_increment,
+        # we only need to check the exact endpoints.
+        x_min_all = min(min(xv[0], xv[-1]) for xv, _ in spectra_blocks)
+        x_max_all = max(max(xv[0], xv[-1]) for xv, _ in spectra_blocks)
+
+        wavenumbers = np.arange(x_min_all, x_max_all + x_inc * 0.5, x_inc)
+
+        total_pixels = sum(sp.shape[0] for _, sp in spectra_blocks)
+        intensities = np.full((total_pixels, len(wavenumbers)), np.nan)
+
+        current_row = 0
+        for xv, sp in spectra_blocks:
+            n_rows = sp.shape[0]
+
+            if len(xv) > 1 and xv[1] < xv[0]:
+                xv = xv[::-1]
+                sp = sp[:, ::-1]
+
+            i_start = int(round((xv[0] - x_min_all) / x_inc))
+            i_end = i_start + len(xv)
+            intensities[current_row : current_row + n_rows, i_start:i_end] = sp
+            current_row += n_rows
+
+        features, spectra = wavenumbers, intensities
+
+        domain = Orange.data.Domain(
+            [],
+            None,
+            metas=[
+                Orange.data.ContinuousVariable.make(MAP_X_VAR),
+                Orange.data.ContinuousVariable.make(MAP_Y_VAR),
+                Orange.data.ContinuousVariable.make("z-focus"),
+                Orange.data.StringVariable.make("Name"),
+                Orange.data.StringVariable.make("Measurement Type"),
+            ],
+        )
+
+        all_metas = np.hstack(
+            (np.vstack((x_locs, y_locs, z_locs)).T, np.vstack((labels, m_types)).T)
+        )
+        data = Orange.data.Table.from_numpy(
+            domain,
+            X=np.zeros((len(spectra), 0)),
+            metas=np.asarray(all_metas, dtype=object),
+        )
 
         if visible_images:
             data.attributes['visible_images'] = visible_images
@@ -581,34 +565,6 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 pos_y=fi['pos_y'] - fi['img_h'] / 2,
                 size_x=fi['img_w'],
                 size_y=fi['img_h'],
-                image_bytes=img_bytes,
-            )
-        except Exception:  # noqa: BLE001
-            return None
-
-    @staticmethod
-    def _float_image_to_visible_v5(m):
-        """Convert a v5 FloatImage2D (e.g. OPTIRImage) to a ConstantBytesVisibleImage."""
-        try:
-            img_data = m.data.astype(np.float32)
-            min_val, max_val = img_data.min(), img_data.max()
-            rng = max_val - min_val
-            if rng == 0:
-                rng = 1.0
-            img_norm = ((img_data - min_val) / rng * 255).astype(np.uint8)
-            im = Image.fromarray(img_norm, 'L')
-            img_bytes = io.BytesIO()
-            im.save(img_bytes, format='PNG')
-            img_w = float(m.metadata.get('ImageWidth', 0.0))
-            img_h = float(m.metadata.get('ImageHeight', 0.0))
-            pos_x = float(m.metadata.get('PositionX', 0.0))
-            pos_y = float(m.metadata.get('PositionY', 0.0))
-            return ConstantBytesVisibleImage(
-                name=m.label,
-                pos_x=pos_x - img_w / 2,
-                pos_y=pos_y - img_h / 2,
-                size_x=img_w,
-                size_y=img_h,
                 image_bytes=img_bytes,
             )
         except Exception:  # noqa: BLE001

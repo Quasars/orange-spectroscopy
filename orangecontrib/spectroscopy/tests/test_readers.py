@@ -430,10 +430,8 @@ class TestPTIR5FileReader(unittest.TestCase):
             PTIRFileReader, "photothermal/sample_optir_spectrum.ptir"
         )
         channel_map = reader.get_channels()
-        signal = '//ZI/*/DEMODS/0/R'
-        label = 'O-PTIR0'
-        self.assertIn(signal, channel_map)
-        self.assertEqual(channel_map[signal], label)
+        self.assertIn('Spectra', channel_map)
+        self.assertEqual(channel_map['Spectra'], 'Spectra')
 
     def test_optir_spectrum_read(self):
         reader = initialize_reader(
@@ -486,11 +484,11 @@ class TestPTIR5FileReader(unittest.TestCase):
         reader = initialize_reader(
             PTIRFileReader, "photothermal/sample_optir_image_stack.ptir"
         )
-        self.assertEqual(reader.sheets, ['DC', 'O-PTIR'])
-        # Read first sheet (DC)
-        reader.sheet = 'DC'
+        self.assertEqual(reader.sheets, ['Hyperspectra'])
+        # Read first sheet
+        reader.sheet = 'Hyperspectra'
         d = reader.read()
-        self.assertEqual(len(d), 2601)  # 51 x 51 pixels
+        self.assertEqual(len(d), 5202)  # Two layers of 51 x 51 pixels
         self.assertEqual(len(d.domain.attributes), 19)
         self.assertAlmostEqual(d[0][0], 0.3846572638)
         self.assertEqual(min(getx(d)), 790.0)
@@ -510,7 +508,7 @@ class TestPTIR5FileReader(unittest.TestCase):
         self.assertAlmostEqual(d[0][0], 0.1507066339)
         self.assertAlmostEqual(d[0]["map_x"], 24856.849609375)
         self.assertAlmostEqual(d[0]["map_y"], 48771.25)
-        self.assertEqual(str(d[0]["Name"]), "AQIR 1600 cm⁻ 4")
+        self.assertEqual(str(d[0]["Name"]), "AQIR 1600 cm⁻¹ 4")
         self.assertEqual(str(d[0]["Measurement Type"]), "OPTIRImage")
 
     def test_camera_image_only_raises(self):
