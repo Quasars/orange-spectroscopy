@@ -42,6 +42,7 @@ dependencies = [
     'pebble',
     'agilent-format>=0.4.5',
     'pySNOM>=0.2.0',
+    'ptir5',
 ]
 
 [project.optional-dependencies]
