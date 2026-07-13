@@ -101,7 +101,7 @@ class OWGate(OWWidget):
         
         try:
             return objects_equal(table_0, table_1)
-        except:
+        except AssertionError:
             return False
 
 
