@@ -26,7 +26,6 @@ class TestOWGate(WidgetTest):
         self.widget.controls.autocommit.setChecked(True)
 
 
-
     def test_autocommit_changes(self):
         from orangecontrib.spectroscopy.tests.util import checkbox_linked_test
 
@@ -163,14 +162,13 @@ class TestOWGate(WidgetTest):
             "not_connected should be raised"
         )
 
-        # TODO why is this not working at the moment?
         # Revert back to previous dataset
-        # self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
 
-        # self.assertFalse(
-        #     self._get_not_connected(),
-        #     "not_connected shouldn't be raised"
-        # )
+        self.assertFalse(
+            self._get_not_connected(),
+            "not_connected shouldn't be raised"
+        )
 
         # Change data again
         self.send_signal(self.widget.Inputs.data, self.zoo)
