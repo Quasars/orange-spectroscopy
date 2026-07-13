@@ -1,10 +1,35 @@
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 
-from orangecontrib.flow.utils import objects_equal
+def objects_equal(object_a, object_b):
+    if not isinstance(object_a, type(object_b)):
+        return False
+    
+    ## Special Cases:
 
+    if isinstance(object_a, np.ndarray):
+        return np.array_equal(object_a, object_b)
 
+    ##
+    
+    if not hasattr(object_a, "__dict__"):
+        return object_a == object_b
 
+    d = object_b.__dict__
+
+    ignore = [
+        ("Table", "ids"),
+        ("Domain", "_indices"),
+    ]
+
+    for key, val in object_a.__dict__.items():
+        if (type(object_a).__name__, key) in ignore:
+            continue
+
+        if key not in d or not objects_equal(val, d[key]):
+            return False
+
+    return True
 
 class OWGate(OWWidget):
     name = "Gate"
@@ -23,12 +48,10 @@ class OWGate(OWWidget):
     class Warning(OWWidget.Warning):
         not_connected = Msg("New data pending.")
 
-
     resizing_enabled = False
     want_main_area = False
 
     autocommit = settings.Setting(False)
-
 
     def __init__(self):
         super().__init__()
@@ -79,8 +102,6 @@ class OWGate(OWWidget):
             return objects_equal(table_0, table_1)
         except:
             return False
-
-
 
 
 if __name__ == "__main__":  # pragma: no cover
