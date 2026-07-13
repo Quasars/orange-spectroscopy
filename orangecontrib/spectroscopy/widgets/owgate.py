@@ -1,5 +1,6 @@
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
+import numpy as np
 
 def objects_equal(object_a, object_b):
     if not isinstance(object_a, type(object_b)):
@@ -35,7 +36,7 @@ class OWGate(OWWidget):
     name = "Gate"
     description = "A gate to control the flow of data."
     icon = "icons/gate.svg"
-    id = "orangecontrib.flow.widgets.owgate"
+    id = "orangecontrib.spectroscopy.widgets.owgate"
     priority = 10
 
 
