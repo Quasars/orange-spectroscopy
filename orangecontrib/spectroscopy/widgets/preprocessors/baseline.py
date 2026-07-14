@@ -29,7 +29,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         super().__init__(parent, **kwargs)
         self.controlArea.setLayout(QVBoxLayout())
 
-        form = QFormLayout()
+        self.form = QFormLayout()
 
         self.baseline_type = 0
         self.peak_dir = 0
@@ -41,7 +41,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
             self,
             "baseline_type",
             items=["Linear", "Rubber band", "Concave Rubberband"],
-            callback=self.edited.emit,
+            callback=self._on_baseline_type_changed,
         )
         self.peakcb = gui.comboBox(
             None,
@@ -58,9 +58,9 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
             callback=self.edited.emit,
         )
 
-        form.addRow("Baseline Type", self.baselinecb)
-        form.addRow("Peak Direction", self.peakcb)
-        form.addRow("Background Action", self.subcb)
+        self.form.addRow("Baseline Type", self.baselinecb)
+        self.form.addRow("Peak Direction", self.peakcb)
+        self.form.addRow("Background Action", self.subcb)
 
         self.iterspin = gui.spin(
             None,
@@ -71,9 +71,9 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
             label="Iterations:",
             callback=self.edited.emit,
         )
-        form.addRow("Iterations:", self.iterspin)
+        self.form.addRow("Iterations:", self.iterspin)
 
-        self.controlArea.layout().addLayout(form)
+        self.controlArea.layout().addLayout(self.form)
 
         self.ranges_box = gui.vBox(self.controlArea)  # container for ranges
 
@@ -175,11 +175,22 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.n_iter = params.get("n_iter", 10)
         self._adapt_ui()
 
+    def _on_baseline_type_changed(self):
+        self._adapt_ui()
+        self.edited.emit()
+
+    def _set_row_visible(self, widget, visible):
+        row, _ = self.form.getWidgetPosition(widget)
+        label_item = self.form.itemAt(row, QFormLayout.LabelRole)
+        if label_item is not None:
+            label_item.widget().setVisible(visible)
+        widget.setVisible(visible)
+
     def _adapt_ui(self):
-        # peak direction is only relevant for rubberband
-        self.peakcb.setEnabled(self.baseline_type == 1)
+        # peak direction is only relevant for rubber band
+        self._set_row_visible(self.peakcb, self.baseline_type == 1)
         # iterations only relevant for concave rubberband
-        self.iterspin.setEnabled(self.baseline_type == 2)
+        self._set_row_visible(self.iterspin, self.baseline_type == 2)
         self._set_button_text()
 
     def parameters(self):
