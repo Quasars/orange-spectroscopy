@@ -97,7 +97,6 @@ def get_targets(p_data, s_data):
     
     return None
 
-    # id = "orangecontrib.spectroscopy.widgets.owoperations"
 
 OPERATIONS = [
     Operation("Addition", lambda p_data, s_data, factor: p_data + s_data),
@@ -110,6 +109,7 @@ OPERATIONS = [
 class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
     name = "Elementwise Operations"
     description = "Perform elementwise operations on two tables."
+    id = "orangecontrib.spectroscopy.widgets.owoperations"
     icon = "icons/operations.svg"
     priority = 10
 
