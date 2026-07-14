@@ -4,7 +4,7 @@ from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QVBoxLayout, QFormLayout, QPushButton, QApplication, QStyle
 
 from Orange.widgets import gui
-from orangecontrib.spectroscopy.preprocess import LinearBaseline, RubberbandBaseline
+from orangecontrib.spectroscopy.preprocess import LinearBaseline, RubberbandBaseline, ConcaveRubberbandBaseline
 from orangecontrib.spectroscopy.widgets.gui import XPosLineEdit
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
@@ -31,12 +31,13 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.baseline_type = 0
         self.peak_dir = 0
         self.sub = 0
+        self.n_iter = 10
 
         self.baselinecb = gui.comboBox(
             None,
             self,
             "baseline_type",
-            items=["Linear", "Rubber band"],
+            items=["Linear", "Rubber band", "Concave Rubberband"],
             callback=self.edited.emit,
         )
         self.peakcb = gui.comboBox(
@@ -57,6 +58,17 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         form.addRow("Baseline Type", self.baselinecb)
         form.addRow("Peak Direction", self.peakcb)
         form.addRow("Background Action", self.subcb)
+
+        self.iterspin = gui.spin(
+            None,
+            self,
+            "n_iter",
+            minv=1,
+            maxv=100,
+            label="Iterations:",
+            callback=self.edited.emit,
+        )
+        form.addRow("Iterations:", self.iterspin)
 
         self.controlArea.layout().addLayout(form)
 
@@ -157,11 +169,14 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.baseline_type = params.get("baseline_type", 0)
         self.peak_dir = params.get("peak_dir", 0)
         self.sub = params.get("sub", 0)
+        self.n_iter = params.get("n_iter", 10)
         self._adapt_ui()
 
     def _adapt_ui(self):
         # peak direction is only relevant for rubberband
         self.peakcb.setEnabled(self.baseline_type == 1)
+        # iterations only relevant for concave rubberband
+        self.iterspin.setEnabled(self.baseline_type == 2)
         self._set_button_text()
 
     def parameters(self):
@@ -178,11 +193,14 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         peak_dir = params.get("peak_dir", 0)
         sub = params.get("sub", 0)
         zero_points = params.get("zero_points", None)
+        n_iter = params.get("n_iter", 10)
 
         if baseline_type == 0:
             return LinearBaseline(peak_dir=peak_dir, sub=sub, zero_points=zero_points)
         elif baseline_type == 1:
             return RubberbandBaseline(peak_dir=peak_dir, sub=sub)
+        elif baseline_type == 2:
+            return ConcaveRubberbandBaseline(n_iter=n_iter, sub=sub)
         else:
             raise Exception("unknown baseline type")
 
