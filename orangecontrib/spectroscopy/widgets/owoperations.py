@@ -237,7 +237,7 @@ class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
 
         class_vars = get_targets(p_data, s_data)
 
-        if not class_vars is None:
+        if class_vars is not None:
             class_vars = OWOperations.reshape_data(class_vars, (rows, 1))
 
         table = Orange.data.Table.from_numpy(domain, attributes, Y=class_vars, metas=metas)
