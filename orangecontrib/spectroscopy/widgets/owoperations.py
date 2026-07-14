@@ -5,6 +5,7 @@ import Orange.data
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.data.util import get_unique_names
+from Orange.data import Table
 
 class MissingPrimaryException(Exception):
     pass
@@ -280,10 +281,15 @@ class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
         p_X, s_X, data = OWOperations.transform(self.p_data, self.s_data)
 
         # CSB note: this is not an ideal solution, previously without the scaled * could just have 2 inputs here
-        data.X = operation(p_X, s_X, self.factor) 
+        result_X = operation(p_X, s_X, self.factor)
 
-        return data
-
+        return Table.from_numpy(
+            domain=data.domain,
+            X=result_X,
+            Y=data.Y.copy(),
+            metas=data.metas.copy(),
+            W=data.W.copy()
+        )
 
     def get_operation_func(self):
         return self.operations[self.operation_index].func
