@@ -1,7 +1,5 @@
 import numpy as np
 
-from AnyQt import QtWidgets
-
 import Orange.data
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
