@@ -45,6 +45,8 @@ from orangecontrib.spectroscopy.preprocess.utils import (
     linear_baseline,
 )
 
+from orangecontrib.spectroscopy.preprocess.concaverubberband import ConcaveRubberbandBaseline  # noqa: E402
+
 
 class MNFDenoising(Preprocess):
     def __init__(self, components=None):
