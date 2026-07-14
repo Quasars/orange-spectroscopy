@@ -6,7 +6,6 @@ at the algorithm layer; GUI integration is handled in baseline.py.
 """
 
 import os
-import threading
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from scipy.spatial import ConvexHull, QhullError
@@ -20,8 +19,6 @@ from orangecontrib.spectroscopy.preprocess.utils import (
 )
 
 _PARALLEL_THRESHOLD = 32  # below this, skip thread-pool dispatch overhead
-_task_state = threading.local()
-# owpreprocess.run_task sets .value = state before pp(data); cleared in finally.
 
 
 def _correct_spectrum(
@@ -109,13 +106,9 @@ def _correct_chunk(X_chunk: np.ndarray, n_iter: int) -> tuple[np.ndarray, np.nda
     return out, baselines
 
 
-def _correct_batch(
-    X: np.ndarray, n_iter: int, state=None
-) -> tuple[np.ndarray, np.ndarray]:
-    """Apply _correct_spectrum row-wise; uses 2 threads when M >= _PARALLEL_THRESHOLD.
+def _correct_batch(X: np.ndarray, n_iter: int) -> tuple[np.ndarray, np.ndarray]:
+    """Apply _correct_spectrum row-wise; uses a thread pool when M >= _PARALLEL_THRESHOLD.
 
-    :param state: optional Orange3 TaskState; if provided, set_progress_value()
-        is called after each chunk. Injected via _task_state by OWPreprocess.run_task.
     :returns: (corrected, baselines), both shape (M, N) float64.
     """
     M = len(X)
@@ -125,30 +118,22 @@ def _correct_batch(
     if M < _PARALLEL_THRESHOLD:
         for i, row in enumerate(X):
             out[i], baselines[i] = _correct_spectrum(row, n_iter)
-            if state is not None:
-                state.set_progress_value(100 * (i + 1) / M)
         return out, baselines
 
     chunk_size = max(1, M // (os.cpu_count() * 4))
     offsets = list(range(0, M, chunk_size))
     chunks = [X[off : off + chunk_size] for off in offsets]
-    done = 0
 
-    try:
-        with ThreadPoolExecutor(max_workers = os.cpu_count()) as ex:
-            future_to_off = {ex.submit(_correct_chunk, chunk, n_iter): off
-                             for chunk, off in zip(chunks, offsets)}
-            for fut in as_completed(future_to_off):
-                off = future_to_off[fut]
-                c, b = fut.result()
-                out[off: off + len(c)] = c
-                baselines[off: off + len(b)] = b
-                done += len(c)
-                if state is not None:
-                    state.set_progress_value(100 * done / M)
-    except Exception:
-        for i, row in enumerate(X):
-            out[i], baselines[i] = _correct_spectrum(row, n_iter)
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
+        future_to_off = {
+            ex.submit(_correct_chunk, chunk, n_iter): off
+            for chunk, off in zip(chunks, offsets, strict=True)
+        }
+        for fut in as_completed(future_to_off):
+            off = future_to_off[fut]
+            c, b = fut.result()
+            out[off : off + len(c)] = c
+            baselines[off : off + len(b)] = b
 
     return out, baselines
 
@@ -165,8 +150,7 @@ class _ConcaveRubberbandBaselineCommon(CommonDomainOrderUnknowns):
 
     def transformed(self, X: np.ndarray, wavenumbers: np.ndarray) -> np.ndarray:
         """Return corrected spectra (sub=0) or baselines (sub=1), shape (M, N)."""
-        state = getattr(_task_state, 'value', None)
-        corrected, baselines = _correct_batch(X, self.n_iter, state=state)
+        corrected, baselines = _correct_batch(X, self.n_iter)
         return (
             corrected if self.sub == ConcaveRubberbandBaseline.Subtract else baselines
         )

@@ -4,7 +4,10 @@ from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QVBoxLayout, QFormLayout, QPushButton, QApplication, QStyle
 
 from Orange.widgets import gui
-from orangecontrib.spectroscopy.preprocess import LinearBaseline, RubberbandBaseline, ConcaveRubberbandBaseline
+from orangecontrib.spectroscopy.preprocess import LinearBaseline, RubberbandBaseline
+from orangecontrib.spectroscopy.preprocess.concaverubberband import (
+    ConcaveRubberbandBaseline,
+)
 from orangecontrib.spectroscopy.widgets.gui import XPosLineEdit
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 from orangecontrib.spectroscopy.widgets.preprocessors.utils import (
