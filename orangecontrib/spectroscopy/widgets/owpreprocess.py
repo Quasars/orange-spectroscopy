@@ -58,9 +58,6 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot, QObject
 
 from orangecontrib.spectroscopy.preprocess.utils import PreprocessException
-from orangecontrib.spectroscopy.preprocess.concaverubberband import (
-    _task_state as _crb_task_state,
-)
 from orangecontrib.spectroscopy.widgets.owspectra import CurvePlot, NoSuchCurve
 from orangecontrib.spectroscopy.widgets.preprocessors.misc import (
     SavitzkyGolayFilteringEditor,
@@ -1053,11 +1050,7 @@ class OWPreprocess(SpectralPreprocessReference):
             pp = create_preprocessor(item, reference)
             plist.append(pp)
             if data is not None:
-                _crb_task_state.value = state
-                try:
-                    data = pp(data)
-                finally:
-                    _crb_task_state.value = None
+                data = pp(data)
             progress_interrupt((i / n + 0.5 / n) * 100)
             if process_reference and reference is not None and i != n - 1:
                 reference = pp(reference)
