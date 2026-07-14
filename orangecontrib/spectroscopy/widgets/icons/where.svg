@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48">
+    <style>
+        .smallbox {stroke:gray; stroke-width:1}
+        .lg_box {fill:lightgray}
+        .dg_box {fill:darkgray}
+        .question {font-size:10px; fill:black}
+    </style>
+    <rect class="smallbox dg_box" width="16px" height="16px" x="0" y="0"/>
+    <rect class="smallbox lg_box" width="16px" height="16px" x="16" y="0"/>
+    <rect class="smallbox dg_box" width="16px" height="16px" x="32" y="0"/>
+    <rect class="smallbox lg_box" width="16px" height="16px" x="0" y="16"/>
+    <rect class="smallbox dg_box" width="16px" height="16px" x="16" y="16"/>
+    <rect class="smallbox lg_box" width="16px" height="16px" x="32" y="16"/>
+    <rect class="smallbox dg_box" width="16px" height="16px" x="0" y="32"/>
+    <rect class="smallbox lg_box" width="16px" height="16px" x="16" y="32"/>
+    <rect class="smallbox dg_box" width="16px" height="16px" x="32" y="32"/>
+    <text class="question" x="22" y="28">?</text>
+    <text class="question" x="22" y="44">?</text>
+    <text class="question" x="38" y="44">?</text>
+</svg>
