@@ -9,8 +9,6 @@ class TestOWWhere(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWWhere)
-        # self.data = COLLAGEN_1
-        
         self.input_data = [[1, 10, 10, 10, 1]]
 
     
