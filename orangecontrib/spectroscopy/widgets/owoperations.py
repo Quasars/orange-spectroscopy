@@ -47,7 +47,7 @@ def bubble_operation(operation, *args):
         return args[0]
 
 
-def divide(p_data, s_data):
+def divide(p_data, s_data, **kwargs):
     # RULES:
     # 1. INF / x = INF
     # 2. x / INF = 0
@@ -98,13 +98,21 @@ def get_targets(p_data, s_data):
     
     return None
 
+def addition(p_data, s_data, **kwargs):
+    return p_data + s_data
+def subtraction(p_data, s_data, **kwargs):
+    return p_data - s_data
+def muiltiplication(p_data, s_data, **kwargs):
+    return p_data * s_data
+def scaled_muiltiplication(p_data, s_data, **kwargs):
+    return p_data * (s_data*kwargs['factor'])
 
 OPERATIONS = [
-    Operation("Addition", lambda p_data, s_data, factor: p_data + s_data),
-    Operation("Subtraction", lambda p_data, s_data, factor: p_data - s_data),
-    Operation("Multiplication", lambda p_data, s_data, factor: p_data * s_data),
-    Operation("Division", lambda p_data, s_data, factor: divide(p_data, s_data)),
-    Operation("Scaled Multiplication", lambda p_data, s_data, factor: p_data * (s_data * factor)),
+    Operation("Addition", addition),
+    Operation("Subtraction", subtraction),
+    Operation("Multiplication", muiltiplication),
+    Operation("Division", divide),
+    Operation("Scaled Multiplication", scaled_muiltiplication),
 ]
 
 class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
@@ -280,8 +288,9 @@ class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
 
         p_X, s_X, data = OWOperations.transform(self.p_data, self.s_data)
 
-        # CSB note: this is not an ideal solution, previously without the scaled * could just have 2 inputs here
-        result_X = operation(p_X, s_X, self.factor)
+        kwargs = {'factor': self.factor}
+
+        result_X = operation(p_X, s_X, **kwargs)
 
         return Table.from_numpy(
             domain=data.domain,
