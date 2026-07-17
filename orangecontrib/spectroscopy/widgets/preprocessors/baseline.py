@@ -39,7 +39,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
             self,
             "baseline_type",
             items=["Linear", "Rubber band", "Concave Rubberband"],
-            callback=self._on_baseline_type_changed,
+            callback=self.edited.emit,
         )
         self.peakcb = gui.comboBox(
             None,
@@ -60,6 +60,9 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.form.addRow("Peak Direction", self.peakcb)
         self.form.addRow("Background Action", self.subcb)
 
+        # if vertical spacing is non-zero, some space remains when hiding elements
+        self.form.setVerticalSpacing(0)
+
         self.iterspin = gui.spin(
             None, self, "n_iter", minv=1, maxv=100,
             label="Iterations:", callback=self.edited.emit,
@@ -69,6 +72,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.controlArea.layout().addLayout(self.form)
 
         self.ranges_box = gui.vBox(self.controlArea)  # container for ranges
+        self.ranges_box.layout().setSpacing(0)
 
         self.range_button = QPushButton("", autoDefault=False)
         self.range_button.clicked.connect(self.add_point)
@@ -173,11 +177,14 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.edited.emit()
 
     def _set_row_visible(self, widget, visible):
+        # in Qt 6.4+ (some build still use older versions) we could
+        # call setRowVisible directly
         row, _ = self.form.getWidgetPosition(widget)
         label_item = self.form.itemAt(row, QFormLayout.LabelRole)
         if label_item is not None:
             label_item.widget().setVisible(visible)
         widget.setVisible(visible)
+        widget.setEnabled(visible)
 
     def _adapt_ui(self):
         # peak direction is only relevant for rubber band
