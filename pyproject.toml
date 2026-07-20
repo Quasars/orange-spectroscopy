@@ -39,7 +39,8 @@ dependencies = [
     'pillow>=9.2.0',
     'lmfit>=1.3.3',
     'bottleneck',
-    'pebble',
+    'pebble<=5.2.0; python_version < "3.12"',
+    'pebble; python_version >= "3.12"',
     'agilent-format>=0.4.5',
     'pySNOM>=0.2.0',
 ]
