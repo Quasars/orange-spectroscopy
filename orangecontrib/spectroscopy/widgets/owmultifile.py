@@ -237,7 +237,6 @@ class RelocatablePathsWidgetMixin(RecentPathsWidgetMixin):
 
     def add_path(self, filename, reader):
         """Add (or move) a file name to the top of recent paths"""
-        self._check_init()
         recent = RecentPath.create(filename, self._search_paths())
         if reader is not None:
             recent.file_format = reader.qualified_name()
