@@ -25,8 +25,8 @@ class TestOWReplace(WidgetTest):
         self.assertTrue(np.all(np.isclose(data, [[1,5,5,5,1]])))
        
     def test_minimum_replacement(self):
-        self.widget.old_min_value=1
-        self.widget.new_min_value=5
+        self.widget.old_value=1
+        self.widget.new_value=5
         self.widget.mode = 1
 
         self.send_signal("Data", Table.from_numpy(None, self.input_data))
@@ -36,8 +36,8 @@ class TestOWReplace(WidgetTest):
         self.assertTrue(np.all(np.isclose(data, [[5,10,10,10,5]])))
        
     def test_maximum_replacement(self):
-        self.widget.old_max_value=10
-        self.widget.new_max_value=7
+        self.widget.old_value=10
+        self.widget.new_value=7
         self.widget.mode = 2
 
         self.send_signal("Data", Table.from_numpy(None, self.input_data))
