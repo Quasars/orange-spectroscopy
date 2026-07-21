@@ -39,7 +39,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
             self,
             "baseline_type",
             items=["Linear", "Rubber band", "Concave Rubberband"],
-            callback=self._on_baseline_type_changed,
+            callback=self.edited.emit,
         )
         self.peakcb = gui.comboBox(
             None,
@@ -82,6 +82,7 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
 
         self.user_changed = False
 
+        self.edited.connect(self._adapt_ui)
         self._adapt_ui()
 
     def activateOptions(self):
@@ -167,10 +168,6 @@ class BaselineEditor(BaseEditorOrange, PreviewMinMaxMixin):
         self.sub = params.get("sub", 0)
         self.n_iter = params.get("n_iter", 10)
         self._adapt_ui()
-
-    def _on_baseline_type_changed(self):
-        self._adapt_ui()
-        self.edited.emit()
 
     def _set_row_visible(self, widget, visible):
         row, _ = self.form.getWidgetPosition(widget)
