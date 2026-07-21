@@ -10,11 +10,11 @@ from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone
 class UnknownValueException(Exception):
     pass
 
-class OWWhere(widget.OWWidget, ConcurrentWidgetMixin):
-    name = "Elementwise Where"
+class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
+    name = "Replace Values"
     description = "Change attribute values where they equal some value."
-    icon = "icons/where.svg"
-    id = "orangecontrib.spectroscopy.widgets.owwhere"
+    icon = "icons/replace.svg"
+    id = "orangecontrib.spectroscopy.widgets.owreplace"
     priority = 20
 
 
