@@ -86,7 +86,6 @@ class OWUnwrap(widget.OWWidget, ConcurrentWidgetMixin):
     def unwrap(data, discont=DEFAULT_DISCONT, period=DEFAULT_PERIOD):
         new_data = data.copy()
 
-        # todo: I think this could be done as new_data = np.unwrap(data[~np.isnan(data)], axis=1, discont=discont, period=period) ? needs some testing.
         for row_i in range(data.shape[0]):
             valid = ~np.isnan(data[row_i, :])
             new_data[row_i, valid] = np.unwrap(data[row_i, valid], discont=discont, period=period)
