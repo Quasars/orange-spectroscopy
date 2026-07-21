@@ -129,7 +129,7 @@ class OWWhere(widget.OWWidget, ConcurrentWidgetMixin):
             )
         formlayout.addRow("New Value: ", self.new_max_value_edit)
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Modify data values in place")
+        gui.auto_commit(self.controlArea, self, "autocommit", "Replace values")
         self._change_input()
 
 
