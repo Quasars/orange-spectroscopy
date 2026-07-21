@@ -115,11 +115,11 @@ OPERATIONS = [
     Operation("Scaled Multiplication", scaled_muiltiplication),
 ]
 
-class OWOperations(widget.OWWidget, ConcurrentWidgetMixin):
-    name = "Elementwise Operations"
-    description = "Perform elementwise operations on two tables."
-    id = "orangecontrib.spectroscopy.widgets.owoperations"
-    icon = "icons/operations.svg"
+class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
+    name = "Spectrum Calculator"
+    description = "Perform arithmetic calcuations on spectra"
+    id = "orangecontrib.spectroscopy.widgets.owspectrumcalculator"
+    icon = "icons/spectrumcalculator.svg"
     priority = 10
 
     class Inputs:
