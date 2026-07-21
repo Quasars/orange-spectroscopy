@@ -2,13 +2,13 @@ from Orange.data import Table
 import numpy as np
 from Orange.widgets.tests.base import WidgetTest
 
-from orangecontrib.spectroscopy.widgets.owwhere import OWWhere
+from orangecontrib.spectroscopy.widgets.owreplace import OWReplace
 
 
-class TestOWWhere(WidgetTest):
+class TestOWReplace(WidgetTest):
 
     def setUp(self):
-        self.widget = self.create_widget(OWWhere)
+        self.widget = self.create_widget(OWReplace)
         self.input_data = [[1, 10, 10, 10, 1]]
 
     
