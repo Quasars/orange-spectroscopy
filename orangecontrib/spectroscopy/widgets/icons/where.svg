@@ -1,21 +1,139 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48">
-    <style>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="48"
+   height="48"
+   version="1.1"
+   id="svg273"
+   sodipodi:docname="where.svg"
+   inkscape:version="1.0.2 (e86c870879, 2021-01-15)">
+  <metadata
+     id="metadata279">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs277" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1277"
+     inkscape:window-height="688"
+     id="namedview275"
+     showgrid="false"
+     inkscape:zoom="5.4137863"
+     inkscape:cx="18.574659"
+     inkscape:cy="30.94328"
+     inkscape:window-x="2002"
+     inkscape:window-y="85"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg273" />
+  <style
+     id="style247">
         .smallbox {stroke:gray; stroke-width:1}
         .lg_box {fill:lightgray}
         .dg_box {fill:darkgray}
         .question {font-size:10px; fill:black}
     </style>
-    <rect class="smallbox dg_box" width="16px" height="16px" x="0" y="0"/>
-    <rect class="smallbox lg_box" width="16px" height="16px" x="16" y="0"/>
-    <rect class="smallbox dg_box" width="16px" height="16px" x="32" y="0"/>
-    <rect class="smallbox lg_box" width="16px" height="16px" x="0" y="16"/>
-    <rect class="smallbox dg_box" width="16px" height="16px" x="16" y="16"/>
-    <rect class="smallbox lg_box" width="16px" height="16px" x="32" y="16"/>
-    <rect class="smallbox dg_box" width="16px" height="16px" x="0" y="32"/>
-    <rect class="smallbox lg_box" width="16px" height="16px" x="16" y="32"/>
-    <rect class="smallbox dg_box" width="16px" height="16px" x="32" y="32"/>
-    <text class="question" x="22" y="28">?</text>
-    <text class="question" x="22" y="44">?</text>
-    <text class="question" x="38" y="44">?</text>
+  <g
+     id="g514"
+     transform="matrix(0.73469388,0,0,0.73469388,6.3673469,6.3673469)">
+    <rect
+       class="smallbox dg_box"
+       width="16"
+       height="16"
+       x="0"
+       y="0"
+       id="rect249" />
+    <rect
+       class="smallbox lg_box"
+       width="16"
+       height="16"
+       x="16"
+       y="0"
+       id="rect251" />
+    <rect
+       class="smallbox dg_box"
+       width="16"
+       height="16"
+       x="32"
+       y="0"
+       id="rect253" />
+    <rect
+       class="smallbox lg_box"
+       width="16"
+       height="16"
+       x="0"
+       y="16"
+       id="rect255" />
+    <rect
+       class="smallbox dg_box"
+       width="16"
+       height="16"
+       x="16"
+       y="16"
+       id="rect257" />
+    <rect
+       class="smallbox lg_box"
+       width="16"
+       height="16"
+       x="32"
+       y="16"
+       id="rect259" />
+    <rect
+       class="smallbox dg_box"
+       width="16"
+       height="16"
+       x="0"
+       y="32"
+       id="rect261" />
+    <rect
+       class="smallbox lg_box"
+       width="16"
+       height="16"
+       x="16"
+       y="32"
+       id="rect263" />
+    <rect
+       class="smallbox dg_box"
+       width="16"
+       height="16"
+       x="32"
+       y="32"
+       id="rect265" />
+    <text
+       class="question"
+       x="22"
+       y="28"
+       id="text267">?</text>
+    <text
+       class="question"
+       x="22"
+       y="44"
+       id="text269">?</text>
+    <text
+       class="question"
+       x="38"
+       y="44"
+       id="text271">?</text>
+  </g>
 </svg>
