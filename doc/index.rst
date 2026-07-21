@@ -37,6 +37,7 @@ Widgets
    widgets/peakfit
    widgets/snr
    widgets/polar
+   widgets/replace
 
 Indices and tables
 ------------------
