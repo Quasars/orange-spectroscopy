@@ -53,10 +53,6 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
 
         self.data = None
         
-        # box = gui.widgetBox(self.controlArea, "Info")
-        # gui.widgetLabel(box, 'WARNING: elementwise operation.\nTake care using this widget if the order of elements in the input data have been changed.')
-
-        # gui.separator(self.controlArea)
 
         gui.comboBox(
             self.controlArea, self, "mode",
