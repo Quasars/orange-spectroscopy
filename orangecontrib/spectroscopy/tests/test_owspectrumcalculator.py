@@ -2,13 +2,13 @@ from Orange.data import Table
 import numpy as np
 from Orange.widgets.tests.base import WidgetTest
 
-from orangecontrib.spectroscopy.widgets.owoperations import OWOperations
+from orangecontrib.spectroscopy.widgets.owspectrumcalculator import OWSpectrumCalculator
 
 
 class TestOWOperations(WidgetTest):
 
     def setUp(self):
-        self.widget = self.create_widget(OWOperations)
+        self.widget = self.create_widget(OWSpectrumCalculator)
         
         self.input_data_p0 = [[1, 2, 3, 4, 5]]
         self.input_data_p1 = [[10, 20, 30, 40, 50]]
