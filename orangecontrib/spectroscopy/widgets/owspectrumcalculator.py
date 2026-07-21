@@ -228,26 +228,26 @@ class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
         attributes = np.empty((rows, cols), dtype=p_data.X.dtype)
 
         if p_data.X.shape[1] == cols:
-            domain = OWOperations.get_domain(p_data.domain, s_data.domain)
+            domain = OWSpectrumCalculator.get_domain(p_data.domain, s_data.domain)
             metas = np.hstack((
-                OWOperations.reshape_data(p_data.metas.copy(), (rows, p_data.metas.shape[1])),
-                OWOperations.reshape_data(s_data.metas.copy(), (rows, s_data.metas.shape[1]))
+                OWSpectrumCalculator.reshape_data(p_data.metas.copy(), (rows, p_data.metas.shape[1])),
+                OWSpectrumCalculator.reshape_data(s_data.metas.copy(), (rows, s_data.metas.shape[1]))
             ))
 
         else:
-            domain = OWOperations.get_domain(s_data.domain, p_data.domain)
+            domain = OWSpectrumCalculator.get_domain(s_data.domain, p_data.domain)
             metas = np.hstack((
-                OWOperations.reshape_data(s_data.metas.copy(), (rows, s_data.metas.shape[1])),
-                OWOperations.reshape_data(p_data.metas.copy(), (rows, p_data.metas.shape[1]))
+                OWSpectrumCalculator.reshape_data(s_data.metas.copy(), (rows, s_data.metas.shape[1])),
+                OWSpectrumCalculator.reshape_data(p_data.metas.copy(), (rows, p_data.metas.shape[1]))
             ))
 
-        p_X = OWOperations.reshape_data(p_data.X.copy(), (rows, cols))
-        s_X = OWOperations.reshape_data(s_data.X.copy(), (rows, cols))
+        p_X = OWSpectrumCalculator.reshape_data(p_data.X.copy(), (rows, cols))
+        s_X = OWSpectrumCalculator.reshape_data(s_data.X.copy(), (rows, cols))
 
         class_vars = get_targets(p_data, s_data)
 
         if class_vars is not None:
-            class_vars = OWOperations.reshape_data(class_vars, (rows, 1))
+            class_vars = OWSpectrumCalculator.reshape_data(class_vars, (rows, 1))
 
         table = Orange.data.Table.from_numpy(domain, attributes, Y=class_vars, metas=metas)
         table.attributes = p_data.attributes
@@ -286,7 +286,7 @@ class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
 
         operation = self.get_operation_func()
 
-        p_X, s_X, data = OWOperations.transform(self.p_data, self.s_data)
+        p_X, s_X, data = OWSpectrumCalculator.transform(self.p_data, self.s_data)
 
         kwargs = {'factor': self.factor}
 
@@ -340,4 +340,4 @@ class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    WidgetPreview(OWOperations).run()
+    WidgetPreview(OWSpectrumCalculator).run()
