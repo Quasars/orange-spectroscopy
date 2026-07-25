@@ -125,6 +125,7 @@ class _AtmCorr(CommonDomainOrderUnknowns):
                         else (dhdy[:, r] / dh2[r])
                     )
             az2sum = (az * az).sum(0)
+            az2sum[az2sum == 0] = 1  # avoid NaNs after next division
             az = az**3 / az2sum
             for ia, atm in enumerate(atms):
                 for i, (p, q) in enumerate(ranges):
