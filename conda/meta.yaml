@@ -16,12 +16,12 @@ build:
 
 requirements:
   build:
-    - python >=3.9
+    - python >=3.10
     - sphinx
     - setuptools
     - recommonmark
   run:
-    - python >=3.8
+    - python >=3.10
     - numpy >=1.24.0
     - orange3 >=3.38.0
     - orange-canvas-core >=0.2.4
