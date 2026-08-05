@@ -29,6 +29,9 @@ from orangecontrib.spectroscopy.preprocess import (
     SpSubtract,
     MNFDenoising,
 )
+from orangecontrib.spectroscopy.preprocess.concaverubberband import (
+    ConcaveRubberbandBaseline,
+)
 from orangecontrib.spectroscopy.preprocess.utils import replacex
 from orangecontrib.spectroscopy.tests.test_conversion import (
     separate_learn_test,
@@ -412,6 +415,43 @@ class TestRubberbandBaseline(unittest.TestCase, TestCommonIndpSamplesMixin):
         data = Table.from_numpy(None, [[1, 2, 1, 1]])
         i = RubberbandBaseline(peak_dir=RubberbandBaseline.PeakNegative)(data)
         np.testing.assert_equal(i.X, [[0, 0, -0.5, 0]])
+
+
+class TestConcaveRubberbandBaseline(unittest.TestCase, TestCommonIndpSamplesMixin):
+    preprocessors = [ConcaveRubberbandBaseline()]
+    data = SMALLER_COLLAGEN
+
+    def test_whole(self):
+        """Spectrum that lies on the concave arch is corrected to zero."""
+        data = Table.from_numpy(None, [[2, 1, 2]])
+        i = ConcaveRubberbandBaseline()(data)
+        np.testing.assert_almost_equal(i.X, 0)
+
+    def test_simple(self):
+        """Flat ends are corrected to zero; peak above the baseline stays positive."""
+        data = Table.from_numpy(None, [[1, 2, 1, 1]])
+        i = ConcaveRubberbandBaseline()(data)
+        np.testing.assert_almost_equal(i.X[0, 0], 0)
+        np.testing.assert_almost_equal(i.X[0, 2], 0)
+        np.testing.assert_almost_equal(i.X[0, 3], 0)
+        self.assertGreater(i.X[0, 1], 0)
+
+    def test_view(self):
+        """sub=View returns the baseline; corrected + baseline reconstructs the original."""
+        data = Table.from_numpy(None, [[2, 1, 2]])
+        corrected = ConcaveRubberbandBaseline(sub=ConcaveRubberbandBaseline.Subtract)(
+            data
+        )
+        baseline = ConcaveRubberbandBaseline(sub=ConcaveRubberbandBaseline.View)(data)
+        np.testing.assert_almost_equal(corrected.X + baseline.X, [[2, 1, 2]])
+
+    def test_n_iter(self):
+        """More iterations tighten the baseline; result with n_iter=1 >= n_iter=5."""
+        data = Table.from_numpy(None, [[1, 3, 2, 3, 1]])
+        i1 = ConcaveRubberbandBaseline(n_iter=1)(data)
+        i5 = ConcaveRubberbandBaseline(n_iter=5)(data)
+        # each additional iteration can only lower the baseline further
+        np.testing.assert_array_less(i5.X - 1e-9, i1.X + 1e-9)
 
 
 class TestLinearBaseline(unittest.TestCase, TestCommonIndpSamplesMixin):
