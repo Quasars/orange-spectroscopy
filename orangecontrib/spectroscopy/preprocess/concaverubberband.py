@@ -129,12 +129,15 @@ def _correct_chunk(
 
 
 def _correct_batch(
-    X: np.ndarray, n_iter: int
+    X: np.ndarray, n_iter: int, progress_callback=None
 ) -> tuple[np.ndarray, np.ndarray]:
     """Apply _correct_spectrum row-wise; uses a thread pool when M >= _PARALLEL_THRESHOLD.
 
+    :param progress_callback: optional callable, called with a fraction in
+        [0, 1] as rows (serial) or chunks (parallel) complete.
     :returns: (corrected, baselines), both shape (M, N) float64.
     """
+    cb = progress_callback or (lambda _f: None)
     M = len(X)
     out = np.empty((M, X.shape[1]), dtype=np.float64)
     baselines = np.empty((M, X.shape[1]), dtype=np.float64)
@@ -142,6 +145,7 @@ def _correct_batch(
     if M < _PARALLEL_THRESHOLD:
         for i, row in enumerate(X):
             out[i], baselines[i] = _correct_spectrum(row, n_iter)
+            cb((i + 1) / M)
         return out, baselines
 
     chunk_size = max(1, M // (os.cpu_count() * 4))
@@ -151,11 +155,14 @@ def _correct_batch(
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as ex:
         future_to_off = {ex.submit(_correct_chunk, chunk, n_iter): off
                          for chunk, off in zip(chunks, offsets)}
+        done = 0
         for fut in as_completed(future_to_off):
             off = future_to_off[fut]
             c, b = fut.result()
             out[off: off + len(c)] = c
             baselines[off: off + len(b)] = b
+            done += 1
+            cb(done / len(chunks))
 
     return out, baselines
 
@@ -165,14 +172,17 @@ class ConcaveRubberbandBaselineFeature(SelectColumn):
 
 
 class _ConcaveRubberbandBaselineCommon(CommonDomainOrderUnknowns):
-    def __init__(self, n_iter: int, sub: int, domain):
+    def __init__(self, n_iter: int, sub: int, domain, progress_callback=None):
         super().__init__(domain)
         self.n_iter = n_iter
         self.sub = sub
+        self.progress_callback = progress_callback
 
     def transformed(self, X: np.ndarray, wavenumbers: np.ndarray) -> np.ndarray:
         """Return corrected spectra (sub=0) or baselines (sub=1), shape (M, N)."""
-        corrected, baselines = _correct_batch(X, self.n_iter)
+        corrected, baselines = _correct_batch(
+            X, self.n_iter, progress_callback=self.progress_callback
+        )
         return corrected if self.sub == ConcaveRubberbandBaseline.Subtract else baselines
 
     def __eq__(self, other):
@@ -201,7 +211,13 @@ class ConcaveRubberbandBaseline(Preprocess):
         self.sub = sub
 
     def __call__(self, data: Orange.data.Table) -> Orange.data.Table:
-        common = _ConcaveRubberbandBaselineCommon(self.n_iter, self.sub, data.domain)
+        # The pipeline (owpreprocess.py's run_task) sets self.progress_callback
+        # on this instance before calling it; direct/test construction simply
+        # never sets it, so it stays absent and progress is a no-op.
+        common = _ConcaveRubberbandBaselineCommon(
+            self.n_iter, self.sub, data.domain,
+            progress_callback=getattr(self, "progress_callback", None),
+        )
         atts = [
             a.copy(compute_value=ConcaveRubberbandBaselineFeature(i, common))
             for i, a in enumerate(data.domain.attributes)
