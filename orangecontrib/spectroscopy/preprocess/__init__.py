@@ -45,7 +45,6 @@ from orangecontrib.spectroscopy.preprocess.utils import (
     linear_baseline,
 )
 
-
 class MNFDenoising(Preprocess):
     def __init__(self, components=None):
         self.components = components
