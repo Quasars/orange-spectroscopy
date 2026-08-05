@@ -3,6 +3,27 @@ Iterative concave rubberband baseline correction as a Preprocess subclass.
 
 Algorithm ported from algorithm.py (Samuel Pinilla). No Orange/Qt imports
 at the algorithm layer; GUI integration is handled in baseline.py.
+
+The iterative concave rubberband baseline correction is a multi-pass refinement
+of the classical rubberband algorithm. In the classical approach, the lower
+convex hull of the spectrum is computed once and its vertices are connected by
+straight-line segments to form a piecewise-linear baseline. The concave variant
+extends this in two ways. First, for wide spans between hull vertices — where a
+linear segment would either miss a broad background hump or cut into spectral
+features — it fits a downward-opening parabola that is tangent to the spectrum
+from below, producing a smoother and more conservative baseline estimate. Second,
+rather than applying this correction in a single pass, the algorithm proceeds
+iteratively: after each pass the estimated baseline is subtracted from the
+spectrum, and the hull and parabolic fitting are recomputed on this residual.
+Because the residual is progressively flatter, each subsequent iteration captures
+background contributions that were not fully resolved in the previous pass,
+tightening the baseline toward the true background floor. The Iterations parameter
+controls how many of these refinement passes are applied. A small value (1-3)
+applies a gentle correction suitable for spectra with a mild or nearly linear
+background; higher values (5-10) are appropriate for spectra with pronounced,
+broadly curved baselines. Excessive iterations should be avoided, as they risk
+pulling the estimated baseline into genuine spectral features, leading to
+overcorrection of the signal.
 """
 
 import os
