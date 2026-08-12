@@ -69,7 +69,7 @@ from Orange.widgets.visualize.utils.plotutils import (
 )
 from Orange.widgets.visualize.utils.customizableplot import CommonParameterSetter
 
-from orangecontrib.spectroscopy import dask_client
+from orangecontrib.spectroscopy import get_dask_client
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.utils import apply_columns_numpy
 from orangecontrib.spectroscopy.widgets.line_geometry import (
@@ -442,7 +442,7 @@ class ShowAverage(QObject, ConcurrentMixin):
                     results.append([colorv, part, mean, std, part_selection])
 
         if is_dask:
-            future = dask_client.compute(dask.array.vstack(compute_dask))
+            future = get_dask_client().compute(dask.array.vstack(compute_dask))
             while not future.done():
                 progress_interrupt(0)
                 time.sleep(0.1)
@@ -529,7 +529,7 @@ class ShowIndividual(QObject, ConcurrentMixin):
         progress_interrupt(0)
         ys = ys[sampled_indices]
         if is_dask:
-            future = dask_client.compute(ys)
+            future = get_dask_client().compute(ys)
             while not future.done():
                 progress_interrupt(0)
                 time.sleep(0.1)

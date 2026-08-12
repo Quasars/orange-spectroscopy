@@ -16,10 +16,19 @@ Orange.data.table.dataset_dirs.append(get_sample_datasets_dir())
 try:
     import dask
     import dask.distributed
-
-    dask_client = dask.distributed.Client(
-        processes=False, n_workers=2, set_as_default=False, dashboard_address=None
-    )
 except ImportError:
     dask = None
-    dask_client = None
+
+_dask_client = None
+
+
+def get_dask_client():
+    """Return the shared dask.distributed client, creating it on first use."""
+    global _dask_client
+    if dask is None:
+        return None
+    if _dask_client is None:
+        _dask_client = dask.distributed.Client(
+            processes=False, n_workers=2, set_as_default=False, dashboard_address=None
+        )
+    return _dask_client
