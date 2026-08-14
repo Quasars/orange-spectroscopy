@@ -45,6 +45,7 @@ requirements:
     - pebble  # [py>=312]
     - agilent-format >=0.4.5
     - pysnom >=0.2.0
+    - ptir5
 
 test:
   imports:
