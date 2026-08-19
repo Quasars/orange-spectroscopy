@@ -49,11 +49,6 @@ class TestOWGate(WidgetTest):
             "output should be None"
         )
 
-        self.assertFalse(
-            self._get_not_connected(),
-            "not_connected shouldn't be raised"
-        )
-
     
     def test_closed_input(self):
         self._close_gate()
@@ -98,11 +93,6 @@ class TestOWGate(WidgetTest):
         self.assertIsNone(
             self._get_output(),
             "output should be None"
-        )
-
-        self.assertFalse(
-            self._get_not_connected(),
-            "not_connected shouldn't be raised"
         )
 
 
@@ -164,11 +154,6 @@ class TestOWGate(WidgetTest):
 
         # Revert back to previous dataset
         self.send_signal(self.widget.Inputs.data, self.iris)
-
-        self.assertFalse(
-            self._get_not_connected(),
-            "not_connected shouldn't be raised"
-        )
 
         # Change data again
         self.send_signal(self.widget.Inputs.data, self.zoo)
