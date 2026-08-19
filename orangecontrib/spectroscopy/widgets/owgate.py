@@ -2,35 +2,6 @@ from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 import numpy as np
 
-def objects_equal(object_a, object_b):
-    if not isinstance(object_a, type(object_b)):
-        return False
-    
-    ## Special Cases:
-
-    if isinstance(object_a, np.ndarray):
-        return np.array_equal(object_a, object_b)
-
-    ##
-    
-    if not hasattr(object_a, "__dict__"):
-        return object_a == object_b
-
-    d = object_b.__dict__
-
-    ignore = [
-        ("Table", "ids"),
-        ("Domain", "_indices"),
-    ]
-
-    for key, val in object_a.__dict__.items():
-        if (type(object_a).__name__, key) in ignore:
-            continue
-
-        if key not in d or not objects_equal(val, d[key]):
-            return False
-
-    return True
 
 class OWGate(OWWidget):
     name = "Gate"
@@ -38,6 +9,7 @@ class OWGate(OWWidget):
     icon = "icons/gate.svg"
     id = "orangecontrib.spectroscopy.widgets.owgate"
     priority = 10
+    replaces = "orangecontrib.flow.owgate"
 
 
     class Inputs:
@@ -61,10 +33,7 @@ class OWGate(OWWidget):
         self.out_data = None
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Send Data")
-    
-
-    def is_connected(self):
-        return OWGate.is_equal(self.in_data, self.out_data)
+        self.Warning.not_connected()
 
 
     @Inputs.data
@@ -72,9 +41,6 @@ class OWGate(OWWidget):
         self.in_data = data
 
         self.Warning.not_connected()
-
-        if self.is_connected():
-            self.Warning.not_connected.clear()
             
         self.commit.deferred()
 
@@ -82,27 +48,10 @@ class OWGate(OWWidget):
     @gui.deferred
     def commit(self):
         self.Warning.not_connected.clear()
-
-        if self.is_connected():
-            return
         
         self.out_data = self.in_data
             
         self.Outputs.data.send(self.out_data)
-
-
-    @staticmethod
-    def is_equal(table_0, table_1):
-        if table_0 is None and table_1 is None:
-            return True
-
-        if table_0 is None or table_1 is None:
-            return False
-        
-        try:
-            return objects_equal(table_0, table_1)
-        except AssertionError:
-            return False
 
 
 if __name__ == "__main__":  # pragma: no cover
