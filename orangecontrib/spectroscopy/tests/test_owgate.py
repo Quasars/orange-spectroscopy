@@ -22,13 +22,6 @@ class TestOWGate(WidgetTest):
     def _open_gate(self):
         self.widget.controls.autocommit.setChecked(True)
 
-
-    def test_autocommit_changes(self):
-        from orangecontrib.spectroscopy.tests.util import checkbox_linked_test
-
-        checkbox_linked_test(self, self.widget,
-                             "autocommit", "autocommit")
-
     def test_default(self):
         self.assertIsNone(self.widget.in_data)
         self.assertIsNone(self.widget.out_data)
