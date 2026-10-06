@@ -1,6 +1,5 @@
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
-import numpy as np
 
 
 class OWGate(OWWidget):
@@ -10,7 +9,6 @@ class OWGate(OWWidget):
     id = "orangecontrib.spectroscopy.widgets.owgate"
     priority = 10
     replaces = "orangecontrib.flow.owgate"
-
 
     class Inputs:
         data = Input("Data", object, default=True, auto_summary=False)
@@ -35,25 +33,20 @@ class OWGate(OWWidget):
         gui.auto_commit(self.controlArea, self, "autocommit", "Send Data")
         self.Warning.not_connected()
 
-
     @Inputs.data
     def setData(self, data):
         self.in_data = data
-
         self.Warning.not_connected()
-            
         self.commit.deferred()
-
 
     @gui.deferred
     def commit(self):
         self.Warning.not_connected.clear()
-        
         self.out_data = self.in_data
-            
         self.Outputs.data.send(self.out_data)
 
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
+
     WidgetPreview(OWGate).run()
