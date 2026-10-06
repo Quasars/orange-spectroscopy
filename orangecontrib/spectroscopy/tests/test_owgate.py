@@ -26,6 +26,7 @@ class TestOWGate(WidgetTest):
         self.assertIsNone(self.widget.in_data)
         self.assertIsNone(self.widget.out_data)
         self.assertIsNone(self._get_output())
+        self.assertFalse(self.widget.Warning.not_connected.is_shown())
 
     def test_closed_input(self):
         self._close_gate()

@@ -31,7 +31,6 @@ class OWGate(OWWidget):
         self.out_data = None
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Send Data")
-        self.Warning.not_connected()
 
     @Inputs.data
     def setData(self, data):
