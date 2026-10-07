@@ -195,7 +195,7 @@ class OWSNRRegion(OWWidget):
         self.editors = {}
         form = QFormLayout()
         box.layout().addLayout(form)
-        self.noise_preset = 0  # index into preset combo; 0 is custom
+        self.noise_preset = 0  
         self.preset_combo = gui.comboBox(
             None,
             self,
