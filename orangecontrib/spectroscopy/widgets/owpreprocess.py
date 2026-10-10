@@ -8,6 +8,7 @@ import numpy as np
 
 import Orange.data
 from Orange import preprocess
+from Orange.util import wrap_callback
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -1049,6 +1050,12 @@ class OWPreprocess(SpectralPreprocessReference):
             item = pp_def[i]
             pp = create_preprocessor(item, reference)
             plist.append(pp)
+            # pp is a fresh, task-local instance - safe to stash progress
+            # reporting on it directly; preprocessors that don't look at
+            # self.progress_callback simply ignore it.
+            pp.progress_callback = wrap_callback(
+                state.set_progress_value, start=i / n * 100, end=(i / n + 0.5 / n) * 100
+            )
             if data is not None:
                 data = pp(data)
             progress_interrupt((i / n + 0.5 / n) * 100)
