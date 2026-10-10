@@ -123,6 +123,13 @@
     "keywords": []
    },
    {
+    "text": "SNR (Region)",
+    "doc": "widgets/snr-region.md",
+    "icon": "../orangecontrib/spectroscopy/widgets/icons/snr.svg",
+    "background": "light-blue",
+    "keywords": []
+   },
+   {
     "text": "Align Stack",
     "doc": null,
     "icon": "../orangecontrib/spectroscopy/widgets/icons/stackalign.svg",

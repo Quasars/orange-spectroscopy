@@ -36,6 +36,7 @@ Widgets
    widgets/pls
    widgets/peakfit
    widgets/snr
+   widgets/snr-region
    widgets/polar
    widgets/gate
 
