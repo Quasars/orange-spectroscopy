@@ -6,11 +6,60 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from AnyQt.QtWidgets import QFormLayout, QWidget
 
 
-class UnknownValueException(Exception):
+class CalculationError(Exception):
     pass
 
 
 REPLACEMENT_MODES = ["Tolerance", "Minimum value", "Maximum value"]
+
+class Replacement:
+
+    def __init__(self, data, mode, old_value, new_value, 
+                 tolerance=None, return_count = True):
+
+        self.function_map = {0: self.tolerance_replace,
+                             1: self.min_replace, 
+                             2: self.max_replace
+                             }
+
+        self.data = data
+        self.mode = mode
+        self.old_value = old_value
+        self.new_value = new_value
+        self.tolerance = tolerance
+        self.return_count = return_count
+        self.message = None
+        self.data_out = None
+
+    def calculate(self):
+        self.function_map.get(self.mode, None)(self.data,
+                                               self.old_value,
+                                               self.new_value
+                                               )
+        return self.data_out
+
+    def tolerance_replace(self, data, old_value, new_value):
+    
+        mask = np.logical_and(data.X >= old_value - self.tolerance, 
+                              data.X <= old_value + self.tolerance)
+        data.X[mask] = new_value
+        self.message = (np.sum(mask), f"{old_value - self.tolerance :.3f} <= x <= {old_value + self.tolerance :.3f}", new_value)
+        self.data_out = data
+
+    def min_replace(self, data, old_value, new_value):
+    
+        mask = np.where(data.X <= old_value)
+        data.X[mask] = new_value
+        self.message = (np.sum(mask), f"{old_value:.3f} <= x", new_value)
+        self.data_out = data
+    
+    def max_replace(self, data, old_value, new_value):
+    
+        mask = np.where(data.X >= old_value)
+        data.X[mask] = new_value
+        self.message = (np.sum(mask), f"x <= {old_value:.3f}", new_value)        
+        self.data_out = data
+    
 
 class OWReplace(OWWidget):
     name = "Replace Values"
@@ -28,6 +77,7 @@ class OWReplace(OWWidget):
 
     class Error(OWWidget.Error):
         invalid_value = Msg("Can't parse '{}'.")
+        calculation_error = Msg("Calculation error")
 
     class Information(OWWidget.Information):
         changed_count = Msg("{} values have been changed from '{}' to '{}'.")
@@ -91,106 +141,53 @@ class OWReplace(OWWidget):
     def _change_input(self):
         self._update_input()
         self.commit.deferred()
-
-    
-    @staticmethod
-    def tolerance_replace(data, old_value, new_value, **kwargs):
-    
-        mask = np.logical_and(data.X >= old_value - kwargs["tol"], 
-                              data.X <= old_value + kwargs["tol"])
-
-        data.X[mask] = new_value
-
-        if kwargs["want_count"]:
-            return data, np.sum(mask)
-        
-        return data
-
-    @staticmethod
-    def min_replace(data, old_value, new_value, **kwargs):
-    
-        mask = np.where(data.X <= old_value)
-        data.X[mask] = new_value
-
-        if kwargs["want_count"]:
-            return data, np.sum(mask)
-        
-        return data
-    
-    @staticmethod
-    def max_replace(data, old_value, new_value, **kwargs):
-    
-        mask = np.where(data.X >= old_value)
-        data.X[mask] = new_value
-
-        if kwargs["want_count"]:
-            return data, np.sum(mask)
-        
-        return data
     
     @staticmethod
     def get_value(text):
-        try:
+        try: # in case something like 'nan'
             return np.float64(text)
         except ValueError:
-            pass
-        
-        try:
-            return np.float64(eval(text))
-        except (AttributeError):
-            raise UnknownValueException()
+            try: # in case something like 'np.nan' is given
+                return np.float64(exec(text))
+            except NameError:
+                return None
 
     def get_outdata(self):
         if self.data is None:
             return None
         
         out = None
+
+        if self.old_value is None or self.new_value is None:
+            return self.data
+
+        if self.get_value(self.old_value) is None:
+            self.Error.invalid_value(self.old_value)
+            return self.data
+            
+        if self.get_value(self.new_value) is None:
+            self.Error.invalid_value(self.new_value)
+            return self.data
+
         if self.data:
-            if self.mode == 0:
-                
-                if self.old_value == "" or self.new_value == "":
-                    return self.data
-                
-                if self.tolerance == "":
-                    self.tolerance = "0.0"
+            replacer = Replacement(data=self.data.copy(),
+                                   mode=self.mode,
+                                   old_value=self.get_value(self.old_value),
+                                   new_value=self.get_value(self.new_value),
+                                   tolerance=self.tolerance)
+            out = replacer.calculate()
 
-                old_value = self.get_value(self.old_value)
-                new_value = self.get_value(self.new_value)
-                tolerance_value = self.get_value(self.tolerance)
-                kwargs={"tol": tolerance_value,
-                        "want_count": True}
-                out, n = self.tolerance_replace(self.data.copy(),
-                                                old_value, new_value,
-                                                **kwargs)
-                self.Information.changed_count(n, f"{old_value - tolerance_value :.3f} <= x <= {old_value + tolerance_value :.3f}", new_value)
+            if replacer.message is not None:
+                # Would rather just 
+                # self.Information.changed_count(replacer.message) 
+                # but can't figure out how
+                self.Information.changed_count(replacer.message[0],
+                                               replacer.message[1],
+                                               replacer.message[2])
+            if replacer.data_out is None:
+                self.Error.calculation_error()
+                # out = None
 
-                
-            elif self.mode == 1:
-                
-                if self.old_value == "" or self.new_value == "":
-                    return self.data
-                
-                old_value = self.get_value(self.old_value)
-                new_value = self.get_value(self.new_value)
-                kwargs={"want_count": True}
-                out, n = self.min_replace(self.data.copy(),
-                                              old_value, new_value,
-                                              **kwargs)
-                self.Information.changed_count(n, f"{old_value:.3f} <= x", new_value)
-
-                
-            elif self.mode == 2:
-                if self.old_value == "" or self.new_value == "":
-                    return self.data
-
-                old_value = self.get_value(self.old_value)
-                new_value = self.get_value(self.new_value)
-                kwargs={"want_count": True}
-                out, n = self.max_replace(self.data.copy(),
-                                              old_value, new_value,
-                                              **kwargs)
-                self.Information.changed_count(n, f"x <= {old_value:.3f}", new_value)
-                
         return out
 
     def value_changed(self):
@@ -205,11 +202,7 @@ class OWReplace(OWWidget):
         self.Error.clear()
         self.Information.clear()
 
-        data = None
-        try:
-            data = self.get_outdata()
-        except UnknownValueException:
-            self.Error.invalid_value()
+        data = self.get_outdata()
 
         self.Outputs.data.send(data)
 
