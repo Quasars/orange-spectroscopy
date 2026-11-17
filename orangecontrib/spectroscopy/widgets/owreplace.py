@@ -1,11 +1,9 @@
 import numpy as np
-import sys
 
 import Orange.data
-from Orange.widgets import gui, settings, widget
-from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
+from Orange.widgets import gui, settings
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from AnyQt.QtWidgets import QFormLayout, QWidget
-from orangecontrib.spectroscopy.widgets.gui import lineEditFloatOrNone
 
 
 class UnknownValueException(Exception):
@@ -14,7 +12,7 @@ class UnknownValueException(Exception):
 
 REPLACEMENT_MODES = ["Tolerance", "Minimum value", "Maximum value"]
 
-class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
+class OWReplace(OWWidget):
     name = "Replace Values"
     description = "Change attribute values where they equal some value."
     icon = "icons/replace.svg"
@@ -23,23 +21,21 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
 
 
     class Inputs:
-        data = widget.Input("Data", Orange.data.Table, default=True)
+        data = Input("Data", Orange.data.Table, default=True)
 
     class Outputs:
-        data = widget.Output("Data", Orange.data.Table, default=True)
+        data = Output("Data", Orange.data.Table, default=True)
 
-    class Error(widget.OWWidget.Error):
-        invalid_value = widget.Msg("Can't parse '{}'.")
+    class Error(OWWidget.Error):
+        invalid_value = Msg("Can't parse '{}'.")
 
-    class Information(widget.OWWidget.Information):
-        changed_count = widget.Msg("{} values have been changed from '{}' to '{}'.")
-
-    settingsHandler = settings.DomainContextHandler()
+    class Information(OWWidget.Information):
+        changed_count = Msg("{} values have been changed from '{}' to '{}'.")
 
     mode = settings.Setting(0)
-    old_value = settings.Setting("")
-    new_value = settings.Setting("")
-    tolerance = settings.Setting("")
+    old_value = settings.Setting(None)
+    new_value = settings.Setting(None)
+    tolerance = settings.Setting(None)
     
     autocommit = settings.Setting(True)
 
@@ -48,12 +44,10 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
 
 
     def __init__(self):
-        widget.OWWidget.__init__(self)
-        ConcurrentWidgetMixin.__init__(self)
+        OWWidget.__init__(self)
 
         self.data = None
         
-
         gui.comboBox(
             self.controlArea, self, "mode",
             contentsLength=12, searchable=True,
@@ -67,15 +61,15 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
         form.setLayout(formlayout)
         box.layout().addWidget(form)
 
-        self.old_value_edit = lineEditFloatOrNone(
+        self.old_value_edit = gui.lineEdit(
             box, self, "old_value",
             callback=self.commit.deferred
             )
-        self.new_value_edit = lineEditFloatOrNone(
+        self.new_value_edit = gui.lineEdit(
             box, self, "new_value",
             callback=self.commit.deferred
             )
-        self.tolerance_edit = lineEditFloatOrNone(
+        self.tolerance_edit = gui.lineEdit(
             box, self, "tolerance",
             callback=self.commit.deferred
             )
@@ -84,12 +78,11 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
         formlayout.addRow("New value: ", self.new_value_edit)
         formlayout.addRow("Tolerance: ", self.tolerance_edit)
 
-        self._update_input()
         gui.auto_apply(self.buttonsArea,            
                        self,            
                        "autocommit",            
-                       commit=self.commit,        
                        )
+        self._change_input()
 
     def _update_input(self):
         check = self.mode == 0
@@ -147,7 +140,6 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
         except (AttributeError):
             raise UnknownValueException()
 
-        
     def get_outdata(self):
         if self.data is None:
             return None
@@ -199,7 +191,6 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
                                               **kwargs)
                 self.Information.changed_count(n, f"x <= {old_value:.3f}", new_value)
                 
-
         return out
 
     def value_changed(self):
@@ -222,6 +213,8 @@ class OWReplace(widget.OWWidget, ConcurrentWidgetMixin):
 
         self.Outputs.data.send(data)
 
+    def handleNewSignals(self):
+        self.commit.now()
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
