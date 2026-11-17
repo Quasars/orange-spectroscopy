@@ -37,6 +37,8 @@ Widgets
    widgets/peakfit
    widgets/snr
    widgets/polar
+   widgets/combine-categories
+   widgets/connected-clusters
 
 Indices and tables
 ------------------
