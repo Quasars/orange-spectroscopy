@@ -178,12 +178,11 @@ class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
                                           label="Scale factor:",
                                           callback=self.commit.deferred)
         
-        self._update_factor_enabled()
         gui.auto_apply(self.buttonsArea,            
                        self,            
                        "autocommit",            
-                       commit=self.commit,        
                        )
+        self.operation_changed()
 
     def operation_changed(self):
         self._update_factor_enabled()
@@ -336,6 +335,9 @@ class OWSpectrumCalculator(widget.OWWidget, ConcurrentWidgetMixin):
             self.Error.multiple_targets()
 
         self.Outputs.data.send(data)
+
+    def handleNewSignals(self):
+        self.commit.now()
 
 
 if __name__ == "__main__":  # pragma: no cover
