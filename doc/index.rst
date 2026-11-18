@@ -37,7 +37,11 @@ Widgets
    widgets/peakfit
    widgets/snr
    widgets/polar
+<<<<<<< HEAD
    widgets/gate
+=======
+   widgets/replace
+>>>>>>> c5fc724 (Add basic docs page)
 
 Indices and tables
 ------------------

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48">
+    <style>
+        .smallbox {stroke:gray; stroke-width:1}
+        .lg_box {fill:lightgray}
+        .dg_box {fill:darkgray}
+        .operator {font-size:16px; fill:black; stroke:black; stroke-width:5}
+    </style>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="6" y="6"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="14" y="6"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="22" y="6"/>
+
+    <rect class="smallbox lg_box" width="8px" height="8px" x="6" y="14"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="14" y="14"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="22" y="14"/>
+
+    <rect class="smallbox dg_box" width="8px" height="8px" x="6" y="22"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="14" y="22"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="22" y="22"/>
+
+
+    <rect class="smallbox dg_box" width="8px" height="8px" x="18" y="18"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="26" y="18"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="34" y="18"/>
+
+    <rect class="smallbox lg_box" width="8px" height="8px" x="18" y="26"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="26" y="26"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="34" y="26"/>
+
+    <rect class="smallbox dg_box" width="8px" height="8px" x="18" y="34"/>
+    <rect class="smallbox lg_box" width="8px" height="8px" x="26" y="34"/>
+    <rect class="smallbox dg_box" width="8px" height="8px" x="34" y="34"/>
+
+    <text class="operator" x="20" y="32">*</text>
+</svg>
