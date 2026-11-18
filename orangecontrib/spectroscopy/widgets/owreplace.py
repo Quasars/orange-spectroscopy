@@ -83,9 +83,9 @@ class OWReplace(OWWidget):
         changed_count = Msg("{} values have been changed from '{}' to '{}'.")
 
     mode = settings.Setting(0)
-    old_value = settings.Setting(None)
-    new_value = settings.Setting(None)
-    tolerance = settings.Setting(None)
+    old_value = settings.Setting("")
+    new_value = settings.Setting("")
+    tolerance = settings.Setting("")
     
     autocommit = settings.Setting(True)
 
@@ -174,7 +174,7 @@ class OWReplace(OWWidget):
                                    mode=self.mode,
                                    old_value=self.get_value(self.old_value),
                                    new_value=self.get_value(self.new_value),
-                                   tolerance=self.tolerance)
+                                   tolerance=self.get_value(self.tolerance))
             out = replacer.calculate()
 
             if replacer.message is not None:
