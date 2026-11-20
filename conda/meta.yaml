@@ -51,6 +51,9 @@ test:
     - orangecontrib.spectroscopy
   commands:
     - python -m unittest -v orangecontrib.spectroscopy.tests
+  requires:
+    - pyqt6
+    - pyqt6-webengine
 
 about:
   home: https://github.com/quasars
